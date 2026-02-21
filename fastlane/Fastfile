@@ -1,15 +1,21 @@
 default_platform(:android)
 
 platform :android do
-  desc "Build the DEV environment APK and AAB"
+  desc "Run Unit Tests for DEV and PROD"
+  lane :test_all do
+    gradle(task: "test", flavor: "Dev", build_type: "Release")
+    gradle(task: "test", flavor: "Prod", build_type: "Release")
+  end
+
+  desc "Build the DEV environment APK"
   lane :build_dev do
     gradle(
-      task: "assemble",
+      task: "test",
       flavor: "Dev",
       build_type: "Release"
     )
     gradle(
-      task: "bundle",
+      task: "assemble",
       flavor: "Dev",
       build_type: "Release"
     )
@@ -17,6 +23,11 @@ platform :android do
 
   desc "Build the PROD environment APK and AAB"
   lane :build_prod do
+    gradle(
+      task: "test",
+      flavor: "Prod",
+      build_type: "Release"
+    )
     gradle(
       task: "assemble",
       flavor: "Prod",
