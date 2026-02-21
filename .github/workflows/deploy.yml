@@ -67,8 +67,8 @@ jobs:
 #          role-to-assume: ${{ env.AWS_ROLE_ARN }}
 #          aws-region: ap-northeast-1
 
-      - name: Setup SAM CLI
-        uses: aws-actions/setup-sam@v2
+#      - name: Setup SAM CLI
+#        uses: aws-actions/setup-sam@v2
 
       - name: SAM Build & Deploy
         run: |
