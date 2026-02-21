@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "58379364819",
+    "project_id": "cloudphotos-dev",
+    "storage_bucket": "cloudphotos-dev.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:58379364819:android:9ccfb1f0253292a5652726",
+        "android_client_info": {
+          "package_name": "com.appvoyager.cloudphotos.dev"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB5VaHiwbpu8_MF56UcPIK1qxeAB6pSJTQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

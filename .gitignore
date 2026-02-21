@@ -44,7 +44,6 @@ keystore.properties
 .cxx/
 
 # Google Services / Firebase (Environment dependent)
-google-services.json
 firebase-*.json
 
 # Mac OS X
