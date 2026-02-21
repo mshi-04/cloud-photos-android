@@ -47,6 +47,9 @@ jobs:
           ruby-version: '4.0.1'
           bundler-cache: true
 
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
       - name: Execute Fastlane
         run: bundle exec fastlane ${{ env.LANE }}
 
@@ -58,20 +61,20 @@ jobs:
             app/build/outputs/apk/**/*.apk
             app/build/outputs/bundle/**/*.aab
 
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ env.AWS_ROLE_ARN }}
-          aws-region: ap-northeast-1
+#      - name: Configure AWS Credentials
+#        uses: aws-actions/configure-aws-credentials@v4
+#        with:
+#          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+#          aws-region: ap-northeast-1
 
-      - name: Setup SAM CLI
-        uses: aws-actions/setup-sam@v2
+#      - name: Setup SAM CLI
+#        uses: aws-actions/setup-sam@v2
 
-      - name: SAM Build & Deploy
-        run: |
-          sam build
-          sam deploy \
-            --stack-name ${{ env.SAM_STACK_NAME }} \
-            --resolve-s3 \
-            --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
-            --parameter-overrides Environment=${{ env.FLAVOR }}
+#      - name: SAM Build & Deploy
+#        run: |
+#          sam build
+#          sam deploy \
+#            --stack-name ${{ env.SAM_STACK_NAME }} \
+#            --resolve-s3 \
+#            --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
+#            --parameter-overrides Environment=${{ env.FLAVOR }}
