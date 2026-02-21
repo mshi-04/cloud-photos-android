@@ -2,6 +2,7 @@ package com.appvoyager.cloudphotos.di
 
 import aws.sdk.kotlin.services.cognitoidentityprovider.CognitoIdentityProviderClient
 import com.appvoyager.cloudphotos.BuildConfig
+import com.appvoyager.cloudphotos.domain.auth.valueobject.ClientId
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -21,6 +22,6 @@ object AuthModule {
     @Provides
     @Singleton
     @Named("clientId")
-    fun provideClientId(): String = BuildConfig.COGNITO_CLIENT_ID
+    fun provideClientId(): ClientId = ClientId(BuildConfig.COGNITO_CLIENT_ID)
 
 }

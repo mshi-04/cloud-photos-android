@@ -8,7 +8,7 @@ value class Email private constructor(val value: String) {
 
         fun of(raw: String): Email =
             raw.trim().also {
-                require(it.isNotEmpty()) { "Email must not be blank." }
+                require(it.isNotBlank()) { "Email must not be blank." }
                 require(EMAIL_REGEX.matches(it)) { "Invalid email format." }
             }.let(::Email)
     }
