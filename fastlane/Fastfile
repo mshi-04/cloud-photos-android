@@ -1,0 +1,31 @@
+default_platform(:android)
+
+platform :android do
+  desc "Build the DEV environment APK and AAB"
+  lane :build_dev do
+    gradle(
+      task: "assemble",
+      flavor: "Dev",
+      build_type: "Release"
+    )
+    gradle(
+      task: "bundle",
+      flavor: "Dev",
+      build_type: "Release"
+    )
+  end
+
+  desc "Build the PROD environment APK and AAB"
+  lane :build_prod do
+    gradle(
+      task: "assemble",
+      flavor: "Prod",
+      build_type: "Release"
+    )
+    gradle(
+      task: "bundle",
+      flavor: "Prod",
+      build_type: "Release"
+    )
+  end
+end
