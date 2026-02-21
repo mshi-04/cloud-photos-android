@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: CD
 
 on:
   pull_request:
@@ -12,10 +12,15 @@ permissions:
   id-token: write
   contents: read
 
+concurrency:
+  group: cd-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-and-deploy:
+    if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    
+
     environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
 
     steps:
