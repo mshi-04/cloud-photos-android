@@ -41,9 +41,20 @@ class AuthRepositoryImpl @Inject constructor(
                     { continuation.resumeWithException(it) }
                 )
             }
+
+            val attributes = suspendCancellableCoroutine { continuation ->
+                Amplify.Auth.fetchUserAttributes(
+                    { continuation.resume(it) { _, _, _ -> } },
+                    { continuation.resumeWithException(it) }
+                )
+            }
+
+            val emailAttribute = attributes.find { it.key.keyString == "email" }
+                ?: throw IllegalStateException("Email attribute not found for user ${user.userId}")
+
             AuthUser(
                 userId = UserId(user.userId),
-                email = Email.of(user.username)
+                email = Email.of(emailAttribute.value)
             )
         }.fold(
             onSuccess = { AuthResult.Success(it) },

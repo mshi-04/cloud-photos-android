@@ -87,6 +87,8 @@ class AuthDataSourceImpl @Inject constructor() : AuthDataSource {
                         )
                     }
 
+                    AuthSignInStep.DONE -> SignInState.SignedIn
+
                     else -> {
                         SignInState.AdditionalStepRequired(
                             AuthSignInStepMapper.mapSignInStep(nextStep.signInStep)
