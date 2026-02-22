@@ -4,6 +4,7 @@ import com.amplifyframework.core.Amplify
 import com.appvoyager.cloudphotos.data.auth.util.AuthErrorMapper
 import com.appvoyager.cloudphotos.domain.auth.datasource.AuthDataSource
 import com.appvoyager.cloudphotos.domain.auth.model.AuthResult
+import com.appvoyager.cloudphotos.domain.auth.model.SignInState
 import com.appvoyager.cloudphotos.domain.auth.model.AuthSession
 import com.appvoyager.cloudphotos.domain.auth.model.AuthUser
 import com.appvoyager.cloudphotos.domain.auth.repository.AuthRepository
@@ -26,7 +27,7 @@ class AuthRepositoryImpl @Inject constructor(
     override suspend fun confirmSignUp(request: ConfirmSignUpRequest): AuthResult<Unit> =
         dataSource.confirmSignUp(request)
 
-    override suspend fun signIn(request: SignInRequest): AuthResult<Unit> =
+    override suspend fun signIn(request: SignInRequest): AuthResult<SignInState> =
         dataSource.signIn(request)
 
     override suspend fun signOut(): AuthResult<Unit> =
