@@ -5,5 +5,5 @@ import com.appvoyager.cloudphotos.domain.auth.valueobject.UserId
 
 data class AuthUser(
     val userId: UserId,
-    val email: Email?,
+    val email: Email?
 )

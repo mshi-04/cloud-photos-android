@@ -1,12 +1,10 @@
 package com.appvoyager.cloudphotos.domain.auth.model
 
-import com.appvoyager.cloudphotos.domain.auth.valueobject.JwtToken
+enum class AuthState { SignedIn, Guest }
 
 data class AuthSession(
-    val isSignedIn: Boolean,
-    val accessToken: JwtToken?,
-    val idToken: JwtToken?,
-    val refreshToken: JwtToken?,
+    val state: AuthState,
 ) {
-    val isGuest: Boolean get() = !isSignedIn
+    val isSignedIn: Boolean get() = state == AuthState.SignedIn
+    val isGuest: Boolean get() = state == AuthState.Guest
 }
