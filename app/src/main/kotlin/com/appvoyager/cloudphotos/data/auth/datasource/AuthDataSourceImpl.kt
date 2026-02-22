@@ -148,7 +148,7 @@ class AuthDataSourceImpl @Inject constructor() : AuthDataSource {
                 )
             }
 
-            val emailAttribute = attributes.find { it.key.keyString == "email" }
+            val emailAttribute = attributes.find { it.key == AuthUserAttributeKey.email() }
                 ?: throw IllegalStateException("Email attribute not found for user ${user.userId}")
 
             AuthUser(
