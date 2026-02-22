@@ -1,4 +1,4 @@
-package com.appvoyager.cloudphotos.domain.auth.util
+package com.appvoyager.cloudphotos.data.auth.util
 
 import com.amplifyframework.auth.result.step.AuthSignInStep
 import com.appvoyager.cloudphotos.domain.auth.model.SignInStep
