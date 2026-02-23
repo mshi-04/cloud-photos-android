@@ -92,4 +92,17 @@ class AuthResultTest {
         // Assert
         assertEquals(AuthResult.Error(error), mapped)
     }
+
+    @Test
+    fun `errorOrNull returns null for success result`() {
+        // Arrange
+        val result: AuthResult<String> = AuthResult.Success("ok")
+
+        // Act
+        val actual = result.errorOrNull()
+
+        // Assert
+        assertNull(actual)
+    }
+
 }

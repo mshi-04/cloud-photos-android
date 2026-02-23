@@ -3,6 +3,7 @@ package com.appvoyager.cloudphotos.domain.auth.valueobject
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 class JwtTokenTest {
 
@@ -23,12 +24,11 @@ class JwtTokenTest {
         // Arrange
         val raw = "\n\t "
 
-        // Act
-        val ex = assertThrows(IllegalArgumentException::class.java) {
+        // Act & Assert
+        val ex = assertThrows<IllegalArgumentException> {
             JwtToken.of(raw)
         }
 
-        // Assert
         assertEquals("Token must not be blank.", ex.message)
     }
 }

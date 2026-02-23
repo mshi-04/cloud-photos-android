@@ -31,4 +31,21 @@ class PasswordTest {
         // Assert
         assertEquals("Password must be at least 8 characters.", ex.message)
     }
+
+    @Test
+    fun `of returns password when length exceeds minimum`() {
+        val raw = "12345678901234567890"
+        val password = Password.of(raw)
+        assertEquals(raw, password.value)
+    }
+
+    @Test
+    fun `of throws when empty`() {
+        val raw = ""
+        val ex = assertThrows(IllegalArgumentException::class.java) {
+            Password.of(raw)
+        }
+        assertEquals("Password must be at least 8 characters.", ex.message)
+    }
+
 }
