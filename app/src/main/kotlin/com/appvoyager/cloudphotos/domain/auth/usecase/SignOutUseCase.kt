@@ -4,7 +4,7 @@ import com.appvoyager.cloudphotos.domain.auth.model.AuthResult
 import com.appvoyager.cloudphotos.domain.auth.repository.AuthRepository
 import javax.inject.Inject
 
-class SignOutUseCase @Inject constructor (
+class SignOutUseCase @Inject constructor(
     private val repository: AuthRepository
 ) {
 

@@ -1,6 +1,5 @@
 package com.appvoyager.cloudphotos.di
 
-import aws.sdk.kotlin.services.cognitoidentityprovider.CognitoIdentityProviderClient
 import com.appvoyager.cloudphotos.BuildConfig
 import com.appvoyager.cloudphotos.domain.auth.valueobject.ClientId
 import dagger.Module
@@ -13,11 +12,6 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object AuthModule {
-
-    @Provides
-    @Singleton
-    fun provideCognitoClient(): CognitoIdentityProviderClient =
-        CognitoIdentityProviderClient { region = "ap-northeast-1" }
 
     @Provides
     @Singleton
