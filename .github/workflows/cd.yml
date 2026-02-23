@@ -1,8 +1,6 @@
 name: CD
 
 on:
-  pull_request:
-    types: [ opened, synchronize, reopened ]
   push:
     branches:
       - develop
@@ -18,10 +16,9 @@ concurrency:
 
 jobs:
   build-and-deploy:
-    if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
 
-    environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
+    environment: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') && 'production' || 'development' }}
 
     steps:
       - name: Checkout code
@@ -29,7 +26,8 @@ jobs:
 
       - name: Set Environment Variables
         run: |
-          if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+          TARGET_BRANCH="${{ github.ref_name }}"
+          if [ "$TARGET_BRANCH" == "main" ]; then
             echo "FLAVOR=prod" >> $GITHUB_ENV
             echo "LANE=build_prod" >> $GITHUB_ENV
             echo "AWS_ROLE_ARN=${{ secrets.AWS_ROLE_ARN_PROD }}" >> $GITHUB_ENV
