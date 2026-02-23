@@ -24,12 +24,15 @@ class SignInUseCaseTest {
     @Test
     fun `invoke returns signed in state when repository returns done state`() =
         runTest(StandardTestDispatcher()) {
+            // Arrange
             val request = signInRequest()
             val expected = AuthResult.Success(SignInState.SignedIn)
             coEvery { repository.signIn(request) } returns expected
 
+            // Act
             val actual = useCase(request)
 
+            // Assert
             assertEquals(expected, actual)
             coVerify(exactly = 1) { repository.signIn(request) }
         }
@@ -37,26 +40,32 @@ class SignInUseCaseTest {
     @Test
     fun `invoke returns mfa state when repository requires mfa`() =
         runTest(StandardTestDispatcher()) {
+            // Arrange
             val request = signInRequest()
             val expected = AuthResult.Success(
                 SignInState.MFARequired(SignInStep.CONFIRM_SIGN_IN_WITH_SMS_MFA_CODE)
             )
             coEvery { repository.signIn(request) } returns expected
 
+            // Act
             val actual = useCase(request)
 
+            // Assert
             assertEquals(expected, actual)
             coVerify(exactly = 1) { repository.signIn(request) }
         }
 
     @Test
     fun `invoke returns error when repository fails`() = runTest(StandardTestDispatcher()) {
+        // Arrange
         val request = signInRequest()
         val expected = AuthResult.Error(AuthError.InvalidCredentials("invalid"))
         coEvery { repository.signIn(request) } returns expected
 
+        // Act
         val actual = useCase(request)
 
+        // Assert
         assertEquals(expected, actual)
         coVerify(exactly = 1) { repository.signIn(request) }
     }

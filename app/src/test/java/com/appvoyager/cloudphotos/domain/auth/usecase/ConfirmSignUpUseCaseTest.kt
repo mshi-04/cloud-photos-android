@@ -21,24 +21,30 @@ class ConfirmSignUpUseCaseTest {
 
     @Test
     fun `invoke returns success when repository succeeds`() = runTest(StandardTestDispatcher()) {
+        // Arrange
         val request = confirmSignUpRequest()
         val expected = AuthResult.Success(Unit)
         coEvery { repository.confirmSignUp(request) } returns expected
 
+        // Act
         val actual = useCase(request)
 
+        // Assert
         assertEquals(expected, actual)
         coVerify(exactly = 1) { repository.confirmSignUp(request) }
     }
 
     @Test
     fun `invoke returns error when repository fails`() = runTest(StandardTestDispatcher()) {
+        // Arrange
         val request = confirmSignUpRequest()
         val expected = AuthResult.Error(AuthError.CodeMismatch("mismatch"))
         coEvery { repository.confirmSignUp(request) } returns expected
 
+        // Act
         val actual = useCase(request)
 
+        // Assert
         assertEquals(expected, actual)
         coVerify(exactly = 1) { repository.confirmSignUp(request) }
     }

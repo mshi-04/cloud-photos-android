@@ -21,24 +21,30 @@ class SignUpUseCaseTest {
 
     @Test
     fun `invoke returns success when repository succeeds`() = runTest(StandardTestDispatcher()) {
+        // Arrange
         val request = signUpRequest()
         val expected = AuthResult.Success(Unit)
         coEvery { repository.signUp(request) } returns expected
 
+        // Act
         val actual = useCase(request)
 
+        // Assert
         assertEquals(expected, actual)
         coVerify(exactly = 1) { repository.signUp(request) }
     }
 
     @Test
     fun `invoke returns error when repository fails`() = runTest(StandardTestDispatcher()) {
+        // Arrange
         val request = signUpRequest()
         val expected = AuthResult.Error(AuthError.UsernameAlreadyExists("already exists"))
         coEvery { repository.signUp(request) } returns expected
 
+        // Act
         val actual = useCase(request)
 
+        // Assert
         assertEquals(expected, actual)
         coVerify(exactly = 1) { repository.signUp(request) }
     }
