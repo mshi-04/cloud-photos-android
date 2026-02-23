@@ -26,7 +26,7 @@ jobs:
       (github.event_name == 'pull_request' && (github.base_ref == 'develop' || github.base_ref == 'main'))
     runs-on: ubuntu-latest
 
-    environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
+    environment: ${{ ((github.event_name == 'pull_request' && github.base_ref == 'main') || (github.event_name == 'push' && github.ref == 'refs/heads/main')) && 'production' || 'development' }}
 
     steps:
       - name: Checkout code
@@ -34,7 +34,8 @@ jobs:
 
       - name: Set Environment Variables
         run: |
-          if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+          TARGET_BRANCH="${{ github.event_name == 'pull_request' && github.base_ref || github.ref_name }}"
+          if [ "$TARGET_BRANCH" == "main" ]; then
             echo "FLAVOR=prod" >> $GITHUB_ENV
             echo "LANE=build_prod" >> $GITHUB_ENV
             echo "AWS_ROLE_ARN=${{ secrets.AWS_ROLE_ARN_PROD }}" >> $GITHUB_ENV
