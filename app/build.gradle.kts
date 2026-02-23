@@ -8,11 +8,7 @@ plugins {
 
 android {
     namespace = "com.appvoyager.cloudphotos"
-    compileSdk {
-        version = release(36) {
-            minorApiLevel = 1
-        }
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.appvoyager.cloudphotos"
@@ -32,11 +28,11 @@ android {
             dimension = "environment"
             applicationIdSuffix = ".dev"
 
-            val devApiBaseUrl = project.findProperty("DEV_API_BASE_URL") as String?
+            val devApiBaseUrl = project.findProperty("DEV_API_BASE_URL")?.toString()
                 ?: "https://api-dev.example.com/"
-            val devCognitoClientId = project.findProperty("DEV_COGNITO_CLIENT_ID") as String?
+            val devCognitoClientId = project.findProperty("DEV_COGNITO_CLIENT_ID")?.toString()
                 ?: "dev_cognito_client_id_placeholder"
-            val devS3BucketName = project.findProperty("DEV_S3_BUCKET_NAME") as String?
+            val devS3BucketName = project.findProperty("DEV_S3_BUCKET_NAME")?.toString()
                 ?: "cloudphotos-dev-bucket-placeholder"
 
             buildConfigField("String", "API_BASE_URL", "\"$devApiBaseUrl\"")
@@ -46,15 +42,12 @@ android {
         create("prod") {
             dimension = "environment"
 
-            val prodApiBaseUrl = providers.gradleProperty("PROD_API_BASE_URL").orNull
-                ?.takeIf { it.isNotBlank() }
-                ?: error("PROD_API_BASE_URL is required for prod")
-            val prodCognitoClientId = providers.gradleProperty("PROD_COGNITO_CLIENT_ID").orNull
-                ?.takeIf { it.isNotBlank() }
-                ?: error("PROD_COGNITO_CLIENT_ID is required for prod")
-            val prodS3BucketName = providers.gradleProperty("PROD_S3_BUCKET_NAME").orNull
-                ?.takeIf { it.isNotBlank() }
-                ?: error("PROD_S3_BUCKET_NAME is required for prod")
+            val prodApiBaseUrl = project.findProperty("PROD_API_BASE_URL")?.toString()
+                ?: "https://api.example.com/"
+            val prodCognitoClientId = project.findProperty("PROD_COGNITO_CLIENT_ID")?.toString()
+                ?: "prod_cognito_client_id_placeholder"
+            val prodS3BucketName = project.findProperty("PROD_S3_BUCKET_NAME")?.toString()
+                ?: "cloudphotos-prod-bucket-placeholder"
 
             buildConfigField("String", "API_BASE_URL", "\"$prodApiBaseUrl\"")
             buildConfigField("String", "COGNITO_CLIENT_ID", "\"$prodCognitoClientId\"")
