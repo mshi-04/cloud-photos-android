@@ -1,10 +1,6 @@
 name: CD
 
 on:
-  pull_request:
-    branches:
-      - develop
-      - main
   push:
     branches:
       - develop
@@ -25,7 +21,7 @@ jobs:
       (github.event_name == 'pull_request' && (github.base_ref == 'develop' || github.base_ref == 'main'))
     runs-on: ubuntu-latest
 
-    environment: ${{ ((github.event_name == 'pull_request' && github.base_ref == 'main') || (github.event_name == 'push' && github.ref == 'refs/heads/main')) && 'production' || 'development' }}
+    environment: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') && 'production' || 'development' }}
 
     steps:
       - name: Checkout code
