@@ -62,7 +62,8 @@ class AuthErrorMapperTest {
     @Test
     fun `map returns Unknown for service exception with unmapped cause`() {
         // Arrange
-        val throwable = ServiceException("service unavailable", "retry", IllegalStateException("boom"))
+        val throwable =
+            ServiceException("service unavailable", "retry", IllegalStateException("boom"))
 
         // Act
         val actual = AuthErrorMapper.map(throwable)
