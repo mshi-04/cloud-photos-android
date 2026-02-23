@@ -46,12 +46,15 @@ android {
         create("prod") {
             dimension = "environment"
 
-            val prodApiBaseUrl = project.findProperty("PROD_API_BASE_URL") as String?
-                ?: "https://api.example.com/"
-            val prodCognitoClientId = project.findProperty("PROD_COGNITO_CLIENT_ID") as String?
-                ?: "prod_cognito_client_id_placeholder"
-            val prodS3BucketName = project.findProperty("PROD_S3_BUCKET_NAME") as String?
-                ?: "cloudphotos-prod-bucket-placeholder"
+            val prodApiBaseUrl = providers.gradleProperty("PROD_API_BASE_URL").orNull
+                ?.takeIf { it.isNotBlank() }
+                ?: error("PROD_API_BASE_URL is required for prod")
+            val prodCognitoClientId = providers.gradleProperty("PROD_COGNITO_CLIENT_ID").orNull
+                ?.takeIf { it.isNotBlank() }
+                ?: error("PROD_COGNITO_CLIENT_ID is required for prod")
+            val prodS3BucketName = providers.gradleProperty("PROD_S3_BUCKET_NAME").orNull
+                ?.takeIf { it.isNotBlank() }
+                ?: error("PROD_S3_BUCKET_NAME is required for prod")
 
             buildConfigField("String", "API_BASE_URL", "\"$prodApiBaseUrl\"")
             buildConfigField("String", "COGNITO_CLIENT_ID", "\"$prodCognitoClientId\"")
