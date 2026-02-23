@@ -3,6 +3,9 @@ name: CD
 on:
   pull_request:
     types: [ opened, synchronize, reopened ]
+    branches:
+      - develop
+      - main
   push:
     branches:
       - develop
@@ -18,7 +21,9 @@ concurrency:
 
 jobs:
   build-and-deploy:
-    if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main'
+    if: |
+      (github.event_name == 'push' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main')) ||
+      (github.event_name == 'pull_request' && (github.base_ref == 'develop' || github.base_ref == 'main'))
     runs-on: ubuntu-latest
 
     environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
