@@ -1,7 +1,6 @@
 package com.appvoyager.cloudphotos.domain.auth.valueobject
 
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 

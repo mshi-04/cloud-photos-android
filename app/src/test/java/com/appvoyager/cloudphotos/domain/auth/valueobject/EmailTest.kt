@@ -1,8 +1,8 @@
 package com.appvoyager.cloudphotos.domain.auth.valueobject
 
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 class EmailTest {
 
@@ -24,7 +24,7 @@ class EmailTest {
         val raw = "   "
 
         // Act
-        val ex = assertThrows(IllegalArgumentException::class.java) {
+        val ex = assertThrows<IllegalArgumentException> {
             Email.of(raw)
         }
 
@@ -38,7 +38,7 @@ class EmailTest {
         val raw = "user.example.com"
 
         // Act
-        val ex = assertThrows(IllegalArgumentException::class.java) {
+        val ex = assertThrows<IllegalArgumentException> {
             Email.of(raw)
         }
 

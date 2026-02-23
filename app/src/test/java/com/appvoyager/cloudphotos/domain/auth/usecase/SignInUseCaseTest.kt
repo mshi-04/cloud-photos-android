@@ -22,30 +22,32 @@ class SignInUseCaseTest {
     private val useCase = SignInUseCase(repository)
 
     @Test
-    fun `invoke returns signed in state when repository returns done state`() = runTest(StandardTestDispatcher()) {
-        val request = signInRequest()
-        val expected = AuthResult.Success(SignInState.SignedIn)
-        coEvery { repository.signIn(request) } returns expected
+    fun `invoke returns signed in state when repository returns done state`() =
+        runTest(StandardTestDispatcher()) {
+            val request = signInRequest()
+            val expected = AuthResult.Success(SignInState.SignedIn)
+            coEvery { repository.signIn(request) } returns expected
 
-        val actual = useCase(request)
+            val actual = useCase(request)
 
-        assertEquals(expected, actual)
-        coVerify(exactly = 1) { repository.signIn(request) }
-    }
+            assertEquals(expected, actual)
+            coVerify(exactly = 1) { repository.signIn(request) }
+        }
 
     @Test
-    fun `invoke returns mfa state when repository requires mfa`() = runTest(StandardTestDispatcher()) {
-        val request = signInRequest()
-        val expected = AuthResult.Success(
-            SignInState.MFARequired(SignInStep.CONFIRM_SIGN_IN_WITH_SMS_MFA_CODE)
-        )
-        coEvery { repository.signIn(request) } returns expected
+    fun `invoke returns mfa state when repository requires mfa`() =
+        runTest(StandardTestDispatcher()) {
+            val request = signInRequest()
+            val expected = AuthResult.Success(
+                SignInState.MFARequired(SignInStep.CONFIRM_SIGN_IN_WITH_SMS_MFA_CODE)
+            )
+            coEvery { repository.signIn(request) } returns expected
 
-        val actual = useCase(request)
+            val actual = useCase(request)
 
-        assertEquals(expected, actual)
-        coVerify(exactly = 1) { repository.signIn(request) }
-    }
+            assertEquals(expected, actual)
+            coVerify(exactly = 1) { repository.signIn(request) }
+        }
 
     @Test
     fun `invoke returns error when repository fails`() = runTest(StandardTestDispatcher()) {

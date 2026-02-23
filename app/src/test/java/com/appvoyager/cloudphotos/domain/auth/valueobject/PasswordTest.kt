@@ -1,8 +1,8 @@
 package com.appvoyager.cloudphotos.domain.auth.valueobject
 
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 class PasswordTest {
 
@@ -24,7 +24,7 @@ class PasswordTest {
         val raw = "1234567"
 
         // Act
-        val ex = assertThrows(IllegalArgumentException::class.java) {
+        val ex = assertThrows<IllegalArgumentException> {
             Password.of(raw)
         }
 
@@ -42,7 +42,7 @@ class PasswordTest {
     @Test
     fun `of throws when empty`() {
         val raw = ""
-        val ex = assertThrows(IllegalArgumentException::class.java) {
+        val ex = assertThrows<IllegalArgumentException> {
             Password.of(raw)
         }
         assertEquals("Password must be at least 8 characters.", ex.message)

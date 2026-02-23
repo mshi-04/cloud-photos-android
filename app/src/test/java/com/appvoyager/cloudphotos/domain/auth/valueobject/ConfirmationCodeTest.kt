@@ -1,8 +1,8 @@
 package com.appvoyager.cloudphotos.domain.auth.valueobject
 
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 class ConfirmationCodeTest {
 
@@ -36,7 +36,7 @@ class ConfirmationCodeTest {
         val raw = "   "
 
         // Act
-        val ex = assertThrows(IllegalArgumentException::class.java) {
+        val ex = assertThrows<IllegalArgumentException> {
             ConfirmationCode.of(raw)
         }
 
@@ -50,7 +50,7 @@ class ConfirmationCodeTest {
         val raw = "12345"
 
         // Act
-        val ex = assertThrows(IllegalArgumentException::class.java) {
+        val ex = assertThrows<IllegalArgumentException> {
             ConfirmationCode.of(raw)
         }
 
@@ -64,7 +64,7 @@ class ConfirmationCodeTest {
         val raw = "1234567"
 
         // Act
-        val ex = assertThrows(IllegalArgumentException::class.java) {
+        val ex = assertThrows<IllegalArgumentException> {
             ConfirmationCode.of(raw)
         }
 
@@ -78,7 +78,7 @@ class ConfirmationCodeTest {
         val raw = "12A456"
 
         // Act
-        val ex = assertThrows(IllegalArgumentException::class.java) {
+        val ex = assertThrows<IllegalArgumentException> {
             ConfirmationCode.of(raw)
         }
 

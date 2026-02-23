@@ -21,26 +21,28 @@ class GetSessionUseCaseTest {
     private val useCase = GetSessionUseCase(repository)
 
     @Test
-    fun `invoke returns signed in session when repository succeeds`() = runTest(StandardTestDispatcher()) {
-        val expected = AuthResult.Success(signedInSession())
-        coEvery { repository.getSession() } returns expected
+    fun `invoke returns signed in session when repository succeeds`() =
+        runTest(StandardTestDispatcher()) {
+            val expected = AuthResult.Success(signedInSession())
+            coEvery { repository.getSession() } returns expected
 
-        val actual = useCase()
+            val actual = useCase()
 
-        assertEquals(expected, actual)
-        coVerify(exactly = 1) { repository.getSession() }
-    }
+            assertEquals(expected, actual)
+            coVerify(exactly = 1) { repository.getSession() }
+        }
 
     @Test
-    fun `invoke returns guest session when repository returns guest`() = runTest(StandardTestDispatcher()) {
-        val expected = AuthResult.Success(guestSession())
-        coEvery { repository.getSession() } returns expected
+    fun `invoke returns guest session when repository returns guest`() =
+        runTest(StandardTestDispatcher()) {
+            val expected = AuthResult.Success(guestSession())
+            coEvery { repository.getSession() } returns expected
 
-        val actual = useCase()
+            val actual = useCase()
 
-        assertEquals(expected, actual)
-        coVerify(exactly = 1) { repository.getSession() }
-    }
+            assertEquals(expected, actual)
+            coVerify(exactly = 1) { repository.getSession() }
+        }
 
     @Test
     fun `invoke returns error when repository fails`() = runTest(StandardTestDispatcher()) {

@@ -1,8 +1,8 @@
 package com.appvoyager.cloudphotos.domain.auth.valueobject
 
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 class UserIdTest {
 
@@ -24,7 +24,7 @@ class UserIdTest {
         val raw = ""
 
         // Act
-        val ex = assertThrows(IllegalArgumentException::class.java) {
+        val ex = assertThrows<IllegalArgumentException> {
             UserId(raw)
         }
 
@@ -35,7 +35,7 @@ class UserIdTest {
     @Test
     fun `constructor throws when whitespace only`() {
         val raw = "   "
-        val ex = assertThrows(IllegalArgumentException::class.java) {
+        val ex = assertThrows<IllegalArgumentException> {
             UserId(raw)
         }
         assertEquals("UserId must not be blank.", ex.message)
