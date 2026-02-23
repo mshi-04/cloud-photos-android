@@ -11,14 +11,13 @@ permissions:
   contents: read
 
 concurrency:
-  group: cd-${{ github.ref }}
+  group: ci-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   build-and-deploy:
     if: |
-      (github.event_name == 'push' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main')) ||
-      (github.event_name == 'pull_request' && (github.base_ref == 'develop' || github.base_ref == 'main'))
+      github.event_name == 'push' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
 
     environment: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') && 'production' || 'development' }}
@@ -29,7 +28,7 @@ jobs:
 
       - name: Set Environment Variables
         run: |
-          TARGET_BRANCH="${{ github.event_name == 'pull_request' && github.base_ref || github.ref_name }}"
+          TARGET_BRANCH="${{ github.ref_name }}"
           if [ "$TARGET_BRANCH" == "main" ]; then
             echo "FLAVOR=prod" >> $GITHUB_ENV
             echo "LANE=build_prod" >> $GITHUB_ENV
