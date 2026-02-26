@@ -3,6 +3,7 @@ package com.appvoyager.cloudphotos.domain.auth.usecase
 import com.appvoyager.cloudphotos.domain.auth.model.AuthError
 import com.appvoyager.cloudphotos.domain.auth.model.AuthResult
 import com.appvoyager.cloudphotos.domain.auth.repository.AuthRepository
+import com.appvoyager.cloudphotos.domain.auth.request.ResendSignUpCodeRequest
 import com.appvoyager.cloudphotos.domain.auth.testutil.validEmail
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -24,15 +25,16 @@ class ResendSignUpCodeUseCaseTest {
         runTest(StandardTestDispatcher()) {
             // Arrange
             val email = validEmail()
+            val request = ResendSignUpCodeRequest(email)
             val expected = AuthResult.Success(Unit)
-            coEvery { repository.resendSignUpCode(email) } returns expected
+            coEvery { repository.resendSignUpCode(request) } returns expected
 
             // Act
-            val actual = useCase(email)
+            val actual = useCase(request)
 
             // Assert
             assertEquals(expected, actual)
-            coVerify(exactly = 1) { repository.resendSignUpCode(email) }
+            coVerify(exactly = 1) { repository.resendSignUpCode(request) }
         }
 
     @Test
@@ -40,15 +42,16 @@ class ResendSignUpCodeUseCaseTest {
         runTest(StandardTestDispatcher()) {
             // Arrange
             val email = validEmail()
+            val request = ResendSignUpCodeRequest(email)
             val expected = AuthResult.Error(AuthError.TooManyRequests("too many"))
-            coEvery { repository.resendSignUpCode(email) } returns expected
+            coEvery { repository.resendSignUpCode(request) } returns expected
 
             // Act
-            val actual = useCase(email)
+            val actual = useCase(request)
 
             // Assert
             assertEquals(expected, actual)
-            coVerify(exactly = 1) { repository.resendSignUpCode(email) }
+            coVerify(exactly = 1) { repository.resendSignUpCode(request) }
         }
 
 }
