@@ -58,7 +58,7 @@ class ResetPasswordCodeViewModel @Inject constructor(
 
     private var isTimerStarted = false
 
-    private val _effect = MutableSharedFlow<ResetPasswordCodeEffect>()
+    private val _effect = MutableSharedFlow<ResetPasswordCodeEffect>(extraBufferCapacity = 1)
     val effect: SharedFlow<ResetPasswordCodeEffect> = _effect.asSharedFlow()
 
     val isResendEnabled: Boolean

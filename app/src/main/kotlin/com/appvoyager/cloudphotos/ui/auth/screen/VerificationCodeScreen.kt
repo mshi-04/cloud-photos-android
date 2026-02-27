@@ -2,7 +2,6 @@ package com.appvoyager.cloudphotos.ui.auth.screen
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,11 +12,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -33,21 +29,16 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onKeyEvent
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.appvoyager.cloudphotos.ui.auth.component.CodeInputRow
+import com.appvoyager.cloudphotos.ui.auth.component.LoadingOverlay
 import com.appvoyager.cloudphotos.ui.auth.effect.VerificationEffect
 import com.appvoyager.cloudphotos.ui.auth.viewmodel.VerificationCodeViewModel
 import com.appvoyager.cloudphotos.ui.theme.CloudPhotosTheme
+import com.appvoyager.cloudphotos.ui.util.StringUtils
 
 @Composable
 fun VerificationCodeScreen(
@@ -111,11 +102,12 @@ private fun VerificationContent(
     onVerify: () -> Unit,
     onResend: () -> Unit
 ) {
-    val maskedEmail = maskEmail(email)
+    val maskedEmail = StringUtils.maskEmail(email)
 
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
             .imePadding()
             .padding(horizontal = 24.dp),
@@ -144,7 +136,6 @@ private fun VerificationContent(
             isError = codeError != null,
             onCodeChanged = onCodeChanged
         )
-
 
         if (codeError != null) {
             Spacer(modifier = Modifier.height(8.dp))
@@ -193,158 +184,12 @@ private fun VerificationContent(
     }
 }
 
-@Composable
-private fun CodeInputRow(
-    codes: List<String>,
-    isError: Boolean,
-    onCodeChanged: (Int, String) -> Unit
-) {
-    val focusRequesters = remember { List(6) { FocusRequester() } }
-    val keyboardController = LocalSoftwareKeyboardController.current
-
-    LaunchedEffect(Unit) {
-        focusRequesters[0].requestFocus()
-    }
-
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
-    ) {
-        codes.forEachIndexed { index, code ->
-            CodeInputBox(
-                value = code,
-                isError = isError,
-                focusRequester = focusRequesters[index],
-                onValueChange = { newValue ->
-
-                    val digits = newValue.filter { it.isDigit() }
-                    if (digits.length > 1) {
-                        onCodeChanged(index, digits)
-
-                        val targetIndex = (index + digits.length).coerceAtMost(5)
-                        focusRequesters[targetIndex].requestFocus()
-                        if (targetIndex == 5) {
-                            keyboardController?.hide()
-                        }
-                        return@CodeInputBox
-                    }
-
-                    onCodeChanged(index, digits.take(1))
-                    if (digits.isNotEmpty() && index < 5) {
-                        focusRequesters[index + 1].requestFocus()
-                    }
-                    if (digits.isNotEmpty() && index == 5) {
-                        keyboardController?.hide()
-                    }
-                },
-                onBackspace = {
-                    if (code.isEmpty() && index > 0) {
-                        onCodeChanged(index - 1, "")
-                        focusRequesters[index - 1].requestFocus()
-                    } else {
-                        onCodeChanged(index, "")
-                    }
-                }
-            )
-        }
-    }
-}
-
-@Composable
-private fun CodeInputBox(
-    value: String,
-    isError: Boolean,
-    focusRequester: FocusRequester,
-    onValueChange: (String) -> Unit,
-    onBackspace: () -> Unit
-) {
-    val borderColor = when {
-        isError -> MaterialTheme.colorScheme.error
-        value.isNotEmpty() -> MaterialTheme.colorScheme.primary
-        else -> MaterialTheme.colorScheme.outline
-    }
-
-    BasicTextField(
-        value = value,
-        onValueChange = onValueChange,
-        singleLine = true,
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        modifier = Modifier
-            .size(48.dp)
-            .focusRequester(focusRequester)
-            .onKeyEvent { event ->
-                if (event.key == Key.Backspace) {
-                    onBackspace()
-                    true
-                } else {
-                    false
-                }
-            },
-        decorationBox = { innerTextField ->
-            Box(
-                modifier = Modifier
-                    .border(
-                        width = if (value.isNotEmpty() || isError) 2.dp else 1.dp,
-                        color = borderColor,
-                        shape = RoundedCornerShape(8.dp),
-                    )
-                    .background(Color.White, RoundedCornerShape(8.dp))
-                    .padding(4.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                if (value.isEmpty()) {
-
-                    Text(
-                        text = "",
-                        style = MaterialTheme.typography.headlineSmall,
-                        textAlign = TextAlign.Center,
-                    )
-                }
-                Box(contentAlignment = Alignment.Center) {
-                    innerTextField()
-                }
-            }
-        },
-        textStyle = MaterialTheme.typography.headlineSmall.copy(
-            textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-    )
-}
-
-@Composable
-private fun LoadingOverlay() {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.4f)),
-        contentAlignment = Alignment.Center
-    ) {
-        CircularProgressIndicator(
-            color = MaterialTheme.colorScheme.primary
-        )
-    }
-}
-
-private fun maskEmail(email: String): String {
-    val parts = email.split("@")
-    if (parts.size != 2) return email
-    val local = parts[0]
-    val domain = parts[1]
-    val maskedLocal = if (local.length <= 2) {
-        local.first() + "***"
-    } else {
-        local.take(2) + "*".repeat((local.length - 2).coerceAtMost(5))
-    }
-    return "$maskedLocal@$domain"
-}
-
 @Preview(showBackground = true)
 @Composable
 private fun VerificationContentPreview() {
     CloudPhotosTheme {
         VerificationContent(
-            email = "exsample@email.com",
+            email = "example@email.com",
             codes = listOf("", "", "", "", "", ""),
             codeError = null,
             isCodeComplete = false,
@@ -363,7 +208,7 @@ private fun VerificationContentPreview() {
 private fun VerificationContentWithCodePreview() {
     CloudPhotosTheme {
         VerificationContent(
-            email = "exsample@email.com",
+            email = "example@email.com",
             codes = listOf("1", "2", "3", "4", "5", ""),
             codeError = null,
             isCodeComplete = false,
@@ -382,7 +227,7 @@ private fun VerificationContentWithCodePreview() {
 private fun VerificationContentWithErrorPreview() {
     CloudPhotosTheme {
         VerificationContent(
-            email = "exsample@email.com",
+            email = "example@email.com",
             codes = listOf("1", "2", "3", "4", "5", "6"),
             codeError = "確認コードが正しくありません",
             isCodeComplete = true,

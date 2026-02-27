@@ -66,7 +66,7 @@ fun LoginScreen(
         viewModel.effect.collect { effect ->
             when (effect) {
                 is LoginEffect.NavigateToVerification -> {
-                    onNavigateToVerification(effect.email)
+                    onNavigateToVerification(effect.email.value)
                 }
 
                 is LoginEffect.NavigateToHome -> {
@@ -85,7 +85,7 @@ fun LoginScreen(
     }
 
 
-    BackHandler(enabled = viewModel.isLoading) {  }
+    BackHandler(enabled = viewModel.isLoading) { }
 
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
@@ -144,6 +144,7 @@ private fun LoginContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
             .imePadding()
             .padding(horizontal = 24.dp),
@@ -286,7 +287,7 @@ private fun LoadingOverlay() {
 private fun LoginContentPreview() {
     CloudPhotosTheme {
         LoginContent(
-            email = "exsample@email.com",
+            email = "example@email.com",
             password = "password",
             isPasswordVisible = false,
             emailError = null,

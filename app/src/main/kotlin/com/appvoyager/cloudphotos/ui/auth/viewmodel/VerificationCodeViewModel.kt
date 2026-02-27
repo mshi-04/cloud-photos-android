@@ -57,6 +57,14 @@ class VerificationCodeViewModel @Inject constructor(
 
     private var isTimerStarted = false
 
+    init {
+        if (email.isEmpty()) {
+            viewModelScope.launch {
+                _effect.emit(VerificationEffect.ShowSnackbar("エラーが発生しました"))
+            }
+        }
+    }
+
     fun startTimer() {
         if (!isTimerStarted) {
             isTimerStarted = true
@@ -99,9 +107,7 @@ class VerificationCodeViewModel @Inject constructor(
             try {
                 val email = Email.of(email)
                 val code = ConfirmationCode.of(fullCode)
-                val confirmResult = confirmSignUpUseCase(ConfirmSignUpRequest(email, code))
-
-                when (confirmResult) {
+                when (val confirmResult = confirmSignUpUseCase(ConfirmSignUpRequest(email, code))) {
                     is AuthResult.Success -> _effect.emit(VerificationEffect.NavigateToHome)
                     is AuthResult.Error -> handleConfirmError(confirmResult.error)
                 }
@@ -120,8 +126,7 @@ class VerificationCodeViewModel @Inject constructor(
             isLoading = true
             try {
                 val email = Email.of(email)
-                val result = resendSignUpCodeUseCase(ResendSignUpCodeRequest(email))
-                when (result) {
+                when (val result = resendSignUpCodeUseCase(ResendSignUpCodeRequest(email))) {
                     is AuthResult.Success -> {
                         _effect.emit(VerificationEffect.ShowSnackbar("確認コードを再送信しました"))
                         startResendTimer()
@@ -135,11 +140,6 @@ class VerificationCodeViewModel @Inject constructor(
                 isLoading = false
             }
         }
-    }
-
-    fun onClearCodes() {
-        codes = List(6) { "" }
-        codeError = null
     }
 
     private suspend fun handleConfirmError(error: AuthError) {

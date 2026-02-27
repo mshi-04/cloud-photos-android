@@ -15,7 +15,7 @@ import com.appvoyager.cloudphotos.ui.auth.screen.ForgotPasswordScreen
 import com.appvoyager.cloudphotos.ui.auth.screen.LoginScreen
 import com.appvoyager.cloudphotos.ui.auth.screen.ResetPasswordCodeScreen
 import com.appvoyager.cloudphotos.ui.auth.screen.VerificationCodeScreen
-import com.appvoyager.cloudphotos.ui.home.HomeScreen
+import com.appvoyager.cloudphotos.ui.screen.HomeScreen
 
 private const val TRANSITION_DURATION_MS = 300
 
@@ -115,10 +115,11 @@ fun NavGraph(
         composable(
             route = AuthRoute.HOME,
             enterTransition = { enterForward() },
+            exitTransition = null,
             popEnterTransition = { enterBack() },
             popExitTransition = { exitBack() }
         ) {
-            HomeScreen()
+            HomeScreen({})
         }
     }
 }

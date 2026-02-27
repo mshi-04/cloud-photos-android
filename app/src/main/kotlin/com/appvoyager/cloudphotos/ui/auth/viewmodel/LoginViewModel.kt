@@ -15,6 +15,7 @@ import com.appvoyager.cloudphotos.domain.auth.usecase.SignUpUseCase
 import com.appvoyager.cloudphotos.domain.auth.valueobject.Email
 import com.appvoyager.cloudphotos.domain.auth.valueobject.Password
 import com.appvoyager.cloudphotos.ui.auth.effect.LoginEffect
+import com.appvoyager.cloudphotos.ui.util.ValidationUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -50,7 +51,7 @@ class LoginViewModel @Inject constructor(
     val effect: SharedFlow<LoginEffect> = _effect.asSharedFlow()
 
     val isFormValid: Boolean
-        get() = email.isNotBlank() && isValidEmailFormat(email) && password.length >= 8
+        get() = email.isNotBlank() && ValidationUtils.isValidEmailFormat(email) && password.length >= 8
 
     fun onEmailChanged(value: String) {
         email = value
@@ -133,7 +134,7 @@ class LoginViewModel @Inject constructor(
 
     private suspend fun handleSignUpResult(result: AuthResult<Unit>) {
         when (result) {
-            is AuthResult.Success -> _effect.emit(LoginEffect.NavigateToVerification(email))
+            is AuthResult.Success -> _effect.emit(LoginEffect.NavigateToVerification(Email.of(email)))
             is AuthResult.Error -> handleAuthError(result.error, isSignUp = true)
         }
     }
@@ -145,7 +146,7 @@ class LoginViewModel @Inject constructor(
             }
 
             is AuthError.UserNotConfirmed -> {
-                _effect.emit(LoginEffect.NavigateToVerification(email))
+                _effect.emit(LoginEffect.NavigateToVerification(Email.of(email)))
             }
 
             is AuthError.UsernameAlreadyExists -> {
@@ -168,7 +169,7 @@ class LoginViewModel @Inject constructor(
 
     private fun validateForm(): Boolean {
         var valid = true
-        if (email.isBlank() || !isValidEmailFormat(email)) {
+        if (email.isBlank() || !ValidationUtils.isValidEmailFormat(email)) {
             emailError = "有効なメールアドレスを入力してください"
             valid = false
         }
@@ -179,7 +180,4 @@ class LoginViewModel @Inject constructor(
         return valid
     }
 
-    private fun isValidEmailFormat(email: String): Boolean {
-        return Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$").matches(email.trim())
-    }
 }

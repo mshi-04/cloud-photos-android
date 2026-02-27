@@ -26,17 +26,22 @@ class MainViewModel @Inject constructor(
         isSessionChecked = true
 
         viewModelScope.launch {
-            val result = getSessionUseCase()
-            uiState = when (result) {
-                is AuthResult.Success -> {
-                    if (result.value.isSignedIn) {
-                        MainUiState.Authenticated
-                    } else {
-                        MainUiState.Unauthenticated
+            try {
+                val result = getSessionUseCase()
+                uiState = when (result) {
+                    is AuthResult.Success -> {
+                        if (result.value.isSignedIn) {
+                            MainUiState.Authenticated
+                        } else {
+                            MainUiState.Unauthenticated
+                        }
                     }
-                }
 
-                is AuthResult.Error -> MainUiState.Unauthenticated
+                    is AuthResult.Error -> MainUiState.Unauthenticated
+                }
+            } catch (_: Exception) {
+                isSessionChecked = false
+                uiState = MainUiState.Unauthenticated
             }
         }
     }

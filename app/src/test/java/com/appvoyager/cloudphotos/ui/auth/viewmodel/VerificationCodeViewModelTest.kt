@@ -89,11 +89,7 @@ class VerificationCodeViewModelTest {
         // Arrange
         coEvery { confirmSignUpUseCase(any()) } returns AuthResult.Success(Unit)
 
-        viewModel.onCodeChanged(0, "1")
-        viewModel.onCodeChanged(1, "2")
-        viewModel.onCodeChanged(2, "3")
-        viewModel.onCodeChanged(3, "4")
-        viewModel.onCodeChanged(4, "5")
+        fillCode("12345")
 
         // Act
         var effect: VerificationEffect? = null
@@ -113,11 +109,7 @@ class VerificationCodeViewModelTest {
             AuthError.CodeMismatch("wrong code")
         )
 
-        viewModel.onCodeChanged(0, "1")
-        viewModel.onCodeChanged(1, "2")
-        viewModel.onCodeChanged(2, "3")
-        viewModel.onCodeChanged(3, "4")
-        viewModel.onCodeChanged(4, "5")
+        fillCode("12345")
 
         // Act
         viewModel.onCodeChanged(5, "6")
@@ -135,11 +127,7 @@ class VerificationCodeViewModelTest {
                 AuthError.CodeExpired("expired")
             )
 
-            viewModel.onCodeChanged(0, "1")
-            viewModel.onCodeChanged(1, "2")
-            viewModel.onCodeChanged(2, "3")
-            viewModel.onCodeChanged(3, "4")
-            viewModel.onCodeChanged(4, "5")
+            fillCode("12345")
 
             // Act
             viewModel.onCodeChanged(5, "6")
@@ -159,11 +147,7 @@ class VerificationCodeViewModelTest {
             AuthError.Network("offline")
         )
 
-        viewModel.onCodeChanged(0, "1")
-        viewModel.onCodeChanged(1, "2")
-        viewModel.onCodeChanged(2, "3")
-        viewModel.onCodeChanged(3, "4")
-        viewModel.onCodeChanged(4, "5")
+        fillCode("12345")
 
         // Act
         var effect: VerificationEffect? = null
@@ -209,5 +193,12 @@ class VerificationCodeViewModelTest {
         Assertions.assertTrue(viewModel.resendTimerSeconds > 0, "Timer should have been reset")
         job.cancel()
     }
+
+    private fun fillCode(code: String) {
+        code.take(6).forEachIndexed { i, ch ->
+            viewModel.onCodeChanged(i, ch.toString())
+        }
+    }
+
 
 }

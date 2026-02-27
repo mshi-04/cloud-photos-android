@@ -54,10 +54,8 @@ class ForgotPasswordViewModel @Inject constructor(
         viewModelScope.launch {
             isLoading = true
             try {
-                val emailVo = Email.of(email)
-                val result = resetPasswordUseCase(ResetPasswordRequest(emailVo))
-
-                when (result) {
+                val email = Email.of(email)
+                when (val result = resetPasswordUseCase(ResetPasswordRequest(email))) {
                     is AuthResult.Success -> {
                         _effect.emit(ForgotPasswordEffect.NavigateToResetCode(email))
                     }

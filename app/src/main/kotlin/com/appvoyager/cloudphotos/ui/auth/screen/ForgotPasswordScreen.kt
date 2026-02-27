@@ -42,6 +42,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.appvoyager.cloudphotos.ui.auth.component.LoadingOverlay
 import com.appvoyager.cloudphotos.ui.auth.effect.ForgotPasswordEffect
 import com.appvoyager.cloudphotos.ui.auth.viewmodel.ForgotPasswordViewModel
 import com.appvoyager.cloudphotos.ui.theme.CloudPhotosTheme
@@ -58,7 +59,7 @@ fun ForgotPasswordScreen(
         viewModel.effect.collect { effect ->
             when (effect) {
                 is ForgotPasswordEffect.NavigateToResetCode -> {
-                    onNavigateToResetCode(effect.email)
+                    onNavigateToResetCode(effect.email.value)
                 }
 
                 is ForgotPasswordEffect.NavigateBackToLogin -> {
@@ -116,6 +117,7 @@ private fun ForgotPasswordContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
             .imePadding()
             .padding(horizontal = 24.dp),
@@ -190,20 +192,6 @@ private fun ForgotPasswordContent(
         }
 
         Spacer(modifier = Modifier.height(80.dp))
-    }
-}
-
-@Composable
-private fun LoadingOverlay() {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.4f)),
-        contentAlignment = Alignment.Center
-    ) {
-        CircularProgressIndicator(
-            color = MaterialTheme.colorScheme.primary
-        )
     }
 }
 

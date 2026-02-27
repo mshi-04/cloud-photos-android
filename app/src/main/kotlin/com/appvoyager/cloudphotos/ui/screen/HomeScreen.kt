@@ -1,5 +1,6 @@
-package com.appvoyager.cloudphotos.ui.home
+package com.appvoyager.cloudphotos.ui.screen
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -18,11 +19,12 @@ import com.appvoyager.cloudphotos.ui.theme.CloudPhotosTheme
 
 @Composable
 fun HomeScreen(
-    onSignOut: () -> Unit = {}
+    onSignOut: () -> Unit
 ) {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
             .padding(24.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
@@ -52,6 +54,6 @@ fun HomeScreen(
 @Composable
 private fun HomeScreenPreview() {
     CloudPhotosTheme {
-        HomeScreen()
+        HomeScreen({})
     }
 }
