@@ -119,7 +119,13 @@ fun NavGraph(
             popEnterTransition = { enterBack() },
             popExitTransition = { exitBack() }
         ) {
-            HomeScreen({})
+            HomeScreen(
+                onSignOut = {
+                    navController.navigate(AuthRoute.LOGIN) {
+                        popUpTo(AuthRoute.HOME) { inclusive = true }
+                    }
+                }
+            )
         }
     }
 }

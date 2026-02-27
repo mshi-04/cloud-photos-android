@@ -10,7 +10,6 @@ import com.appvoyager.cloudphotos.domain.auth.request.ResendSignUpCodeRequest
 import com.appvoyager.cloudphotos.domain.auth.request.ResetPasswordRequest
 import com.appvoyager.cloudphotos.domain.auth.request.SignInRequest
 import com.appvoyager.cloudphotos.domain.auth.request.SignUpRequest
-import com.appvoyager.cloudphotos.domain.auth.valueobject.Email
 
 interface AuthDataSource {
 

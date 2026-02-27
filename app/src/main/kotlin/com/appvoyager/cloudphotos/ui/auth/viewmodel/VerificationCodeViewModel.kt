@@ -31,8 +31,7 @@ class VerificationCodeViewModel @Inject constructor(
     private val resendSignUpCodeUseCase: ResendSignUpCodeUseCase
 ) : ViewModel() {
 
-    val email: String = savedStateHandle.get<String>(ARG_EMAIL)
-        ?: error("Missing required nav argument: $ARG_EMAIL")
+    val email: String = savedStateHandle.get<String>(ARG_EMAIL).orEmpty()
 
     var codes by mutableStateOf(List(6) { "" })
         private set
@@ -58,7 +57,7 @@ class VerificationCodeViewModel @Inject constructor(
     private var isTimerStarted = false
 
     init {
-        if (email.isEmpty()) {
+        if (email.isBlank()) {
             viewModelScope.launch {
                 _effect.emit(VerificationEffect.ShowSnackbar("エラーが発生しました"))
             }

@@ -5,6 +5,7 @@ import com.appvoyager.cloudphotos.domain.auth.model.AuthResult
 import com.appvoyager.cloudphotos.domain.auth.model.SignInState
 import com.appvoyager.cloudphotos.domain.auth.usecase.SignInUseCase
 import com.appvoyager.cloudphotos.domain.auth.usecase.SignUpUseCase
+import com.appvoyager.cloudphotos.domain.auth.valueobject.Email
 import com.appvoyager.cloudphotos.ui.auth.effect.LoginEffect
 import io.mockk.coEvery
 import io.mockk.mockk
@@ -182,7 +183,7 @@ class LoginViewModelTest {
         // Assert
         Assertions.assertTrue(effect is LoginEffect.NavigateToVerification)
         Assertions.assertEquals(
-            "test@example.com",
+            Email.of("test@example.com"),
             (effect as LoginEffect.NavigateToVerification).email
         )
         job.cancel()

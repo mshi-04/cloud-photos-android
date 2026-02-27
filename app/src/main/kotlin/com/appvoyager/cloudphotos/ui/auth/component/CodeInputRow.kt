@@ -12,13 +12,16 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.dp
 
+private const val CODE_LENGTH = 6
+
 @Composable
 fun CodeInputRow(
     codes: List<String>,
     isError: Boolean,
     onCodeChanged: (Int, String) -> Unit
 ) {
-    val focusRequesters = remember { List(6) { FocusRequester() } }
+    require(codes.size == CODE_LENGTH) { "codes must have exactly $CODE_LENGTH elements" }
+    val focusRequesters = remember { List(CODE_LENGTH) { FocusRequester() } }
     val keyboardController = LocalSoftwareKeyboardController.current
 
     LaunchedEffect(Unit) {
