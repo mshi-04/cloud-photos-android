@@ -101,7 +101,8 @@ private fun VerificationContent(
     onVerify: () -> Unit,
     onResend: () -> Unit
 ) {
-    val maskedEmail = StringUtils.maskEmail(Email.of(email))
+    val maskedEmail = runCatching { StringUtils.maskEmail(Email.of(email)) }
+        .getOrElse { "" }
 
     Column(
         modifier = Modifier

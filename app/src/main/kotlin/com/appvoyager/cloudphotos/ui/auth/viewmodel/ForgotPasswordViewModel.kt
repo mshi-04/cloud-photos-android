@@ -11,6 +11,7 @@ import com.appvoyager.cloudphotos.domain.auth.request.ResetPasswordRequest
 import com.appvoyager.cloudphotos.domain.auth.usecase.ResetPasswordUseCase
 import com.appvoyager.cloudphotos.domain.auth.valueobject.Email
 import com.appvoyager.cloudphotos.ui.auth.effect.ForgotPasswordEffect
+import com.appvoyager.cloudphotos.ui.util.ValidationUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -36,7 +37,7 @@ class ForgotPasswordViewModel @Inject constructor(
     val effect: SharedFlow<ForgotPasswordEffect> = _effect.asSharedFlow()
 
     val isFormValid: Boolean
-        get() = email.isNotBlank() && isValidEmailFormat(email)
+        get() = email.isNotBlank() && ValidationUtils.isValidEmailFormat(email)
 
     fun onEmailChanged(value: String) {
         email = value
@@ -90,6 +91,4 @@ class ForgotPasswordViewModel @Inject constructor(
         }
     }
 
-    private fun isValidEmailFormat(email: String): Boolean =
-        Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$").matches(email.trim())
 }

@@ -125,7 +125,10 @@ private fun ResetPasswordCodeContent(
     onConfirm: () -> Unit,
     onResend: () -> Unit
 ) {
-    val maskedEmail = StringUtils.maskEmail(Email.of(email))
+    val maskedEmail = remember(email) {
+        runCatching { StringUtils.maskEmail(Email.of(email)) }
+            .getOrDefault(email)
+    }
     val focusManager = LocalFocusManager.current
 
     Column(
