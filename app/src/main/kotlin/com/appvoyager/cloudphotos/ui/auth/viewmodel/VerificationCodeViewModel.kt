@@ -51,7 +51,7 @@ class VerificationCodeViewModel @Inject constructor(
     val isCodeComplete: Boolean
         get() = codes.all { it.length == 1 && it[0].isDigit() }
 
-    private val _effect = MutableSharedFlow<VerificationEffect>()
+    private val _effect = MutableSharedFlow<VerificationEffect>(extraBufferCapacity = 1)
     val effect: SharedFlow<VerificationEffect> = _effect.asSharedFlow()
 
     private var isTimerStarted = false
@@ -99,10 +99,10 @@ class VerificationCodeViewModel @Inject constructor(
 
     fun onVerify() {
         if (!isCodeComplete || isLoading) return
+        isLoading = true
         val fullCode = codes.joinToString("")
 
         viewModelScope.launch {
-            isLoading = true
             try {
                 val email = Email.of(email)
                 val code = ConfirmationCode.of(fullCode)
@@ -119,10 +119,10 @@ class VerificationCodeViewModel @Inject constructor(
     }
 
     fun onResend() {
-        if (!isResendEnabled) return
+        if (!isResendEnabled || isLoading) return
+        isLoading = true
 
         viewModelScope.launch {
-            isLoading = true
             try {
                 val email = Email.of(email)
                 when (val result = resendSignUpCodeUseCase(ResendSignUpCodeRequest(email))) {

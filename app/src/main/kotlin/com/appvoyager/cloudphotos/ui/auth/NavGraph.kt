@@ -11,6 +11,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.appvoyager.cloudphotos.domain.auth.valueobject.Email
 import com.appvoyager.cloudphotos.ui.auth.screen.ForgotPasswordScreen
 import com.appvoyager.cloudphotos.ui.auth.screen.LoginScreen
 import com.appvoyager.cloudphotos.ui.auth.screen.ResetPasswordCodeScreen
@@ -26,14 +27,15 @@ object AuthRoute {
     const val RESET_PASSWORD_CODE = "reset_password_code/{email}"
     const val HOME = "home"
 
-    fun verification(email: String): String = "verification/${Uri.encode(email)}"
-    fun resetPasswordCode(email: String): String = "reset_password_code/${Uri.encode(email)}"
+    fun verification(email: Email): String = "verification/${Uri.encode(email.value)}"
+    fun resetPasswordCode(email: Email): String = "reset_password_code/${Uri.encode(email.value)}"
 }
 
 @Composable
 fun NavGraph(
     navController: NavHostController = rememberNavController(),
-    startDestination: String
+    startDestination: String,
+    onSignOut: () -> Unit = {}
 ) {
     NavHost(
         navController = navController,
@@ -48,7 +50,7 @@ fun NavGraph(
         ) {
             LoginScreen(
                 onNavigateToVerification = { email ->
-                    navController.navigate(AuthRoute.verification(email))
+                    navController.navigate(AuthRoute.verification(Email.of(email)))
                 },
                 onNavigateToHome = {
                     navController.navigate(AuthRoute.HOME) {
@@ -87,7 +89,7 @@ fun NavGraph(
         ) {
             ForgotPasswordScreen(
                 onNavigateToResetCode = { email ->
-                    navController.navigate(AuthRoute.resetPasswordCode(email))
+                    navController.navigate(AuthRoute.resetPasswordCode(Email.of(email)))
                 },
                 onNavigateBack = {
                     navController.popBackStack()
@@ -114,13 +116,24 @@ fun NavGraph(
 
         composable(
             route = AuthRoute.HOME,
-            enterTransition = { enterForward() },
+            enterTransition = {
+                val fromRoute = initialState.destination.route
+                if (fromRoute == AuthRoute.LOGIN) {
+                    EnterTransition.None
+                } else {
+                    slideIntoContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.Left,
+                        animationSpec = tween(TRANSITION_DURATION_MS)
+                    )
+                }
+            },
             exitTransition = null,
             popEnterTransition = { enterBack() },
             popExitTransition = { exitBack() }
         ) {
             HomeScreen(
                 onSignOut = {
+                    onSignOut()
                     navController.navigate(AuthRoute.LOGIN) {
                         popUpTo(AuthRoute.HOME) { inclusive = true }
                     }
@@ -130,11 +143,8 @@ fun NavGraph(
     }
 }
 
-private fun AnimatedContentTransitionScope<*>.isInitial(): Boolean = initialState == null
-
 private fun AnimatedContentTransitionScope<*>.enterForward() =
-    if (isInitial()) EnterTransition.None
-    else slideIntoContainer(
+    slideIntoContainer(
         towards = AnimatedContentTransitionScope.SlideDirection.Left,
         animationSpec = tween(TRANSITION_DURATION_MS)
     )

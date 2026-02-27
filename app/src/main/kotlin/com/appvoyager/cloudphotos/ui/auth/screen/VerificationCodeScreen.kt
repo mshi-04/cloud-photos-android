@@ -31,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.appvoyager.cloudphotos.domain.auth.valueobject.Email
 import com.appvoyager.cloudphotos.ui.auth.component.CodeInputRow
 import com.appvoyager.cloudphotos.ui.auth.component.LoadingOverlay
 import com.appvoyager.cloudphotos.ui.auth.effect.VerificationEffect
@@ -100,7 +101,7 @@ private fun VerificationContent(
     onVerify: () -> Unit,
     onResend: () -> Unit
 ) {
-    val maskedEmail = StringUtils.maskEmail(email)
+    val maskedEmail = StringUtils.maskEmail(Email.of(email))
 
     Column(
         modifier = Modifier

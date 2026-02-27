@@ -124,6 +124,10 @@ class LoginViewModelTest {
 
             // Assert
             Assertions.assertTrue(effect is LoginEffect.NavigateToVerification)
+            Assertions.assertEquals(
+                Email.of("test@example.com"),
+                (effect as LoginEffect.NavigateToVerification).email
+            )
             job.cancel()
         }
 

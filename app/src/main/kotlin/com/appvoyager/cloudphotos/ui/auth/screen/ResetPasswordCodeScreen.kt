@@ -42,6 +42,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.appvoyager.cloudphotos.domain.auth.valueobject.Email
 import com.appvoyager.cloudphotos.ui.auth.component.CodeInputRow
 import com.appvoyager.cloudphotos.ui.auth.component.LoadingOverlay
 import com.appvoyager.cloudphotos.ui.auth.effect.ResetPasswordCodeEffect
@@ -124,7 +125,7 @@ private fun ResetPasswordCodeContent(
     onConfirm: () -> Unit,
     onResend: () -> Unit
 ) {
-    val maskedEmail = StringUtils.maskEmail(email)
+    val maskedEmail = StringUtils.maskEmail(Email.of(email))
     val focusManager = LocalFocusManager.current
 
     Column(

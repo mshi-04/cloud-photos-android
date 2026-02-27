@@ -53,8 +53,14 @@ class ForgotPasswordViewModel @Inject constructor(
 
         viewModelScope.launch {
             isLoading = true
+            val email = try {
+                Email.of(email)
+            } catch (_: IllegalArgumentException) {
+                emailError = "有効なメールアドレスを入力してください"
+                isLoading = false
+                return@launch
+            }
             try {
-                val email = Email.of(email)
                 when (val result = resetPasswordUseCase(ResetPasswordRequest(email))) {
                     is AuthResult.Success -> {
                         _effect.emit(ForgotPasswordEffect.NavigateToResetCode(email))
@@ -62,8 +68,6 @@ class ForgotPasswordViewModel @Inject constructor(
 
                     is AuthResult.Error -> handleError(result.error)
                 }
-            } catch (_: IllegalArgumentException) {
-                emailError = "有効なメールアドレスを入力してください"
             } finally {
                 isLoading = false
             }
