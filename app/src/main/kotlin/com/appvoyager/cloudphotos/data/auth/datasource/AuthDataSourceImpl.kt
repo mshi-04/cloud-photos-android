@@ -13,7 +13,10 @@ import com.appvoyager.cloudphotos.domain.auth.model.AuthSession
 import com.appvoyager.cloudphotos.domain.auth.model.AuthState
 import com.appvoyager.cloudphotos.domain.auth.model.AuthUser
 import com.appvoyager.cloudphotos.domain.auth.model.SignInState
+import com.appvoyager.cloudphotos.domain.auth.request.ConfirmResetPasswordRequest
 import com.appvoyager.cloudphotos.domain.auth.request.ConfirmSignUpRequest
+import com.appvoyager.cloudphotos.domain.auth.request.ResendSignUpCodeRequest
+import com.appvoyager.cloudphotos.domain.auth.request.ResetPasswordRequest
 import com.appvoyager.cloudphotos.domain.auth.request.SignInRequest
 import com.appvoyager.cloudphotos.domain.auth.request.SignUpRequest
 import com.appvoyager.cloudphotos.domain.auth.valueobject.Email
@@ -175,6 +178,50 @@ class AuthDataSourceImpl @Inject constructor() : AuthDataSource {
             )
         }.fold(
             onSuccess = { AuthResult.Success(it) },
+            onFailure = { AuthResult.Error(AuthErrorMapper.map(it)) }
+        )
+
+    override suspend fun resendSignUpCode(request: ResendSignUpCodeRequest): AuthResult<Unit> =
+        runCatching {
+            suspendCancellableCoroutine { coroutine ->
+                Amplify.Auth.resendSignUpCode(
+                    request.email.value,
+                    { coroutine.resume(Unit) { _, _, _ -> } },
+                    { coroutine.resumeWithException(it) }
+                )
+            }
+        }.fold(
+            onSuccess = { AuthResult.Success(Unit) },
+            onFailure = { AuthResult.Error(AuthErrorMapper.map(it)) }
+        )
+
+    override suspend fun resetPassword(request: ResetPasswordRequest): AuthResult<Unit> =
+        runCatching {
+            suspendCancellableCoroutine { coroutine ->
+                Amplify.Auth.resetPassword(
+                    request.email.value,
+                    { coroutine.resume(Unit) { _, _, _ -> } },
+                    { coroutine.resumeWithException(it) }
+                )
+            }
+        }.fold(
+            onSuccess = { AuthResult.Success(Unit) },
+            onFailure = { AuthResult.Error(AuthErrorMapper.map(it)) }
+        )
+
+    override suspend fun confirmResetPassword(request: ConfirmResetPasswordRequest): AuthResult<Unit> =
+        runCatching {
+            suspendCancellableCoroutine { coroutine ->
+                Amplify.Auth.confirmResetPassword(
+                    request.email.value,
+                    request.newPassword.value,
+                    request.code.value,
+                    { coroutine.resume(Unit) { _, _, _ -> } },
+                    { error -> coroutine.resumeWithException(error) }
+                )
+            }
+        }.fold(
+            onSuccess = { AuthResult.Success(Unit) },
             onFailure = { AuthResult.Error(AuthErrorMapper.map(it)) }
         )
 
