@@ -1,0 +1,15 @@
+{
+  "auth": {
+    "plugins": {
+      "awsCognitoAuthPlugin": {
+        "CognitoUserPool": {
+          "Default": {
+            "PoolId": "PROD_POOL_ID_HERE",
+            "AppClientId": "PROD_APP_CLIENT_ID_HERE",
+            "Region": "ap-northeast-1"
+          }
+        }
+      }
+    }
+  }
+}
