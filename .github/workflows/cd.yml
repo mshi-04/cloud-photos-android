@@ -1,0 +1,94 @@
+name: CD
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: cd-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    environment: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') && 'production' || 'development' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set Environment Variables
+        run: |
+          TARGET_BRANCH="${{ github.ref_name }}"
+          if [ "$TARGET_BRANCH" == "main" ]; then
+            echo "FLAVOR=prod" >> $GITHUB_ENV
+            echo "LANE=build_prod" >> $GITHUB_ENV
+            echo "AWS_ROLE_ARN=${{ secrets.AWS_ROLE_ARN_PROD }}" >> $GITHUB_ENV
+            echo "SAM_STACK_NAME=cloudphotos-prod-stack" >> $GITHUB_ENV
+          else
+            echo "FLAVOR=dev" >> $GITHUB_ENV
+            echo "LANE=build_dev" >> $GITHUB_ENV
+            echo "AWS_ROLE_ARN=${{ secrets.AWS_ROLE_ARN_DEV }}" >> $GITHUB_ENV
+            echo "SAM_STACK_NAME=cloudphotos-dev-stack" >> $GITHUB_ENV
+          fi
+
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '4.0.1'
+          bundler-cache: true
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Execute Fastlane
+        run: bundle exec fastlane ${{ env.LANE }}
+
+      - name: Upload Artifacts (DEV)
+        if: env.FLAVOR == 'dev'
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-${{ env.FLAVOR }}-release
+          path: |
+            app/build/outputs/apk/**/*.apk
+
+      - name: Upload Artifacts (PROD)
+        if: env.FLAVOR == 'prod'
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-${{ env.FLAVOR }}-release
+          path: |
+            app/build/outputs/apk/**/*.apk
+            app/build/outputs/bundle/**/*.aab
+
+#      - name: Configure AWS Credentials
+#        uses: aws-actions/configure-aws-credentials@v4
+#        with:
+#          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+#          aws-region: ap-northeast-1
+
+#      - name: Setup SAM CLI
+#        uses: aws-actions/setup-sam@v2
+
+#      - name: SAM Build & Deploy
+#        run: |
+#          sam build
+#          sam deploy \
+#            --stack-name ${{ env.SAM_STACK_NAME }} \
+#            --resolve-s3 \
+#            --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
+#            --parameter-overrides Environment=${{ env.FLAVOR }}
