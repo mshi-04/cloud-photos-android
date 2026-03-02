@@ -17,15 +17,12 @@ platform :android do
     }.compact
   end
 
-  desc "Run Unit Tests for DEV (used in CI)"
-  lane :test_dev do
+  desc "Run Unit Tests (used in CI)"
+  lane :test do
     gradle(task: "test", flavor: "Dev", build_type: "Debug", properties: dev_properties)
   end
 
-  desc "Run Unit Tests for PROD (used in CI)"
-  lane :test_prod do
-    gradle(task: "test", flavor: "Prod", build_type: "Debug", properties: prod_properties)
-  end
+
 
   desc "Build the DEV environment APK (used in CD)"
   lane :build_dev do

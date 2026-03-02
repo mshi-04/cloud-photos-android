@@ -28,9 +28,9 @@ android {
             dimension = "environment"
             applicationIdSuffix = ".dev"
 
-            val devCognitoClientId = requireNonBlankProperty("DEV_COGNITO_CLIENT_ID", "development")
-            val devApiBaseUrl = requireNonBlankProperty("DEV_API_BASE_URL", "development")
-            val devS3BucketName = requireNonBlankProperty("DEV_S3_BUCKET_NAME", "development")
+            val devCognitoClientId = requireNonBlankProperty("DEV_COGNITO_CLIENT_ID", "dev")
+            val devApiBaseUrl = requireNonBlankProperty("DEV_API_BASE_URL", "dev")
+            val devS3BucketName = requireNonBlankProperty("DEV_S3_BUCKET_NAME", "dev")
 
             buildConfigField("String", "COGNITO_CLIENT_ID", "\"$devCognitoClientId\"")
             buildConfigField("String", "API_BASE_URL", "\"$devApiBaseUrl\"")
@@ -39,9 +39,9 @@ android {
         create("prod") {
             dimension = "environment"
 
-            val prodCognitoClientId = requireNonBlankProperty("PROD_COGNITO_CLIENT_ID", "production")
-            val prodApiBaseUrl = requireNonBlankProperty("PROD_API_BASE_URL", "production")
-            val prodS3BucketName = requireNonBlankProperty("PROD_S3_BUCKET_NAME", "production")
+            val prodCognitoClientId = requireNonBlankProperty("PROD_COGNITO_CLIENT_ID", "prod")
+            val prodApiBaseUrl = requireNonBlankProperty("PROD_API_BASE_URL", "prod")
+            val prodS3BucketName = requireNonBlankProperty("PROD_S3_BUCKET_NAME", "prod")
 
             buildConfigField("String", "COGNITO_CLIENT_ID", "\"$prodCognitoClientId\"")
             buildConfigField("String", "API_BASE_URL", "\"$prodApiBaseUrl\"")
@@ -121,15 +121,15 @@ dependencies {
 
 }
 
-private fun requireNonBlankProperty(name: String, target: String): String {
+private fun requireNonBlankProperty(name: String, targetFlavor: String): String {
     val value = findProperty(name)?.toString()?.takeIf { it.isNotBlank() }
     if (value != null) return value
 
     val isTargetBuild = gradle.startParameter.taskNames.any {
-        it.contains(target, ignoreCase = true)
+        it.contains(targetFlavor, ignoreCase = true)
     }
     if (isTargetBuild) {
-        throw GradleException("$name must be set for $target builds")
+        throw GradleException("$name must be set for $targetFlavor builds")
     }
 
     return "UNCONFIGURED"

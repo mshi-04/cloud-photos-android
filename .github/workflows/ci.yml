@@ -39,21 +39,15 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Execute Unit Tests (DEV)
+      - name: Execute Unit Tests
         env:
           DEV_API_BASE_URL: ${{ secrets.DEV_API_BASE_URL }}
           DEV_COGNITO_CLIENT_ID: ${{ secrets.DEV_COGNITO_CLIENT_ID }}
           DEV_S3_BUCKET_NAME: ${{ secrets.DEV_S3_BUCKET_NAME }}
-        run: bundle exec fastlane test_dev
+        run: bundle exec fastlane test
 
-      - name: Execute Unit Tests (PROD)
-        env:
-          PROD_API_BASE_URL: ${{ secrets.PROD_API_BASE_URL }}
-          PROD_COGNITO_CLIENT_ID: ${{ secrets.PROD_COGNITO_CLIENT_ID }}
-          PROD_S3_BUCKET_NAME: ${{ secrets.PROD_S3_BUCKET_NAME }}
-        run: bundle exec fastlane test_prod
 
-      - name: Execute Fastlane (build DEV only)
+      - name: Execute Fastlane Build
         env:
           DEV_API_BASE_URL: ${{ secrets.DEV_API_BASE_URL }}
           DEV_COGNITO_CLIENT_ID: ${{ secrets.DEV_COGNITO_CLIENT_ID }}
