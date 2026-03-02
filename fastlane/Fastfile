@@ -1,20 +1,20 @@
 default_platform(:android)
 
 platform :android do
-  def dev_properties
+  def env_properties(prefix)
     {
-      "DEV_API_BASE_URL" => ENV["DEV_API_BASE_URL"],
-      "DEV_COGNITO_CLIENT_ID" => ENV["DEV_COGNITO_CLIENT_ID"],
-      "DEV_S3_BUCKET_NAME" => ENV["DEV_S3_BUCKET_NAME"]
+      "#{prefix}_API_BASE_URL" => ENV["#{prefix}_API_BASE_URL"],
+      "#{prefix}_COGNITO_CLIENT_ID" => ENV["#{prefix}_COGNITO_CLIENT_ID"],
+      "#{prefix}_S3_BUCKET_NAME" => ENV["#{prefix}_S3_BUCKET_NAME"]
     }.compact
   end
 
+  def dev_properties
+    env_properties("DEV")
+  end
+
   def prod_properties
-    {
-      "PROD_API_BASE_URL" => ENV["PROD_API_BASE_URL"],
-      "PROD_COGNITO_CLIENT_ID" => ENV["PROD_COGNITO_CLIENT_ID"],
-      "PROD_S3_BUCKET_NAME" => ENV["PROD_S3_BUCKET_NAME"]
-    }.compact
+    env_properties("PROD")
   end
 
   desc "Run Unit Tests (used in CI)"
