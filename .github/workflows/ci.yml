@@ -18,6 +18,10 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      DEV_API_BASE_URL: ${{ secrets.DEV_API_BASE_URL }}
+      DEV_COGNITO_CLIENT_ID: ${{ secrets.DEV_COGNITO_CLIENT_ID }}
+      DEV_S3_BUCKET_NAME: ${{ secrets.DEV_S3_BUCKET_NAME }}
 
     steps:
       - name: Checkout code
@@ -44,16 +48,8 @@ jobs:
         run: chmod +x gradlew
 
       - name: Execute Unit Tests
-        env:
-          DEV_API_BASE_URL: ${{ secrets.DEV_API_BASE_URL }}
-          DEV_COGNITO_CLIENT_ID: ${{ secrets.DEV_COGNITO_CLIENT_ID }}
-          DEV_S3_BUCKET_NAME: ${{ secrets.DEV_S3_BUCKET_NAME }}
         run: bundle exec fastlane test
 
 
       - name: Execute Fastlane Build
-        env:
-          DEV_API_BASE_URL: ${{ secrets.DEV_API_BASE_URL }}
-          DEV_COGNITO_CLIENT_ID: ${{ secrets.DEV_COGNITO_CLIENT_ID }}
-          DEV_S3_BUCKET_NAME: ${{ secrets.DEV_S3_BUCKET_NAME }}
         run: bundle exec fastlane build_dev

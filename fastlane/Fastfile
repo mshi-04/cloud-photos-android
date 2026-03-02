@@ -3,10 +3,10 @@ default_platform(:android)
 platform :android do
   def env_properties(prefix)
     {
-      "#{prefix}_API_BASE_URL" => ENV["#{prefix}_API_BASE_URL"],
-      "#{prefix}_COGNITO_CLIENT_ID" => ENV["#{prefix}_COGNITO_CLIENT_ID"],
-      "#{prefix}_S3_BUCKET_NAME" => ENV["#{prefix}_S3_BUCKET_NAME"]
-    }.compact
+      "#{prefix}_API_BASE_URL" => ENV.fetch("#{prefix}_API_BASE_URL"),
+      "#{prefix}_COGNITO_CLIENT_ID" => ENV.fetch("#{prefix}_COGNITO_CLIENT_ID"),
+      "#{prefix}_S3_BUCKET_NAME" => ENV.fetch("#{prefix}_S3_BUCKET_NAME")
+    }
   end
 
   def dev_properties
