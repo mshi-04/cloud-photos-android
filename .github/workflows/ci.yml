@@ -18,6 +18,10 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      DEV_API_BASE_URL: ${{ secrets.DEV_API_BASE_URL }}
+      DEV_COGNITO_CLIENT_ID: ${{ secrets.DEV_COGNITO_CLIENT_ID }}
+      DEV_S3_BUCKET_NAME: ${{ secrets.DEV_S3_BUCKET_NAME }}
 
     steps:
       - name: Checkout code
@@ -28,7 +32,11 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
-          cache: 'gradle'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref_name != 'main' }}
 
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
@@ -39,8 +47,9 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Execute Unit Tests (DEV & PROD)
-        run: bundle exec fastlane test_all
+      - name: Execute Unit Tests
+        run: bundle exec fastlane test
 
-      - name: Execute Fastlane (build only)
+
+      - name: Execute Fastlane Build
         run: bundle exec fastlane build_dev

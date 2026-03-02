@@ -28,29 +28,23 @@ android {
             dimension = "environment"
             applicationIdSuffix = ".dev"
 
-            val devApiBaseUrl = project.findProperty("DEV_API_BASE_URL")?.toString()
-                ?: "https://api-dev.example.com/"
-            val devCognitoClientId = project.findProperty("DEV_COGNITO_CLIENT_ID")?.toString()
-                ?: "dev_cognito_client_id_placeholder"
-            val devS3BucketName = project.findProperty("DEV_S3_BUCKET_NAME")?.toString()
-                ?: "cloudphotos-dev-bucket-placeholder"
+            val devCognitoClientId = requireNonBlankProperty("DEV_COGNITO_CLIENT_ID", "dev")
+            val devApiBaseUrl = requireNonBlankProperty("DEV_API_BASE_URL", "dev")
+            val devS3BucketName = requireNonBlankProperty("DEV_S3_BUCKET_NAME", "dev")
 
-            buildConfigField("String", "API_BASE_URL", "\"$devApiBaseUrl\"")
             buildConfigField("String", "COGNITO_CLIENT_ID", "\"$devCognitoClientId\"")
+            buildConfigField("String", "API_BASE_URL", "\"$devApiBaseUrl\"")
             buildConfigField("String", "S3_BUCKET_NAME", "\"$devS3BucketName\"")
         }
         create("prod") {
             dimension = "environment"
 
-            val prodApiBaseUrl = project.findProperty("PROD_API_BASE_URL")?.toString()
-                ?: "https://api.example.com/"
-            val prodCognitoClientId = project.findProperty("PROD_COGNITO_CLIENT_ID")?.toString()
-                ?: "prod_cognito_client_id_placeholder"
-            val prodS3BucketName = project.findProperty("PROD_S3_BUCKET_NAME")?.toString()
-                ?: "cloudphotos-prod-bucket-placeholder"
+            val prodCognitoClientId = requireNonBlankProperty("PROD_COGNITO_CLIENT_ID", "prod")
+            val prodApiBaseUrl = requireNonBlankProperty("PROD_API_BASE_URL", "prod")
+            val prodS3BucketName = requireNonBlankProperty("PROD_S3_BUCKET_NAME", "prod")
 
-            buildConfigField("String", "API_BASE_URL", "\"$prodApiBaseUrl\"")
             buildConfigField("String", "COGNITO_CLIENT_ID", "\"$prodCognitoClientId\"")
+            buildConfigField("String", "API_BASE_URL", "\"$prodApiBaseUrl\"")
             buildConfigField("String", "S3_BUCKET_NAME", "\"$prodS3BucketName\"")
         }
     }
@@ -125,4 +119,18 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 
+}
+
+private fun requireNonBlankProperty(name: String, targetFlavor: String): String {
+    val value = findProperty(name)?.toString()?.takeIf { it.isNotBlank() }
+    if (value != null) return value
+
+    val isTargetBuild = gradle.startParameter.taskNames.any {
+        it.contains(targetFlavor, ignoreCase = true)
+    }
+    if (isTargetBuild) {
+        throw GradleException("$name must be set for $targetFlavor builds")
+    }
+
+    return "UNCONFIGURED"
 }
