@@ -54,6 +54,3 @@ jobs:
 
       - name: Execute Unit Tests
         run: bundle exec fastlane test
-
-      - name: Execute Fastlane Build
-        run: bundle exec fastlane build_dev

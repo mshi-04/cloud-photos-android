@@ -22,8 +22,6 @@ platform :android do
     gradle(task: "testDevDebugUnitTest", properties: dev_properties, print_command: false)
   end
 
-
-
   desc "Build the DEV environment APK (used in CD)"
   lane :build_dev do
     gradle(task: "assemble", flavor: "Dev", build_type: "Release", properties: dev_properties, print_command: false)
