@@ -6,7 +6,6 @@ on:
   push:
     branches:
       - main
-      - develop
 
 permissions:
   contents: read
@@ -18,10 +17,6 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      DEV_API_BASE_URL: ${{ secrets.DEV_API_BASE_URL }}
-      DEV_COGNITO_CLIENT_ID: ${{ secrets.DEV_COGNITO_CLIENT_ID }}
-      DEV_S3_BUCKET_NAME: ${{ secrets.DEV_S3_BUCKET_NAME }}
 
     steps:
       - name: Checkout code
@@ -47,9 +42,18 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      - name: Set dummy secrets for Fork PRs
+        run: |
+          echo "DEV_API_BASE_URL=${DEV_API_BASE_URL:-http://localhost:8080/dummy}" >> $GITHUB_ENV
+          echo "DEV_COGNITO_CLIENT_ID=${DEV_COGNITO_CLIENT_ID:-dummy_client_id}" >> $GITHUB_ENV
+          echo "DEV_S3_BUCKET_NAME=${DEV_S3_BUCKET_NAME:-dummy_bucket_name}" >> $GITHUB_ENV
+        env:
+          DEV_API_BASE_URL: ${{ secrets.DEV_API_BASE_URL }}
+          DEV_COGNITO_CLIENT_ID: ${{ secrets.DEV_COGNITO_CLIENT_ID }}
+          DEV_S3_BUCKET_NAME: ${{ secrets.DEV_S3_BUCKET_NAME }}
+
       - name: Execute Unit Tests
         run: bundle exec fastlane test
-
 
       - name: Execute Fastlane Build
         run: bundle exec fastlane build_dev

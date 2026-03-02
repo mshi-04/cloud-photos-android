@@ -19,7 +19,7 @@ platform :android do
 
   desc "Run Unit Tests (used in CI)"
   lane :test do
-    gradle(task: "test", flavor: "Dev", build_type: "Debug", properties: dev_properties, print_command: false)
+    gradle(task: "testDevDebugUnitTest", properties: dev_properties, print_command: false)
   end
 
 
