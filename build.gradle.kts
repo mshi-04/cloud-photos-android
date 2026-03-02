@@ -22,7 +22,7 @@ allprojects {
         "PROD_S3_BUCKET_NAME"
     ).forEach { key ->
         val value = localProperties.getProperty(key)
-        if (value != null && !extra.has(key)) {
+        if (value != null && findProperty(key) == null) {
             extra[key] = value
         }
     }

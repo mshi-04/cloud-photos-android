@@ -24,28 +24,19 @@ android {
 
     flavorDimensions += "environment"
     productFlavors {
-        create("dev") {
-            dimension = "environment"
-            applicationIdSuffix = ".dev"
+        BuildFlavor.entries.forEach { flavor ->
+            create(flavor.flavorName) {
+                dimension = "environment"
+                flavor.appIdSuffix?.let { applicationIdSuffix = it }
 
-            val devCognitoClientId = requireNonBlankProperty("DEV_COGNITO_CLIENT_ID", "dev")
-            val devApiBaseUrl = requireNonBlankProperty("DEV_API_BASE_URL", "dev")
-            val devS3BucketName = requireNonBlankProperty("DEV_S3_BUCKET_NAME", "dev")
+                val cognitoClientId = requireEnvProperty(flavor, "COGNITO_CLIENT_ID")
+                val apiBaseUrl = requireEnvProperty(flavor, "API_BASE_URL")
+                val s3BucketName = requireEnvProperty(flavor, "S3_BUCKET_NAME")
 
-            buildConfigField("String", "COGNITO_CLIENT_ID", "\"$devCognitoClientId\"")
-            buildConfigField("String", "API_BASE_URL", "\"$devApiBaseUrl\"")
-            buildConfigField("String", "S3_BUCKET_NAME", "\"$devS3BucketName\"")
-        }
-        create("prod") {
-            dimension = "environment"
-
-            val prodCognitoClientId = requireNonBlankProperty("PROD_COGNITO_CLIENT_ID", "prod")
-            val prodApiBaseUrl = requireNonBlankProperty("PROD_API_BASE_URL", "prod")
-            val prodS3BucketName = requireNonBlankProperty("PROD_S3_BUCKET_NAME", "prod")
-
-            buildConfigField("String", "COGNITO_CLIENT_ID", "\"$prodCognitoClientId\"")
-            buildConfigField("String", "API_BASE_URL", "\"$prodApiBaseUrl\"")
-            buildConfigField("String", "S3_BUCKET_NAME", "\"$prodS3BucketName\"")
+                buildConfigField("String", "COGNITO_CLIENT_ID", "\"$cognitoClientId\"")
+                buildConfigField("String", "API_BASE_URL", "\"$apiBaseUrl\"")
+                buildConfigField("String", "S3_BUCKET_NAME", "\"$s3BucketName\"")
+            }
         }
     }
 
@@ -121,16 +112,18 @@ dependencies {
 
 }
 
-private fun requireNonBlankProperty(name: String, targetFlavor: String): String {
-    val value = findProperty(name)?.toString()?.takeIf { it.isNotBlank() }
-    if (value != null) return value
+enum class BuildFlavor(
+    val flavorName: String,
+    val propertyPrefix: String,
+    val appIdSuffix: String? = null
+) {
+    DEV("dev", "DEV", ".dev"),
+    PROD("prod", "PROD", null)
+}
 
-    val isTargetBuild = gradle.startParameter.taskNames.any {
-        it.contains(targetFlavor, ignoreCase = true)
-    }
-    if (isTargetBuild) {
-        throw GradleException("$name must be set for $targetFlavor builds")
-    }
-
-    return "UNCONFIGURED"
+private fun requireEnvProperty(flavor: BuildFlavor, baseName: String): String {
+    val propertyName = "${flavor.propertyPrefix}_$baseName"
+    val value = findProperty(propertyName)?.toString()?.takeIf { it.isNotBlank() }
+    
+    return value ?: throw GradleException("$propertyName must be set for ${flavor.flavorName} builds")
 }

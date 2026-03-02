@@ -3,8 +3,8 @@ name: CD
 on:
   push:
     branches:
-      - develop
       - main
+      - develop
 
 permissions:
   id-token: write
@@ -55,6 +55,8 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref_name != 'main' }}
 
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
@@ -81,22 +83,13 @@ jobs:
           PROD_S3_BUCKET_NAME: ${{ secrets.PROD_S3_BUCKET_NAME }}
         run: bundle exec fastlane ${{ env.LANE }}
 
-      - name: Upload Artifacts (DEV)
-        if: env.FLAVOR == env.FLAVOR_DEV
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: app-${{ env.FLAVOR }}-release
           path: |
             app/build/outputs/apk/**/*.apk
-
-      - name: Upload Artifacts (PROD)
-        if: env.FLAVOR == env.FLAVOR_PROD
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-${{ env.FLAVOR }}-release
-          path: |
-            app/build/outputs/apk/**/*.apk
-            app/build/outputs/bundle/**/*.aab
+            ${{ env.FLAVOR == env.FLAVOR_PROD && 'app/build/outputs/bundle/**/*.aab' || '' }}
 
 #      - name: Configure AWS Credentials
 #        uses: aws-actions/configure-aws-credentials@v4
