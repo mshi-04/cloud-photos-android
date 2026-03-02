@@ -127,8 +127,9 @@ private fun requireEnvProperty(flavor: BuildFlavor, baseName: String): String {
     
     if (value != null) return value
 
-    val isCodeQl = System.getenv().keys.any { it.startsWith("CodeQL", ignoreCase = true) }
-    if (isCodeQl) return ""
+    val isCodeQlAnalysis = System.getenv("CODEQL_ACTION_VERSION") != null
+            || System.getenv("CODEQL_DIST") != null
+    if (isCodeQlAnalysis) return ""
 
     if (!isFlavorValidationRequired(flavor)) return ""
     throw GradleException("$propertyName must be set for ${flavor.flavorName} builds")
