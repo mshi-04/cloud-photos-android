@@ -43,11 +43,11 @@ android {
             dimension = "environment"
 
             val prodApiBaseUrl = project.findProperty("PROD_API_BASE_URL")?.toString()
-                ?: "https://api.example.com/"
+                ?: throw GradleException("PROD_API_BASE_URL must be set for production builds")
             val prodCognitoClientId = project.findProperty("PROD_COGNITO_CLIENT_ID")?.toString()
-                ?: "prod_cognito_client_id_placeholder"
+                ?: throw GradleException("PROD_COGNITO_CLIENT_ID must be set for production builds")
             val prodS3BucketName = project.findProperty("PROD_S3_BUCKET_NAME")?.toString()
-                ?: "cloudphotos-prod-bucket-placeholder"
+                ?: throw GradleException("PROD_S3_BUCKET_NAME must be set for production builds")
 
             buildConfigField("String", "API_BASE_URL", "\"$prodApiBaseUrl\"")
             buildConfigField("String", "COGNITO_CLIENT_ID", "\"$prodCognitoClientId\"")
