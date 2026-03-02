@@ -28,29 +28,29 @@ android {
             dimension = "environment"
             applicationIdSuffix = ".dev"
 
-            val devApiBaseUrl = project.findProperty("DEV_API_BASE_URL")?.toString()
-                ?: "https://api-dev.example.com/"
             val devCognitoClientId = project.findProperty("DEV_COGNITO_CLIENT_ID")?.toString()
                 ?: "dev_cognito_client_id_placeholder"
+            val devApiBaseUrl = project.findProperty("DEV_API_BASE_URL")?.toString()
+                ?: "https://api-dev.example.com/"
             val devS3BucketName = project.findProperty("DEV_S3_BUCKET_NAME")?.toString()
                 ?: "cloudphotos-dev-bucket-placeholder"
 
-            buildConfigField("String", "API_BASE_URL", "\"$devApiBaseUrl\"")
             buildConfigField("String", "COGNITO_CLIENT_ID", "\"$devCognitoClientId\"")
+            buildConfigField("String", "API_BASE_URL", "\"$devApiBaseUrl\"")
             buildConfigField("String", "S3_BUCKET_NAME", "\"$devS3BucketName\"")
         }
         create("prod") {
             dimension = "environment"
 
-            val prodApiBaseUrl = project.findProperty("PROD_API_BASE_URL")?.toString()
-                ?: throw GradleException("PROD_API_BASE_URL must be set for production builds")
             val prodCognitoClientId = project.findProperty("PROD_COGNITO_CLIENT_ID")?.toString()
                 ?: throw GradleException("PROD_COGNITO_CLIENT_ID must be set for production builds")
+            val prodApiBaseUrl = project.findProperty("PROD_API_BASE_URL")?.toString()
+                ?: throw GradleException("PROD_API_BASE_URL must be set for production builds")
             val prodS3BucketName = project.findProperty("PROD_S3_BUCKET_NAME")?.toString()
                 ?: throw GradleException("PROD_S3_BUCKET_NAME must be set for production builds")
 
-            buildConfigField("String", "API_BASE_URL", "\"$prodApiBaseUrl\"")
             buildConfigField("String", "COGNITO_CLIENT_ID", "\"$prodCognitoClientId\"")
+            buildConfigField("String", "API_BASE_URL", "\"$prodApiBaseUrl\"")
             buildConfigField("String", "S3_BUCKET_NAME", "\"$prodS3BucketName\"")
         }
     }
