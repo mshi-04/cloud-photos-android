@@ -19,19 +19,19 @@ platform :android do
 
   desc "Run Unit Tests (used in CI)"
   lane :test do
-    gradle(task: "test", flavor: "Dev", build_type: "Debug", properties: dev_properties)
+    gradle(task: "test", flavor: "Dev", build_type: "Debug", properties: dev_properties, print_command: false)
   end
 
 
 
   desc "Build the DEV environment APK (used in CD)"
   lane :build_dev do
-    gradle(task: "assemble", flavor: "Dev", build_type: "Release", properties: dev_properties)
+    gradle(task: "assemble", flavor: "Dev", build_type: "Release", properties: dev_properties, print_command: false)
   end
 
   desc "Build the PROD environment APK and AAB (used in CD)"
   lane :build_prod do
-    gradle(task: "assemble", flavor: "Prod", build_type: "Release", properties: prod_properties)
-    gradle(task: "bundle", flavor: "Prod", build_type: "Release", properties: prod_properties)
+    gradle(task: "assemble", flavor: "Prod", build_type: "Release", properties: prod_properties, print_command: false)
+    gradle(task: "bundle", flavor: "Prod", build_type: "Release", properties: prod_properties, print_command: false)
   end
 end
