@@ -10,10 +10,20 @@ if (localPropertiesFile.exists()) {
 }
 
 allprojects {
-    localProperties.forEach { key, value ->
-        val keyStr = key.toString()
-        if (!extra.has(keyStr)) {
-            extra[keyStr] = value
+    // Inject only the required build properties into each subproject.
+    // Using an explicit whitelist instead of dumping all local.properties keys
+    // prevents unintended values (e.g. sdk.dir) from leaking across modules.
+    listOf(
+        "DEV_API_BASE_URL",
+        "DEV_COGNITO_CLIENT_ID",
+        "DEV_S3_BUCKET_NAME",
+        "PROD_API_BASE_URL",
+        "PROD_COGNITO_CLIENT_ID",
+        "PROD_S3_BUCKET_NAME"
+    ).forEach { key ->
+        val value = localProperties.getProperty(key)
+        if (value != null && !extra.has(key)) {
+            extra[key] = value
         }
     }
 }

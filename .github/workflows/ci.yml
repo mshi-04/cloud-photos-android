@@ -39,22 +39,23 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Execute Unit Tests (DEV & PROD)
+      - name: Execute Unit Tests (DEV)
         env:
           DEV_API_BASE_URL: ${{ secrets.DEV_API_BASE_URL }}
           DEV_COGNITO_CLIENT_ID: ${{ secrets.DEV_COGNITO_CLIENT_ID }}
           DEV_S3_BUCKET_NAME: ${{ secrets.DEV_S3_BUCKET_NAME }}
-          PROD_API_BASE_URL: ${{ secrets.PROD_API_BASE_URL }}
-          PROD_COGNITO_CLIENT_ID: ${{ secrets.PROD_COGNITO_CLIENT_ID }}
-          PROD_S3_BUCKET_NAME: ${{ secrets.PROD_S3_BUCKET_NAME }}
-        run: bundle exec fastlane test_all
+        run: bundle exec fastlane test_dev
 
-      - name: Execute Fastlane (build only)
+      - name: Execute Unit Tests (PROD)
+        env:
+          PROD_API_BASE_URL: ${{ secrets.PROD_API_BASE_URL }}
+          PROD_COGNITO_CLIENT_ID: ${{ secrets.PROD_COGNITO_CLIENT_ID }}
+          PROD_S3_BUCKET_NAME: ${{ secrets.PROD_S3_BUCKET_NAME }}
+        run: bundle exec fastlane test_prod
+
+      - name: Execute Fastlane (build DEV only)
         env:
           DEV_API_BASE_URL: ${{ secrets.DEV_API_BASE_URL }}
           DEV_COGNITO_CLIENT_ID: ${{ secrets.DEV_COGNITO_CLIENT_ID }}
           DEV_S3_BUCKET_NAME: ${{ secrets.DEV_S3_BUCKET_NAME }}
-          PROD_API_BASE_URL: ${{ secrets.PROD_API_BASE_URL }}
-          PROD_COGNITO_CLIENT_ID: ${{ secrets.PROD_COGNITO_CLIENT_ID }}
-          PROD_S3_BUCKET_NAME: ${{ secrets.PROD_S3_BUCKET_NAME }}
         run: bundle exec fastlane build_dev

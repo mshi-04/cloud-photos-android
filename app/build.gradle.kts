@@ -28,12 +28,9 @@ android {
             dimension = "environment"
             applicationIdSuffix = ".dev"
 
-            val devCognitoClientId = project.findProperty("DEV_COGNITO_CLIENT_ID")?.toString()
-                ?: throw GradleException("DEV_COGNITO_CLIENT_ID must be set for development builds")
-            val devApiBaseUrl = project.findProperty("DEV_API_BASE_URL")?.toString()
-                ?: throw GradleException("DEV_API_BASE_URL must be set for development builds")
-            val devS3BucketName = project.findProperty("DEV_S3_BUCKET_NAME")?.toString()
-                ?: throw GradleException("DEV_S3_BUCKET_NAME must be set for development builds")
+            val devCognitoClientId = requireNonBlankProperty("DEV_COGNITO_CLIENT_ID", "development")
+            val devApiBaseUrl = requireNonBlankProperty("DEV_API_BASE_URL", "development")
+            val devS3BucketName = requireNonBlankProperty("DEV_S3_BUCKET_NAME", "development")
 
             buildConfigField("String", "COGNITO_CLIENT_ID", "\"$devCognitoClientId\"")
             buildConfigField("String", "API_BASE_URL", "\"$devApiBaseUrl\"")
@@ -42,12 +39,9 @@ android {
         create("prod") {
             dimension = "environment"
 
-            val prodCognitoClientId = project.findProperty("PROD_COGNITO_CLIENT_ID")?.toString()
-                ?: throw GradleException("PROD_COGNITO_CLIENT_ID must be set for production builds")
-            val prodApiBaseUrl = project.findProperty("PROD_API_BASE_URL")?.toString()
-                ?: throw GradleException("PROD_API_BASE_URL must be set for production builds")
-            val prodS3BucketName = project.findProperty("PROD_S3_BUCKET_NAME")?.toString()
-                ?: throw GradleException("PROD_S3_BUCKET_NAME must be set for production builds")
+            val prodCognitoClientId = requireNonBlankProperty("PROD_COGNITO_CLIENT_ID", "production")
+            val prodApiBaseUrl = requireNonBlankProperty("PROD_API_BASE_URL", "production")
+            val prodS3BucketName = requireNonBlankProperty("PROD_S3_BUCKET_NAME", "production")
 
             buildConfigField("String", "COGNITO_CLIENT_ID", "\"$prodCognitoClientId\"")
             buildConfigField("String", "API_BASE_URL", "\"$prodApiBaseUrl\"")
@@ -125,4 +119,18 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 
+}
+
+private fun requireNonBlankProperty(name: String, target: String): String {
+    val value = findProperty(name)?.toString()?.takeIf { it.isNotBlank() }
+    if (value != null) return value
+
+    val isTargetBuild = gradle.startParameter.taskNames.any {
+        it.contains(target, ignoreCase = true)
+    }
+    if (isTargetBuild) {
+        throw GradleException("$name must be set for $target builds")
+    }
+
+    return "UNCONFIGURED"
 }
