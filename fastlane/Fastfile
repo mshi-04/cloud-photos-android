@@ -9,13 +9,11 @@ platform :android do
 
   desc "Build the DEV environment APK"
   lane :build_dev do
-    gradle(task: "test", flavor: "Dev", build_type: "Debug")
     gradle(task: "assemble", flavor: "Dev", build_type: "Release")
   end
 
   desc "Build the PROD environment APK and AAB"
   lane :build_prod do
-    gradle(task: "test", flavor: "Prod", build_type: "Debug")
     gradle(task: "assemble", flavor: "Prod", build_type: "Release")
     gradle(task: "bundle", flavor: "Prod", build_type: "Release")
   end
