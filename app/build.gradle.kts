@@ -29,11 +29,11 @@ android {
             applicationIdSuffix = ".dev"
 
             val devCognitoClientId = project.findProperty("DEV_COGNITO_CLIENT_ID")?.toString()
-                ?: "dev_cognito_client_id_placeholder"
+                ?: throw GradleException("DEV_COGNITO_CLIENT_ID must be set for development builds")
             val devApiBaseUrl = project.findProperty("DEV_API_BASE_URL")?.toString()
-                ?: "https://api-dev.example.com/"
+                ?: throw GradleException("DEV_API_BASE_URL must be set for development builds")
             val devS3BucketName = project.findProperty("DEV_S3_BUCKET_NAME")?.toString()
-                ?: "cloudphotos-dev-bucket-placeholder"
+                ?: throw GradleException("DEV_S3_BUCKET_NAME must be set for development builds")
 
             buildConfigField("String", "COGNITO_CLIENT_ID", "\"$devCognitoClientId\"")
             buildConfigField("String", "API_BASE_URL", "\"$devApiBaseUrl\"")
