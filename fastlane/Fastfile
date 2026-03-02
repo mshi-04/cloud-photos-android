@@ -1,16 +1,13 @@
 default_platform(:android)
 
 platform :android do
-  def dev_properties
+  # Gradle is configured project-wide, so all flavor properties must always be
+  # provided regardless of which flavor is being built or tested.
+  def properties
     {
       "DEV_API_BASE_URL" => ENV["DEV_API_BASE_URL"],
       "DEV_COGNITO_CLIENT_ID" => ENV["DEV_COGNITO_CLIENT_ID"],
-      "DEV_S3_BUCKET_NAME" => ENV["DEV_S3_BUCKET_NAME"]
-    }.compact
-  end
-
-  def prod_properties
-    {
+      "DEV_S3_BUCKET_NAME" => ENV["DEV_S3_BUCKET_NAME"],
       "PROD_API_BASE_URL" => ENV["PROD_API_BASE_URL"],
       "PROD_COGNITO_CLIENT_ID" => ENV["PROD_COGNITO_CLIENT_ID"],
       "PROD_S3_BUCKET_NAME" => ENV["PROD_S3_BUCKET_NAME"]
@@ -19,18 +16,18 @@ platform :android do
 
   desc "Run Unit Tests for DEV and PROD (used in CI)"
   lane :test_all do
-    gradle(task: "test", flavor: "Dev", build_type: "Debug", properties: dev_properties)
-    gradle(task: "test", flavor: "Prod", build_type: "Debug", properties: prod_properties)
+    gradle(task: "test", flavor: "Dev", build_type: "Debug", properties: properties)
+    gradle(task: "test", flavor: "Prod", build_type: "Debug", properties: properties)
   end
 
   desc "Build the DEV environment APK (used in CD)"
   lane :build_dev do
-    gradle(task: "assemble", flavor: "Dev", build_type: "Release", properties: dev_properties)
+    gradle(task: "assemble", flavor: "Dev", build_type: "Release", properties: properties)
   end
 
   desc "Build the PROD environment APK and AAB (used in CD)"
   lane :build_prod do
-    gradle(task: "assemble", flavor: "Prod", build_type: "Release", properties: prod_properties)
-    gradle(task: "bundle", flavor: "Prod", build_type: "Release", properties: prod_properties)
+    gradle(task: "assemble", flavor: "Prod", build_type: "Release", properties: properties)
+    gradle(task: "bundle", flavor: "Prod", build_type: "Release", properties: properties)
   end
 end
