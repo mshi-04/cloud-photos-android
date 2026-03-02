@@ -125,5 +125,17 @@ private fun requireEnvProperty(flavor: BuildFlavor, baseName: String): String {
     val propertyName = "${flavor.propertyPrefix}_$baseName"
     val value = findProperty(propertyName)?.toString()?.takeIf { it.isNotBlank() }
     
-    return value ?: throw GradleException("$propertyName must be set for ${flavor.flavorName} builds")
+    if (value != null) return value
+    if (!isFlavorValidationRequired(flavor)) return ""
+    throw GradleException("$propertyName must be set for ${flavor.flavorName} builds")
+}
+
+private fun isFlavorValidationRequired(flavor: BuildFlavor): Boolean {
+    val taskNames = gradle.startParameter.taskNames.map { it.lowercase() }
+    if (taskNames.isEmpty()) return false
+
+    val allFlavorTasks = setOf("assemble", "build", "bundle")
+    return taskNames.any { task ->
+        task in allFlavorTasks || task.contains(flavor.flavorName.lowercase())
+    }
 }
