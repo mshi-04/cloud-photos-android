@@ -136,7 +136,8 @@ private fun requireEnvProperty(flavor: BuildFlavor, baseName: String): String {
 }
 
 private fun isFlavorValidationRequired(flavor: BuildFlavor): Boolean {
-    val taskNames = gradle.startParameter.taskNames.map { it.lowercase() }
+    val taskNames = gradle.startParameter.taskNames
+        .map { it.substringAfterLast(":").lowercase() }
     if (taskNames.isEmpty()) return false
 
     val allFlavorTasks = setOf("assemble", "build", "bundle")
