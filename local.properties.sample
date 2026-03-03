@@ -1,16 +1,19 @@
+sdk.dir=PATH_TO_ANDROID_SDK
 
-sdk.dir=C\:\\Users\\masato\\AppData\\Local\\Android\\Sdk
+# ⚠️ 重要: このファイルはサンプルです
+# 実際の local.properties ファイルは絶対にコミットしないでください
+# 機密情報（API キー、クライアント ID など）が含まれています
+
+# ⚠️ IMPORTANT: This file is a sample.
+# NEVER commit your actual local.properties file.
+# It contains sensitive information (API keys, Client IDs, etc.).
 
 # dev env
 DEV_API_BASE_URL=https://api-dev.example.com/
 DEV_COGNITO_CLIENT_ID=your_dev_cognito_client_id_here
 DEV_S3_BUCKET_NAME=cloudphotos-dev-bucket
 
-# prod end
+# prod env
 PROD_API_BASE_URL=https://api.example.com/
 PROD_COGNITO_CLIENT_ID=your_prod_cognito_client_id_here
 PROD_S3_BUCKET_NAME=cloudphotos-prod-bucket
-
-# Caution:
-# - Please set Cognito Client ID and S3 Bucket Name.
-# - This file contains sensitive information and should not be committed.

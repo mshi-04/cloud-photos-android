@@ -1,22 +1,35 @@
 default_platform(:android)
 
 platform :android do
-  desc "Run Unit Tests for DEV and PROD"
-  lane :test_all do
-    gradle(task: "test", flavor: "Dev", build_type: "Debug")
-    gradle(task: "test", flavor: "Prod", build_type: "Debug")
+  def env_properties(prefix)
+    {
+      "#{prefix}_API_BASE_URL" => ENV.fetch("#{prefix}_API_BASE_URL"),
+      "#{prefix}_COGNITO_CLIENT_ID" => ENV.fetch("#{prefix}_COGNITO_CLIENT_ID"),
+      "#{prefix}_S3_BUCKET_NAME" => ENV.fetch("#{prefix}_S3_BUCKET_NAME")
+    }
   end
 
-  desc "Build the DEV environment APK"
+  def dev_properties
+    env_properties("DEV")
+  end
+
+  def prod_properties
+    env_properties("PROD")
+  end
+
+  desc "Run Unit Tests (used in CI)"
+  lane :test do
+    gradle(task: "testDevDebugUnitTest", properties: dev_properties, print_command: false)
+  end
+
+  desc "Build the DEV environment APK (used in CD)"
   lane :build_dev do
-    gradle(task: "test", flavor: "Dev", build_type: "Debug")
-    gradle(task: "assemble", flavor: "Dev", build_type: "Release")
+    gradle(task: "assemble", flavor: "Dev", build_type: "Release", properties: dev_properties, print_command: false)
   end
 
-  desc "Build the PROD environment APK and AAB"
+  desc "Build the PROD environment APK and AAB (used in CD)"
   lane :build_prod do
-    gradle(task: "test", flavor: "Prod", build_type: "Debug")
-    gradle(task: "assemble", flavor: "Prod", build_type: "Release")
-    gradle(task: "bundle", flavor: "Prod", build_type: "Release")
+    gradle(task: "assemble", flavor: "Prod", build_type: "Release", properties: prod_properties, print_command: false)
+    gradle(task: "bundle", flavor: "Prod", build_type: "Release", properties: prod_properties, print_command: false)
   end
 end

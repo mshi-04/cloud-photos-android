@@ -6,7 +6,6 @@ on:
   push:
     branches:
       - main
-      - develop
 
 permissions:
   contents: read
@@ -28,7 +27,11 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
-          cache: 'gradle'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref_name != 'main' }}
 
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
@@ -39,8 +42,15 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Execute Unit Tests (DEV & PROD)
-        run: bundle exec fastlane test_all
+      - name: Set dummy secrets for Fork PRs
+        run: |
+          echo "DEV_API_BASE_URL=${DEV_API_BASE_URL:-http://localhost:8080/dummy}" >> $GITHUB_ENV
+          echo "DEV_COGNITO_CLIENT_ID=${DEV_COGNITO_CLIENT_ID:-dummy_client_id}" >> $GITHUB_ENV
+          echo "DEV_S3_BUCKET_NAME=${DEV_S3_BUCKET_NAME:-dummy_bucket_name}" >> $GITHUB_ENV
+        env:
+          DEV_API_BASE_URL: ${{ secrets.DEV_API_BASE_URL }}
+          DEV_COGNITO_CLIENT_ID: ${{ secrets.DEV_COGNITO_CLIENT_ID }}
+          DEV_S3_BUCKET_NAME: ${{ secrets.DEV_S3_BUCKET_NAME }}
 
-      - name: Execute Fastlane (build only)
-        run: bundle exec fastlane build_dev
+      - name: Execute Unit Tests
+        run: bundle exec fastlane test

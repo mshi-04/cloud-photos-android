@@ -24,34 +24,19 @@ android {
 
     flavorDimensions += "environment"
     productFlavors {
-        create("dev") {
-            dimension = "environment"
-            applicationIdSuffix = ".dev"
+        BuildFlavor.entries.forEach { flavor ->
+            create(flavor.flavorName) {
+                dimension = "environment"
+                flavor.appIdSuffix?.let { applicationIdSuffix = it }
 
-            val devApiBaseUrl = project.findProperty("DEV_API_BASE_URL")?.toString()
-                ?: "https://api-dev.example.com/"
-            val devCognitoClientId = project.findProperty("DEV_COGNITO_CLIENT_ID")?.toString()
-                ?: "dev_cognito_client_id_placeholder"
-            val devS3BucketName = project.findProperty("DEV_S3_BUCKET_NAME")?.toString()
-                ?: "cloudphotos-dev-bucket-placeholder"
+                val cognitoClientId = requireEnvProperty(flavor, "COGNITO_CLIENT_ID")
+                val apiBaseUrl = requireEnvProperty(flavor, "API_BASE_URL")
+                val s3BucketName = requireEnvProperty(flavor, "S3_BUCKET_NAME")
 
-            buildConfigField("String", "API_BASE_URL", "\"$devApiBaseUrl\"")
-            buildConfigField("String", "COGNITO_CLIENT_ID", "\"$devCognitoClientId\"")
-            buildConfigField("String", "S3_BUCKET_NAME", "\"$devS3BucketName\"")
-        }
-        create("prod") {
-            dimension = "environment"
-
-            val prodApiBaseUrl = project.findProperty("PROD_API_BASE_URL")?.toString()
-                ?: "https://api.example.com/"
-            val prodCognitoClientId = project.findProperty("PROD_COGNITO_CLIENT_ID")?.toString()
-                ?: "prod_cognito_client_id_placeholder"
-            val prodS3BucketName = project.findProperty("PROD_S3_BUCKET_NAME")?.toString()
-                ?: "cloudphotos-prod-bucket-placeholder"
-
-            buildConfigField("String", "API_BASE_URL", "\"$prodApiBaseUrl\"")
-            buildConfigField("String", "COGNITO_CLIENT_ID", "\"$prodCognitoClientId\"")
-            buildConfigField("String", "S3_BUCKET_NAME", "\"$prodS3BucketName\"")
+                buildConfigField("String", "COGNITO_CLIENT_ID", "\"$cognitoClientId\"")
+                buildConfigField("String", "API_BASE_URL", "\"$apiBaseUrl\"")
+                buildConfigField("String", "S3_BUCKET_NAME", "\"$s3BucketName\"")
+            }
         }
     }
 
@@ -125,4 +110,38 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 
+}
+
+enum class BuildFlavor(
+    val flavorName: String,
+    val propertyPrefix: String,
+    val appIdSuffix: String? = null
+) {
+    DEV("dev", "DEV", ".dev"),
+    PROD("prod", "PROD", null)
+}
+
+private fun requireEnvProperty(flavor: BuildFlavor, baseName: String): String {
+    val propertyName = "${flavor.propertyPrefix}_$baseName"
+    val value = findProperty(propertyName)?.toString()?.takeIf { it.isNotBlank() }
+    
+    if (value != null) return value
+
+    val isCodeQlAnalysis = System.getenv("CODEQL_ACTION_VERSION") != null
+            || System.getenv("CODEQL_DIST") != null
+    if (isCodeQlAnalysis) return ""
+
+    if (!isFlavorValidationRequired(flavor)) return ""
+    throw GradleException("$propertyName must be set for ${flavor.flavorName} builds")
+}
+
+private fun isFlavorValidationRequired(flavor: BuildFlavor): Boolean {
+    val taskNames = gradle.startParameter.taskNames
+        .map { it.substringAfterLast(":").lowercase() }
+    if (taskNames.isEmpty()) return false
+
+    val allFlavorTasks = setOf("assemble", "build", "bundle")
+    return taskNames.any { task ->
+        task in allFlavorTasks || task.contains(flavor.flavorName.lowercase())
+    }
 }
