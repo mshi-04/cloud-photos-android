@@ -87,7 +87,6 @@ class ForgotPasswordViewModel @Inject constructor(
             is AuthError.Unknown,
             is AuthError.UserNotConfirmed,
             is AuthError.UsernameAlreadyExists -> {
-                android.util.Log.e("ForgotPasswordViewModel", "unexpected auth error", Exception(error.toString()))
                 _effect.emit(ForgotPasswordEffect.ShowSnackbar(R.string.error_unknown))
             }
         }
