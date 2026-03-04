@@ -91,6 +91,9 @@ fun NavGraph(
                 onNavigateToResetCode = { email ->
                     navController.navigate(AuthRoute.resetPasswordCode(Email.of(email)))
                 },
+                onNavigateToVerification = { email ->
+                    navController.navigate(AuthRoute.verification(Email.of(email)))
+                },
                 onNavigateBack = {
                     navController.popBackStack()
                 }

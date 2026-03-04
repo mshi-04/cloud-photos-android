@@ -46,7 +46,6 @@ class ResetPasswordCodeViewModel @Inject constructor(
     val effect: SharedFlow<ResetPasswordCodeEffect> = _effect.asSharedFlow()
 
 
-
     fun startTimerIfNeeded() {
         if (!isTimerStarted) {
             isTimerStarted = true
@@ -123,9 +122,7 @@ class ResetPasswordCodeViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true) }
             try {
                 val emailVO = Email.of(email)
-                val result = resetPasswordUseCase(ResetPasswordRequest(emailVO))
-
-                when (result) {
+                when (val result = resetPasswordUseCase(ResetPasswordRequest(emailVO))) {
                     is AuthResult.Success -> {
                         _effect.emit(ResetPasswordCodeEffect.ShowSnackbar(R.string.message_code_resent))
                         startResendTimer()

@@ -53,6 +53,7 @@ import com.appvoyager.cloudphotos.ui.theme.CloudPhotosTheme
 fun ForgotPasswordScreen(
     viewModel: ForgotPasswordViewModel = hiltViewModel(),
     onNavigateToResetCode: (String) -> Unit,
+    onNavigateToVerification: (String) -> Unit,
     onNavigateBack: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -64,6 +65,10 @@ fun ForgotPasswordScreen(
             when (effect) {
                 is ForgotPasswordEffect.NavigateToResetCode -> {
                     onNavigateToResetCode(effect.email.value)
+                }
+
+                is ForgotPasswordEffect.NavigateToVerification -> {
+                    onNavigateToVerification(effect.email.value)
                 }
 
                 is ForgotPasswordEffect.NavigateBackToLogin -> {

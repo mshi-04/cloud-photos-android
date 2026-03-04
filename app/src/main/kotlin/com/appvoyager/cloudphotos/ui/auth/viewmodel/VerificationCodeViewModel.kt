@@ -96,7 +96,8 @@ class VerificationCodeViewModel @Inject constructor(
             try {
                 val emailValue = Email.of(email)
                 val codeValue = ConfirmationCode.of(fullCode)
-                when (val confirmResult = confirmSignUpUseCase(ConfirmSignUpRequest(emailValue, codeValue))) {
+                when (val confirmResult =
+                    confirmSignUpUseCase(ConfirmSignUpRequest(emailValue, codeValue))) {
                     is AuthResult.Success -> _effect.emit(VerificationEffect.NavigateToHome)
                     is AuthResult.Error -> handleConfirmError(confirmResult.error)
                 }

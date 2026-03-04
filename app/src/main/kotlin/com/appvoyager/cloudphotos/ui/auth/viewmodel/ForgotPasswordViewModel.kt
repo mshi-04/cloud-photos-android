@@ -41,7 +41,7 @@ class ForgotPasswordViewModel @Inject constructor(
     }
 
     fun onSubmit() {
-        if (!_uiState.value.isFormValid || _uiState.value.isLoading) return
+        if (_uiState.value.isLoading) return
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
@@ -78,12 +78,29 @@ class ForgotPasswordViewModel @Inject constructor(
                 _effect.emit(ForgotPasswordEffect.ShowSnackbar(R.string.error_too_many_requests))
             }
 
-            is AuthError.CodeExpired,
-            is AuthError.CodeMismatch,
-            is AuthError.InvalidCredentials,
-            is AuthError.InvalidPassword,
+            is AuthError.UserNotConfirmed -> {
+                val email = Email.of(_uiState.value.email)
+                _effect.emit(ForgotPasswordEffect.ShowSnackbar(R.string.error_user_not_confirmed))
+                _effect.emit(ForgotPasswordEffect.NavigateToVerification(email))
+            }
+
+            is AuthError.InvalidPassword -> {
+                _effect.emit(ForgotPasswordEffect.ShowSnackbar(R.string.error_invalid_password))
+            }
+
+            is AuthError.InvalidCredentials -> {
+                _effect.emit(ForgotPasswordEffect.ShowSnackbar(R.string.error_invalid_credentials))
+            }
+
+            is AuthError.CodeExpired -> {
+                _effect.emit(ForgotPasswordEffect.ShowSnackbar(R.string.error_code_expired))
+            }
+
+            is AuthError.CodeMismatch -> {
+                _effect.emit(ForgotPasswordEffect.ShowSnackbar(R.string.error_code_mismatch))
+            }
+
             is AuthError.Unknown,
-            is AuthError.UserNotConfirmed,
             is AuthError.UsernameAlreadyExists -> {
                 _effect.emit(ForgotPasswordEffect.ShowSnackbar(R.string.error_unknown))
             }
