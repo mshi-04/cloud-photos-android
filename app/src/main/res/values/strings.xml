@@ -1,6 +1,13 @@
 <resources>
     <string name="app_name" translatable="false">Cloud Photos</string>
 
+    <!-- screen of login verification -->
+    <string name="verification_code_prompt">A verification code has been sent to your registered
+        email address.\nPlease check and enter it below.</string>
+    <string name="verification_code_resend_timer">Resend (%1$d)</string>
+    <string name="verification_code_resend">Resend</string>
+    <string name="verification_code_verify">Verify</string>
+
     <!-- Success Messages -->
     <string name="message_code_resent">Verification code has been resent</string>
     <string name="message_password_reset">Password has been reset</string>

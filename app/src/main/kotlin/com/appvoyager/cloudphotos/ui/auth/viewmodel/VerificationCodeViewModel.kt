@@ -15,6 +15,7 @@ import com.appvoyager.cloudphotos.domain.auth.valueobject.Email
 import com.appvoyager.cloudphotos.ui.auth.effect.VerificationEffect
 import com.appvoyager.cloudphotos.ui.auth.uistate.VerificationCodeUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,8 +43,7 @@ class VerificationCodeViewModel @Inject constructor(
     val effect: SharedFlow<VerificationEffect> = _effect.asSharedFlow()
 
     private var isTimerStarted = false
-
-
+    private var resendTimerJob: Job? = null
 
     init {
         if (email.isBlank()) {
@@ -94,9 +94,9 @@ class VerificationCodeViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                val email = Email.of(email)
-                val code = ConfirmationCode.of(fullCode)
-                when (val confirmResult = confirmSignUpUseCase(ConfirmSignUpRequest(email, code))) {
+                val emailValue = Email.of(email)
+                val codeValue = ConfirmationCode.of(fullCode)
+                when (val confirmResult = confirmSignUpUseCase(ConfirmSignUpRequest(emailValue, codeValue))) {
                     is AuthResult.Success -> _effect.emit(VerificationEffect.NavigateToHome)
                     is AuthResult.Error -> handleConfirmError(confirmResult.error)
                 }
@@ -114,8 +114,8 @@ class VerificationCodeViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                val email = Email.of(email)
-                when (val result = resendSignUpCodeUseCase(ResendSignUpCodeRequest(email))) {
+                val emailValue = Email.of(email)
+                when (val result = resendSignUpCodeUseCase(ResendSignUpCodeRequest(emailValue))) {
                     is AuthResult.Success -> {
                         _effect.emit(VerificationEffect.ShowSnackbar(R.string.message_code_resent))
                         startResendTimer()
@@ -182,8 +182,9 @@ class VerificationCodeViewModel @Inject constructor(
     }
 
     private fun startResendTimer() {
+        resendTimerJob?.cancel()
         _uiState.update { it.copy(resendTimerSeconds = VerificationCodeUiState.DEFAULT_RESEND_COOLDOWN_SECONDS) }
-        viewModelScope.launch {
+        resendTimerJob = viewModelScope.launch {
             while (_uiState.value.resendTimerSeconds > 0) {
                 delay(1_000L)
                 _uiState.update { it.copy(resendTimerSeconds = it.resendTimerSeconds - 1) }

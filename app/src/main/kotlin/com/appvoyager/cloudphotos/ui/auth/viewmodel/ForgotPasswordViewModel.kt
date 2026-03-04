@@ -10,7 +10,6 @@ import com.appvoyager.cloudphotos.domain.auth.usecase.ResetPasswordUseCase
 import com.appvoyager.cloudphotos.domain.auth.valueobject.Email
 import com.appvoyager.cloudphotos.ui.auth.effect.ForgotPasswordEffect
 import com.appvoyager.cloudphotos.ui.auth.uistate.ForgotPasswordUiState
-import com.appvoyager.cloudphotos.ui.util.ValidationUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,11 +32,6 @@ class ForgotPasswordViewModel @Inject constructor(
     private val _effect = MutableSharedFlow<ForgotPasswordEffect>()
     val effect: SharedFlow<ForgotPasswordEffect> = _effect.asSharedFlow()
 
-    val isFormValid: Boolean
-        get() = with(_uiState.value) {
-            email.isNotBlank() && ValidationUtils.isValidEmailFormat(email)
-        }
-
     fun onEmailChanged(value: String) {
         _uiState.update { it.copy(email = value, emailError = null) }
     }
@@ -47,7 +41,7 @@ class ForgotPasswordViewModel @Inject constructor(
     }
 
     fun onSubmit() {
-        if (!isFormValid || _uiState.value.isLoading) return
+        if (!_uiState.value.isFormValid || _uiState.value.isLoading) return
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
@@ -93,6 +87,7 @@ class ForgotPasswordViewModel @Inject constructor(
             is AuthError.Unknown,
             is AuthError.UserNotConfirmed,
             is AuthError.UsernameAlreadyExists -> {
+                android.util.Log.e("ForgotPasswordViewModel", "unexpected auth error", Exception(error.toString()))
                 _effect.emit(ForgotPasswordEffect.ShowSnackbar(R.string.error_unknown))
             }
         }

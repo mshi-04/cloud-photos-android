@@ -12,7 +12,7 @@ data class ResetPasswordCodeUiState(
     val resendTimerSeconds: Int = DEFAULT_RESEND_COOLDOWN_SECONDS
 ) {
     val isCodeComplete: Boolean
-        get() = codes.all { it.length == 1 && it[0].isDigit() }
+        get() = codes.size == 6 && codes.all { it.length == 1 && it[0].isDigit() }
 
     val isFormValid: Boolean
         get() = isCodeComplete && newPassword.length >= 8

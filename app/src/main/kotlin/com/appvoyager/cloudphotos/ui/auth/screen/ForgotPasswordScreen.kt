@@ -90,7 +90,7 @@ fun ForgotPasswordScreen(
             ForgotPasswordContent(
                 email = uiState.email,
                 emailError = uiState.emailError?.let { stringResource(it) },
-                isFormValid = viewModel.isFormValid,
+                isFormValid = uiState.isFormValid,
                 isLoading = uiState.isLoading,
                 onEmailChanged = { viewModel.onEmailChanged(it) },
                 onClearEmail = { viewModel.onClearEmail() },
