@@ -1,7 +1,6 @@
 package com.appvoyager.cloudphotos.ui.auth.uistate
 
 import androidx.annotation.StringRes
-import com.appvoyager.cloudphotos.ui.auth.viewmodel.ResetPasswordCodeViewModel
 
 data class ResetPasswordCodeUiState(
     val codes: List<String> = List(6) { "" },
@@ -10,5 +9,18 @@ data class ResetPasswordCodeUiState(
     val isLoading: Boolean = false,
     @param:StringRes val codeError: Int? = null,
     @param:StringRes val passwordError: Int? = null,
-    val resendTimerSeconds: Int = ResetPasswordCodeViewModel.RESEND_COOLDOWN_SECONDS
-)
+    val resendTimerSeconds: Int = DEFAULT_RESEND_COOLDOWN_SECONDS
+) {
+    val isCodeComplete: Boolean
+        get() = codes.all { it.length == 1 && it[0].isDigit() }
+
+    val isFormValid: Boolean
+        get() = isCodeComplete && newPassword.length >= 8
+
+    val isResendEnabled: Boolean
+        get() = resendTimerSeconds <= 0 && !isLoading
+
+    companion object {
+        const val DEFAULT_RESEND_COOLDOWN_SECONDS = 60
+    }
+}

@@ -1,11 +1,20 @@
 package com.appvoyager.cloudphotos.ui.auth.uistate
 
 import androidx.annotation.StringRes
-import com.appvoyager.cloudphotos.ui.auth.viewmodel.VerificationCodeViewModel
 
 data class VerificationCodeUiState(
     val codes: List<String> = List(6) { "" },
     val isLoading: Boolean = false,
     @param:StringRes val codeError: Int? = null,
-    val resendTimerSeconds: Int = VerificationCodeViewModel.RESEND_COOLDOWN_SECONDS
-)
+    val resendTimerSeconds: Int = DEFAULT_RESEND_COOLDOWN_SECONDS
+) {
+    val isCodeComplete: Boolean
+        get() = codes.all { it.length == 1 && it[0].isDigit() }
+
+    val isResendEnabled: Boolean
+        get() = resendTimerSeconds <= 0 && !isLoading
+
+    companion object {
+        const val DEFAULT_RESEND_COOLDOWN_SECONDS = 60
+    }
+}

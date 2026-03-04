@@ -45,14 +45,7 @@ class ResetPasswordCodeViewModel @Inject constructor(
     private val _effect = MutableSharedFlow<ResetPasswordCodeEffect>(extraBufferCapacity = 1)
     val effect: SharedFlow<ResetPasswordCodeEffect> = _effect.asSharedFlow()
 
-    val isResendEnabled: Boolean
-        get() = _uiState.value.resendTimerSeconds <= 0 && !_uiState.value.isLoading
 
-    val isCodeComplete: Boolean
-        get() = _uiState.value.codes.all { it.length == 1 && it[0].isDigit() }
-
-    val isFormValid: Boolean
-        get() = isCodeComplete && _uiState.value.newPassword.length >= 8
 
     fun startTimerIfNeeded() {
         if (!isTimerStarted) {
@@ -62,13 +55,14 @@ class ResetPasswordCodeViewModel @Inject constructor(
     }
 
     fun onCodeChanged(index: Int, value: String) {
-        if (index !in 0..5) return
+        val codeLength = _uiState.value.codes.size
+        if (index !in 0 until codeLength) return
         _uiState.update { it.copy(codeError = null) }
 
         val digits = value.filter { it.isDigit() }
         if (digits.length > 1) {
             val currentCodes = _uiState.value.codes.toMutableList()
-            digits.take(6 - index).forEachIndexed { i, ch ->
+            digits.take(codeLength - index).forEachIndexed { i, ch ->
                 currentCodes[index + i] = ch.toString()
             }
             _uiState.update { it.copy(codes = currentCodes) }
@@ -89,21 +83,21 @@ class ResetPasswordCodeViewModel @Inject constructor(
     }
 
     fun onClearCodes() {
-        _uiState.update { it.copy(codes = List(6) { "" }, codeError = null) }
+        _uiState.update { it.copy(codes = List(it.codes.size) { "" }, codeError = null) }
     }
 
     fun onConfirm() {
-        if (!validateForm() || _uiState.value.isLoading) return
+        if (_uiState.value.isLoading || !validateForm()) return
         val fullCode = _uiState.value.codes.joinToString("")
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
-                val email = Email.of(email)
+                val emailVO = Email.of(email)
                 val code = ConfirmationCode.of(fullCode)
                 val password = Password.of(_uiState.value.newPassword)
                 val result = confirmResetPasswordUseCase(
-                    ConfirmResetPasswordRequest(email, code, password)
+                    ConfirmResetPasswordRequest(emailVO, code, password)
                 )
 
                 when (result) {
@@ -123,13 +117,13 @@ class ResetPasswordCodeViewModel @Inject constructor(
     }
 
     fun onResend() {
-        if (!isResendEnabled) return
+        if (!_uiState.value.isResendEnabled) return
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
-                val email = Email.of(email)
-                val result = resetPasswordUseCase(ResetPasswordRequest(email))
+                val emailVO = Email.of(email)
+                val result = resetPasswordUseCase(ResetPasswordRequest(emailVO))
 
                 when (result) {
                     is AuthResult.Success -> {
@@ -149,7 +143,7 @@ class ResetPasswordCodeViewModel @Inject constructor(
 
     private fun validateForm(): Boolean {
         var valid = true
-        if (!isCodeComplete) {
+        if (!_uiState.value.isCodeComplete) {
             _uiState.update { it.copy(codeError = R.string.error_enter_code) }
             valid = false
         }
@@ -178,7 +172,11 @@ class ResetPasswordCodeViewModel @Inject constructor(
                 _effect.emit(ResetPasswordCodeEffect.ShowSnackbar(R.string.error_too_many_requests))
             }
 
-            else -> {
+            is AuthError.InvalidCredentials,
+            is AuthError.InvalidPassword,
+            is AuthError.Unknown,
+            is AuthError.UserNotConfirmed,
+            is AuthError.UsernameAlreadyExists -> {
                 _effect.emit(ResetPasswordCodeEffect.ShowSnackbar(R.string.error_unknown))
             }
         }
@@ -194,14 +192,20 @@ class ResetPasswordCodeViewModel @Inject constructor(
                 _effect.emit(ResetPasswordCodeEffect.ShowSnackbar(R.string.error_too_many_requests))
             }
 
-            else -> {
+            is AuthError.CodeExpired,
+            is AuthError.CodeMismatch,
+            is AuthError.InvalidCredentials,
+            is AuthError.InvalidPassword,
+            is AuthError.Unknown,
+            is AuthError.UserNotConfirmed,
+            is AuthError.UsernameAlreadyExists -> {
                 _effect.emit(ResetPasswordCodeEffect.ShowSnackbar(R.string.error_resend_failed))
             }
         }
     }
 
     private fun startResendTimer() {
-        _uiState.update { it.copy(resendTimerSeconds = RESEND_COOLDOWN_SECONDS) }
+        _uiState.update { it.copy(resendTimerSeconds = ResetPasswordCodeUiState.DEFAULT_RESEND_COOLDOWN_SECONDS) }
         viewModelScope.launch {
             while (_uiState.value.resendTimerSeconds > 0) {
                 delay(1_000L)
@@ -211,7 +215,6 @@ class ResetPasswordCodeViewModel @Inject constructor(
     }
 
     companion object {
-        const val RESEND_COOLDOWN_SECONDS = 60
         private const val ARG_EMAIL = "email"
     }
 }

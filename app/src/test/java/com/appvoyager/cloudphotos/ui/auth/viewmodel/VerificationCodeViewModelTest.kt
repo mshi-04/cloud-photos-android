@@ -64,7 +64,7 @@ class VerificationCodeViewModelTest {
         Assertions.assertFalse(state.isLoading)
         Assertions.assertNull(state.codeError)
         Assertions.assertEquals(60, state.resendTimerSeconds)
-        Assertions.assertFalse(viewModel.isResendEnabled)
+        Assertions.assertFalse(state.isResendEnabled)
     }
 
     @Test
@@ -87,7 +87,7 @@ class VerificationCodeViewModelTest {
     @Test
     fun `isCodeComplete returns true when all 6 digits filled`() {
         repeat(6) { i -> viewModel.onCodeChanged(i, (i + 1).toString()) }
-        Assertions.assertTrue(viewModel.isCodeComplete)
+        Assertions.assertTrue(viewModel.uiState.value.isCodeComplete)
     }
 
     @Test

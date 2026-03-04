@@ -70,7 +70,7 @@ class LoginViewModel @Inject constructor(
     }
 
     fun onSignIn() {
-        if (!validateForm()) return
+        if (_uiState.value.isLoading || !validateForm()) return
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
@@ -79,7 +79,7 @@ class LoginViewModel @Inject constructor(
                 val email = Email.of(state.email)
                 val password = Password.of(state.password)
                 val result = signInUseCase(SignInRequest(email, password))
-                handleSignInResult(result)
+                handleSignInResult(result, email)
             } catch (_: IllegalArgumentException) {
                 _uiState.update { it.copy(emailError = R.string.error_check_input) }
             } finally {
@@ -89,7 +89,7 @@ class LoginViewModel @Inject constructor(
     }
 
     fun onSignUp() {
-        if (!validateForm()) return
+        if (_uiState.value.isLoading || !validateForm()) return
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
@@ -98,7 +98,7 @@ class LoginViewModel @Inject constructor(
                 val email = Email.of(state.email)
                 val password = Password.of(state.password)
                 val result = signUpUseCase(SignUpRequest(email, password))
-                handleSignUpResult(result)
+                handleSignUpResult(result, email)
             } catch (_: IllegalArgumentException) {
                 _uiState.update { it.copy(emailError = R.string.error_check_input) }
             } finally {
@@ -107,7 +107,7 @@ class LoginViewModel @Inject constructor(
         }
     }
 
-    private suspend fun handleSignInResult(result: AuthResult<SignInState>) {
+    private suspend fun handleSignInResult(result: AuthResult<SignInState>, requestedEmail: Email) {
         when (result) {
             is AuthResult.Success -> {
                 when (result.value) {
@@ -116,21 +116,21 @@ class LoginViewModel @Inject constructor(
                 }
             }
 
-            is AuthResult.Error -> handleAuthError(result.error)
+            is AuthResult.Error -> handleAuthError(result.error, requestedEmail)
         }
     }
 
-    private suspend fun handleSignUpResult(result: AuthResult<Unit>) {
+    private suspend fun handleSignUpResult(result: AuthResult<Unit>, requestedEmail: Email) {
         when (result) {
             is AuthResult.Success -> {
-                _effect.emit(LoginEffect.NavigateToVerification(Email.of(_uiState.value.email)))
+                _effect.emit(LoginEffect.NavigateToVerification(requestedEmail))
             }
 
-            is AuthResult.Error -> handleAuthError(result.error)
+            is AuthResult.Error -> handleAuthError(result.error, requestedEmail)
         }
     }
 
-    private suspend fun handleAuthError(error: AuthError) {
+    private suspend fun handleAuthError(error: AuthError, requestedEmail: Email) {
         when (error) {
             is AuthError.InvalidCredentials -> {
                 _uiState.update { it.copy(passwordError = R.string.error_invalid_credentials) }
@@ -141,7 +141,7 @@ class LoginViewModel @Inject constructor(
             }
 
             is AuthError.UserNotConfirmed -> {
-                _effect.emit(LoginEffect.NavigateToVerification(Email.of(_uiState.value.email)))
+                _effect.emit(LoginEffect.NavigateToVerification(requestedEmail))
             }
 
             is AuthError.UsernameAlreadyExists -> {
@@ -156,7 +156,9 @@ class LoginViewModel @Inject constructor(
                 _effect.emit(LoginEffect.ShowSnackbar(R.string.error_too_many_requests))
             }
 
-            else -> {
+            is AuthError.CodeExpired,
+            is AuthError.CodeMismatch,
+            is AuthError.Unknown -> {
                 _effect.emit(LoginEffect.ShowSnackbar(R.string.error_unknown))
             }
         }

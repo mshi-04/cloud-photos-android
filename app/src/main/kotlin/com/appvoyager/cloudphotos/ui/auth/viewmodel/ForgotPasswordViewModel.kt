@@ -86,7 +86,13 @@ class ForgotPasswordViewModel @Inject constructor(
                 _effect.emit(ForgotPasswordEffect.ShowSnackbar(R.string.error_too_many_requests))
             }
 
-            else -> {
+            is AuthError.CodeExpired,
+            is AuthError.CodeMismatch,
+            is AuthError.InvalidCredentials,
+            is AuthError.InvalidPassword,
+            is AuthError.Unknown,
+            is AuthError.UserNotConfirmed,
+            is AuthError.UsernameAlreadyExists -> {
                 _effect.emit(ForgotPasswordEffect.ShowSnackbar(R.string.error_unknown))
             }
         }

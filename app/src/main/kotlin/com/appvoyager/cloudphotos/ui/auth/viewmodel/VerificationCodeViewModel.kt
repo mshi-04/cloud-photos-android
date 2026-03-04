@@ -43,11 +43,7 @@ class VerificationCodeViewModel @Inject constructor(
 
     private var isTimerStarted = false
 
-    val isResendEnabled: Boolean
-        get() = _uiState.value.resendTimerSeconds <= 0 && !_uiState.value.isLoading
 
-    val isCodeComplete: Boolean
-        get() = _uiState.value.codes.all { it.length == 1 && it[0].isDigit() }
 
     init {
         if (email.isBlank()) {
@@ -65,17 +61,18 @@ class VerificationCodeViewModel @Inject constructor(
     }
 
     fun onCodeChanged(index: Int, value: String) {
-        if (index !in 0..5) return
+        val codeLength = _uiState.value.codes.size
+        if (index !in 0 until codeLength) return
         _uiState.update { it.copy(codeError = null) }
 
         val digits = value.filter { it.isDigit() }
         if (digits.length > 1) {
             val currentCodes = _uiState.value.codes.toMutableList()
-            digits.take(6 - index).forEachIndexed { i, ch ->
+            digits.take(codeLength - index).forEachIndexed { i, ch ->
                 currentCodes[index + i] = ch.toString()
             }
             _uiState.update { it.copy(codes = currentCodes) }
-            if (isCodeComplete) {
+            if (_uiState.value.isCodeComplete) {
                 onVerify()
             }
             return
@@ -85,13 +82,13 @@ class VerificationCodeViewModel @Inject constructor(
         currentCodes[index] = digits.take(1)
         _uiState.update { it.copy(codes = currentCodes) }
 
-        if (isCodeComplete) {
+        if (_uiState.value.isCodeComplete) {
             onVerify()
         }
     }
 
     fun onVerify() {
-        if (!isCodeComplete || _uiState.value.isLoading) return
+        if (!_uiState.value.isCodeComplete || _uiState.value.isLoading) return
         _uiState.update { it.copy(isLoading = true) }
         val fullCode = _uiState.value.codes.joinToString("")
 
@@ -112,7 +109,7 @@ class VerificationCodeViewModel @Inject constructor(
     }
 
     fun onResend() {
-        if (!isResendEnabled || _uiState.value.isLoading) return
+        if (!_uiState.value.isResendEnabled || _uiState.value.isLoading) return
         _uiState.update { it.copy(isLoading = true) }
 
         viewModelScope.launch {
@@ -152,7 +149,11 @@ class VerificationCodeViewModel @Inject constructor(
                 _effect.emit(VerificationEffect.ShowSnackbar(R.string.error_too_many_requests))
             }
 
-            else -> {
+            is AuthError.InvalidCredentials,
+            is AuthError.InvalidPassword,
+            is AuthError.Unknown,
+            is AuthError.UserNotConfirmed,
+            is AuthError.UsernameAlreadyExists -> {
                 _effect.emit(VerificationEffect.ShowSnackbar(R.string.error_unknown))
             }
         }
@@ -168,14 +169,20 @@ class VerificationCodeViewModel @Inject constructor(
                 _effect.emit(VerificationEffect.ShowSnackbar(R.string.error_too_many_requests))
             }
 
-            else -> {
+            is AuthError.CodeExpired,
+            is AuthError.CodeMismatch,
+            is AuthError.InvalidCredentials,
+            is AuthError.InvalidPassword,
+            is AuthError.Unknown,
+            is AuthError.UserNotConfirmed,
+            is AuthError.UsernameAlreadyExists -> {
                 _effect.emit(VerificationEffect.ShowSnackbar(R.string.error_resend_failed))
             }
         }
     }
 
     private fun startResendTimer() {
-        _uiState.update { it.copy(resendTimerSeconds = RESEND_COOLDOWN_SECONDS) }
+        _uiState.update { it.copy(resendTimerSeconds = VerificationCodeUiState.DEFAULT_RESEND_COOLDOWN_SECONDS) }
         viewModelScope.launch {
             while (_uiState.value.resendTimerSeconds > 0) {
                 delay(1_000L)
@@ -185,8 +192,6 @@ class VerificationCodeViewModel @Inject constructor(
     }
 
     companion object {
-        const val RESEND_COOLDOWN_SECONDS = 60
-
         private const val ARG_EMAIL = "email"
     }
 }
