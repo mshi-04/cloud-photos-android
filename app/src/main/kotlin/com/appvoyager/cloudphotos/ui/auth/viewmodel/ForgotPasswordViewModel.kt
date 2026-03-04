@@ -45,18 +45,16 @@ class ForgotPasswordViewModel @Inject constructor(
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            val email = try {
-                Email.of(_uiState.value.email)
-            } catch (_: IllegalArgumentException) {
-                _uiState.update {
-                    it.copy(
-                        emailError = R.string.error_invalid_email,
-                        isLoading = false
-                    )
-                }
-                return@launch
-            }
             try {
+                val email = try {
+                    Email.of(_uiState.value.email)
+                } catch (_: IllegalArgumentException) {
+                    _uiState.update {
+                        it.copy(emailError = R.string.error_invalid_email)
+                    }
+                    return@launch
+                }
+
                 when (val result = resetPasswordUseCase(ResetPasswordRequest(email))) {
                     is AuthResult.Success -> {
                         _effect.emit(ForgotPasswordEffect.NavigateToResetCode(email))
