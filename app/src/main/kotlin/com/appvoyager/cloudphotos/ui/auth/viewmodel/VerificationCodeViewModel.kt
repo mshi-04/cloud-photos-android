@@ -1,12 +1,9 @@
 package com.appvoyager.cloudphotos.ui.auth.viewmodel
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.appvoyager.cloudphotos.R
 import com.appvoyager.cloudphotos.domain.auth.model.AuthError
 import com.appvoyager.cloudphotos.domain.auth.model.AuthResult
 import com.appvoyager.cloudphotos.domain.auth.request.ConfirmSignUpRequest
@@ -16,11 +13,16 @@ import com.appvoyager.cloudphotos.domain.auth.usecase.ResendSignUpCodeUseCase
 import com.appvoyager.cloudphotos.domain.auth.valueobject.ConfirmationCode
 import com.appvoyager.cloudphotos.domain.auth.valueobject.Email
 import com.appvoyager.cloudphotos.ui.auth.effect.VerificationEffect
+import com.appvoyager.cloudphotos.ui.auth.uistate.VerificationCodeUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -33,33 +35,24 @@ class VerificationCodeViewModel @Inject constructor(
 
     val email: String = savedStateHandle.get<String>(ARG_EMAIL).orEmpty()
 
-    var codes by mutableStateOf(List(6) { "" })
-        private set
-
-    var isLoading by mutableStateOf(false)
-        private set
-
-    var codeError by mutableStateOf<String?>(null)
-        private set
-
-    var resendTimerSeconds by mutableIntStateOf(RESEND_COOLDOWN_SECONDS)
-        private set
-
-    val isResendEnabled: Boolean
-        get() = resendTimerSeconds <= 0 && !isLoading
-
-    val isCodeComplete: Boolean
-        get() = codes.all { it.length == 1 && it[0].isDigit() }
+    private val _uiState = MutableStateFlow(VerificationCodeUiState())
+    val uiState: StateFlow<VerificationCodeUiState> = _uiState.asStateFlow()
 
     private val _effect = MutableSharedFlow<VerificationEffect>(extraBufferCapacity = 1)
     val effect: SharedFlow<VerificationEffect> = _effect.asSharedFlow()
 
     private var isTimerStarted = false
 
+    val isResendEnabled: Boolean
+        get() = _uiState.value.resendTimerSeconds <= 0 && !_uiState.value.isLoading
+
+    val isCodeComplete: Boolean
+        get() = _uiState.value.codes.all { it.length == 1 && it[0].isDigit() }
+
     init {
         if (email.isBlank()) {
             viewModelScope.launch {
-                _effect.emit(VerificationEffect.ShowSnackbar("エラーが発生しました"))
+                _effect.emit(VerificationEffect.ShowSnackbar(R.string.error_unknown))
             }
         }
     }
@@ -73,24 +66,24 @@ class VerificationCodeViewModel @Inject constructor(
 
     fun onCodeChanged(index: Int, value: String) {
         if (index !in 0..5) return
-        codeError = null
+        _uiState.update { it.copy(codeError = null) }
 
         val digits = value.filter { it.isDigit() }
         if (digits.length > 1) {
-            val newCodes = codes.toMutableList()
+            val currentCodes = _uiState.value.codes.toMutableList()
             digits.take(6 - index).forEachIndexed { i, ch ->
-                newCodes[index + i] = ch.toString()
+                currentCodes[index + i] = ch.toString()
             }
-            codes = newCodes
+            _uiState.update { it.copy(codes = currentCodes) }
             if (isCodeComplete) {
                 onVerify()
             }
             return
         }
 
-        val newCodes = codes.toMutableList()
-        newCodes[index] = digits.take(1)
-        codes = newCodes
+        val currentCodes = _uiState.value.codes.toMutableList()
+        currentCodes[index] = digits.take(1)
+        _uiState.update { it.copy(codes = currentCodes) }
 
         if (isCodeComplete) {
             onVerify()
@@ -98,9 +91,9 @@ class VerificationCodeViewModel @Inject constructor(
     }
 
     fun onVerify() {
-        if (!isCodeComplete || isLoading) return
-        isLoading = true
-        val fullCode = codes.joinToString("")
+        if (!isCodeComplete || _uiState.value.isLoading) return
+        _uiState.update { it.copy(isLoading = true) }
+        val fullCode = _uiState.value.codes.joinToString("")
 
         viewModelScope.launch {
             try {
@@ -111,32 +104,32 @@ class VerificationCodeViewModel @Inject constructor(
                     is AuthResult.Error -> handleConfirmError(confirmResult.error)
                 }
             } catch (_: IllegalArgumentException) {
-                codeError = "正しい確認コードを入力してください"
+                _uiState.update { it.copy(codeError = R.string.error_confirm_code) }
             } finally {
-                isLoading = false
+                _uiState.update { it.copy(isLoading = false) }
             }
         }
     }
 
     fun onResend() {
-        if (!isResendEnabled || isLoading) return
-        isLoading = true
+        if (!isResendEnabled || _uiState.value.isLoading) return
+        _uiState.update { it.copy(isLoading = true) }
 
         viewModelScope.launch {
             try {
                 val email = Email.of(email)
                 when (val result = resendSignUpCodeUseCase(ResendSignUpCodeRequest(email))) {
                     is AuthResult.Success -> {
-                        _effect.emit(VerificationEffect.ShowSnackbar("確認コードを再送信しました"))
+                        _effect.emit(VerificationEffect.ShowSnackbar(R.string.message_code_resent))
                         startResendTimer()
                     }
 
                     is AuthResult.Error -> handleResendError(result.error)
                 }
             } catch (_: IllegalArgumentException) {
-                _effect.emit(VerificationEffect.ShowSnackbar("エラーが発生しました"))
+                _effect.emit(VerificationEffect.ShowSnackbar(R.string.error_unknown))
             } finally {
-                isLoading = false
+                _uiState.update { it.copy(isLoading = false) }
             }
         }
     }
@@ -144,23 +137,23 @@ class VerificationCodeViewModel @Inject constructor(
     private suspend fun handleConfirmError(error: AuthError) {
         when (error) {
             is AuthError.CodeMismatch -> {
-                codeError = "確認コードが正しくありません"
+                _uiState.update { it.copy(codeError = R.string.error_code_mismatch) }
             }
 
             is AuthError.CodeExpired -> {
-                codeError = "確認コードの有効期限が切れました。再送信してください"
+                _uiState.update { it.copy(codeError = R.string.error_code_expired) }
             }
 
             is AuthError.Network -> {
-                _effect.emit(VerificationEffect.ShowSnackbar("ネットワークエラーが発生しました"))
+                _effect.emit(VerificationEffect.ShowSnackbar(R.string.error_network))
             }
 
             is AuthError.TooManyRequests -> {
-                _effect.emit(VerificationEffect.ShowSnackbar("リクエストが多すぎます。しばらくしてから再試行してください"))
+                _effect.emit(VerificationEffect.ShowSnackbar(R.string.error_too_many_requests))
             }
 
             else -> {
-                _effect.emit(VerificationEffect.ShowSnackbar("エラーが発生しました"))
+                _effect.emit(VerificationEffect.ShowSnackbar(R.string.error_unknown))
             }
         }
     }
@@ -168,25 +161,25 @@ class VerificationCodeViewModel @Inject constructor(
     private suspend fun handleResendError(error: AuthError) {
         when (error) {
             is AuthError.Network -> {
-                _effect.emit(VerificationEffect.ShowSnackbar("ネットワークエラーが発生しました"))
+                _effect.emit(VerificationEffect.ShowSnackbar(R.string.error_network))
             }
 
             is AuthError.TooManyRequests -> {
-                _effect.emit(VerificationEffect.ShowSnackbar("リクエストが多すぎます。しばらくしてから再試行してください"))
+                _effect.emit(VerificationEffect.ShowSnackbar(R.string.error_too_many_requests))
             }
 
             else -> {
-                _effect.emit(VerificationEffect.ShowSnackbar("再送信に失敗しました"))
+                _effect.emit(VerificationEffect.ShowSnackbar(R.string.error_resend_failed))
             }
         }
     }
 
     private fun startResendTimer() {
-        resendTimerSeconds = RESEND_COOLDOWN_SECONDS
+        _uiState.update { it.copy(resendTimerSeconds = RESEND_COOLDOWN_SECONDS) }
         viewModelScope.launch {
-            while (resendTimerSeconds > 0) {
+            while (_uiState.value.resendTimerSeconds > 0) {
                 delay(1_000L)
-                resendTimerSeconds--
+                _uiState.update { it.copy(resendTimerSeconds = it.resendTimerSeconds - 1) }
             }
         }
     }

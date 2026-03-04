@@ -16,7 +16,10 @@ class CloudPhotosApp : Application() {
             Amplify.addPlugin(AWSCognitoAuthPlugin())
             Amplify.configure(applicationContext)
         } catch (error: AmplifyException) {
-            throw RuntimeException("Amplify initialization failed. Check amplifyconfiguration.json.", error)
+            throw RuntimeException(
+                "Amplify initialization failed. Check amplifyconfiguration.json.",
+                error
+            )
         }
     }
 

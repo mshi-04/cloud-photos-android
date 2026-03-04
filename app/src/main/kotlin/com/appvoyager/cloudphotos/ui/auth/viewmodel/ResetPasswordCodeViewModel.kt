@@ -1,12 +1,9 @@
 package com.appvoyager.cloudphotos.ui.auth.viewmodel
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.appvoyager.cloudphotos.R
 import com.appvoyager.cloudphotos.domain.auth.model.AuthError
 import com.appvoyager.cloudphotos.domain.auth.model.AuthResult
 import com.appvoyager.cloudphotos.domain.auth.request.ConfirmResetPasswordRequest
@@ -17,11 +14,16 @@ import com.appvoyager.cloudphotos.domain.auth.valueobject.ConfirmationCode
 import com.appvoyager.cloudphotos.domain.auth.valueobject.Email
 import com.appvoyager.cloudphotos.domain.auth.valueobject.Password
 import com.appvoyager.cloudphotos.ui.auth.effect.ResetPasswordCodeEffect
+import com.appvoyager.cloudphotos.ui.auth.uistate.ResetPasswordCodeUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -35,26 +37,8 @@ class ResetPasswordCodeViewModel @Inject constructor(
     val email: String = savedStateHandle.get<String>(ARG_EMAIL)
         ?: error("Missing required nav argument: $ARG_EMAIL")
 
-    var codes by mutableStateOf(List(6) { "" })
-        private set
-
-    var newPassword by mutableStateOf("")
-        private set
-
-    var isNewPasswordVisible by mutableStateOf(false)
-        private set
-
-    var isLoading by mutableStateOf(false)
-        private set
-
-    var codeError by mutableStateOf<String?>(null)
-        private set
-
-    var passwordError by mutableStateOf<String?>(null)
-        private set
-
-    var resendTimerSeconds by mutableIntStateOf(RESEND_COOLDOWN_SECONDS)
-        private set
+    private val _uiState = MutableStateFlow(ResetPasswordCodeUiState())
+    val uiState: StateFlow<ResetPasswordCodeUiState> = _uiState.asStateFlow()
 
     private var isTimerStarted = false
 
@@ -62,13 +46,13 @@ class ResetPasswordCodeViewModel @Inject constructor(
     val effect: SharedFlow<ResetPasswordCodeEffect> = _effect.asSharedFlow()
 
     val isResendEnabled: Boolean
-        get() = resendTimerSeconds <= 0 && !isLoading
+        get() = _uiState.value.resendTimerSeconds <= 0 && !_uiState.value.isLoading
 
     val isCodeComplete: Boolean
-        get() = codes.all { it.length == 1 && it[0].isDigit() }
+        get() = _uiState.value.codes.all { it.length == 1 && it[0].isDigit() }
 
     val isFormValid: Boolean
-        get() = isCodeComplete && newPassword.length >= 8
+        get() = isCodeComplete && _uiState.value.newPassword.length >= 8
 
     fun startTimerIfNeeded() {
         if (!isTimerStarted) {
@@ -79,63 +63,61 @@ class ResetPasswordCodeViewModel @Inject constructor(
 
     fun onCodeChanged(index: Int, value: String) {
         if (index !in 0..5) return
-        codeError = null
+        _uiState.update { it.copy(codeError = null) }
 
         val digits = value.filter { it.isDigit() }
         if (digits.length > 1) {
-            val newCodes = codes.toMutableList()
+            val currentCodes = _uiState.value.codes.toMutableList()
             digits.take(6 - index).forEachIndexed { i, ch ->
-                newCodes[index + i] = ch.toString()
+                currentCodes[index + i] = ch.toString()
             }
-            codes = newCodes
+            _uiState.update { it.copy(codes = currentCodes) }
             return
         }
 
-        val newCodes = codes.toMutableList()
-        newCodes[index] = digits.take(1)
-        codes = newCodes
+        val currentCodes = _uiState.value.codes.toMutableList()
+        currentCodes[index] = digits.take(1)
+        _uiState.update { it.copy(codes = currentCodes) }
     }
 
     fun onNewPasswordChanged(value: String) {
-        newPassword = value
-        passwordError = null
+        _uiState.update { it.copy(newPassword = value, passwordError = null) }
     }
 
     fun onToggleNewPasswordVisibility() {
-        isNewPasswordVisible = !isNewPasswordVisible
+        _uiState.update { it.copy(isNewPasswordVisible = !it.isNewPasswordVisible) }
     }
 
     fun onClearCodes() {
-        codes = List(6) { "" }
-        codeError = null
+        _uiState.update { it.copy(codes = List(6) { "" }, codeError = null) }
     }
 
     fun onConfirm() {
-        if (!validateForm() || isLoading) return
-        val fullCode = codes.joinToString("")
+        if (!validateForm() || _uiState.value.isLoading) return
+        val fullCode = _uiState.value.codes.joinToString("")
 
         viewModelScope.launch {
-            isLoading = true
+            _uiState.update { it.copy(isLoading = true) }
             try {
                 val email = Email.of(email)
                 val code = ConfirmationCode.of(fullCode)
-                val password = Password.of(newPassword)
+                val password = Password.of(_uiState.value.newPassword)
                 val result = confirmResetPasswordUseCase(
                     ConfirmResetPasswordRequest(email, code, password)
                 )
 
                 when (result) {
                     is AuthResult.Success -> {
-                        _effect.emit(ResetPasswordCodeEffect.ShowSnackbar("パスワードをリセットしました"))
+                        _effect.emit(ResetPasswordCodeEffect.ShowSnackbar(R.string.message_password_reset))
                         _effect.emit(ResetPasswordCodeEffect.NavigateBackToLogin)
                     }
 
                     is AuthResult.Error -> handleConfirmError(result.error)
                 }
             } catch (_: IllegalArgumentException) {
-                codeError = "入力内容を確認してください"
+                _uiState.update { it.copy(codeError = R.string.error_check_input) }
             } finally {
-                isLoading = false
+                _uiState.update { it.copy(isLoading = false) }
             }
         }
     }
@@ -144,23 +126,23 @@ class ResetPasswordCodeViewModel @Inject constructor(
         if (!isResendEnabled) return
 
         viewModelScope.launch {
-            isLoading = true
+            _uiState.update { it.copy(isLoading = true) }
             try {
                 val email = Email.of(email)
                 val result = resetPasswordUseCase(ResetPasswordRequest(email))
 
                 when (result) {
                     is AuthResult.Success -> {
-                        _effect.emit(ResetPasswordCodeEffect.ShowSnackbar("確認コードを再送信しました"))
+                        _effect.emit(ResetPasswordCodeEffect.ShowSnackbar(R.string.message_code_resent))
                         startResendTimer()
                     }
 
                     is AuthResult.Error -> handleResendError(result.error)
                 }
             } catch (_: IllegalArgumentException) {
-                _effect.emit(ResetPasswordCodeEffect.ShowSnackbar("エラーが発生しました"))
+                _effect.emit(ResetPasswordCodeEffect.ShowSnackbar(R.string.error_unknown))
             } finally {
-                isLoading = false
+                _uiState.update { it.copy(isLoading = false) }
             }
         }
     }
@@ -168,11 +150,11 @@ class ResetPasswordCodeViewModel @Inject constructor(
     private fun validateForm(): Boolean {
         var valid = true
         if (!isCodeComplete) {
-            codeError = "確認コードを入力してください"
+            _uiState.update { it.copy(codeError = R.string.error_enter_code) }
             valid = false
         }
-        if (newPassword.length < 8) {
-            passwordError = "パスワードは8文字以上で入力してください"
+        if (_uiState.value.newPassword.length < 8) {
+            _uiState.update { it.copy(passwordError = R.string.error_password_too_short) }
             valid = false
         }
         return valid
@@ -181,23 +163,23 @@ class ResetPasswordCodeViewModel @Inject constructor(
     private suspend fun handleConfirmError(error: AuthError) {
         when (error) {
             is AuthError.CodeMismatch -> {
-                codeError = "確認コードが正しくありません"
+                _uiState.update { it.copy(codeError = R.string.error_code_mismatch) }
             }
 
             is AuthError.CodeExpired -> {
-                codeError = "確認コードの有効期限が切れました。再送信してください"
+                _uiState.update { it.copy(codeError = R.string.error_code_expired) }
             }
 
             is AuthError.Network -> {
-                _effect.emit(ResetPasswordCodeEffect.ShowSnackbar("ネットワークエラーが発生しました"))
+                _effect.emit(ResetPasswordCodeEffect.ShowSnackbar(R.string.error_network))
             }
 
             is AuthError.TooManyRequests -> {
-                _effect.emit(ResetPasswordCodeEffect.ShowSnackbar("リクエストが多すぎます。しばらくしてから再試行してください"))
+                _effect.emit(ResetPasswordCodeEffect.ShowSnackbar(R.string.error_too_many_requests))
             }
 
             else -> {
-                _effect.emit(ResetPasswordCodeEffect.ShowSnackbar("エラーが発生しました"))
+                _effect.emit(ResetPasswordCodeEffect.ShowSnackbar(R.string.error_unknown))
             }
         }
     }
@@ -205,25 +187,25 @@ class ResetPasswordCodeViewModel @Inject constructor(
     private suspend fun handleResendError(error: AuthError) {
         when (error) {
             is AuthError.Network -> {
-                _effect.emit(ResetPasswordCodeEffect.ShowSnackbar("ネットワークエラーが発生しました"))
+                _effect.emit(ResetPasswordCodeEffect.ShowSnackbar(R.string.error_network))
             }
 
             is AuthError.TooManyRequests -> {
-                _effect.emit(ResetPasswordCodeEffect.ShowSnackbar("リクエストが多すぎます。しばらくしてから再試行してください"))
+                _effect.emit(ResetPasswordCodeEffect.ShowSnackbar(R.string.error_too_many_requests))
             }
 
             else -> {
-                _effect.emit(ResetPasswordCodeEffect.ShowSnackbar("再送信に失敗しました"))
+                _effect.emit(ResetPasswordCodeEffect.ShowSnackbar(R.string.error_resend_failed))
             }
         }
     }
 
     private fun startResendTimer() {
-        resendTimerSeconds = RESEND_COOLDOWN_SECONDS
+        _uiState.update { it.copy(resendTimerSeconds = RESEND_COOLDOWN_SECONDS) }
         viewModelScope.launch {
-            while (resendTimerSeconds > 0) {
+            while (_uiState.value.resendTimerSeconds > 0) {
                 delay(1_000L)
-                resendTimerSeconds--
+                _uiState.update { it.copy(resendTimerSeconds = it.resendTimerSeconds - 1) }
             }
         }
     }

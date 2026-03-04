@@ -1,6 +1,7 @@
 package com.appvoyager.cloudphotos.ui.auth.viewmodel
 
 import androidx.lifecycle.SavedStateHandle
+import com.appvoyager.cloudphotos.R
 import com.appvoyager.cloudphotos.domain.auth.model.AuthError
 import com.appvoyager.cloudphotos.domain.auth.model.AuthResult
 import com.appvoyager.cloudphotos.domain.auth.usecase.ConfirmSignUpUseCase
@@ -40,7 +41,7 @@ class VerificationCodeViewModelTest {
         return VerificationCodeViewModel(
             savedStateHandle = savedStateHandle,
             confirmSignUpUseCase = confirmSignUpUseCase,
-            resendSignUpCodeUseCase = resendSignUpCodeUseCase,
+            resendSignUpCodeUseCase = resendSignUpCodeUseCase
         )
     }
 
@@ -58,24 +59,29 @@ class VerificationCodeViewModelTest {
 
     @Test
     fun `initial state has empty codes and timer started`() {
-        Assertions.assertEquals(List(6) { "" }, viewModel.codes)
-        Assertions.assertFalse(viewModel.isLoading)
-        Assertions.assertNull(viewModel.codeError)
-        Assertions.assertEquals(60, viewModel.resendTimerSeconds)
+        val state = viewModel.uiState.value
+        Assertions.assertEquals(List(6) { "" }, state.codes)
+        Assertions.assertFalse(state.isLoading)
+        Assertions.assertNull(state.codeError)
+        Assertions.assertEquals(60, state.resendTimerSeconds)
         Assertions.assertFalse(viewModel.isResendEnabled)
     }
 
     @Test
     fun `onCodeChanged updates single digit`() {
         viewModel.onCodeChanged(0, "1")
-        Assertions.assertEquals("1", viewModel.codes[0])
-        Assertions.assertEquals("", viewModel.codes[1])
+        val state = viewModel.uiState.value
+        Assertions.assertEquals("1", state.codes[0])
+        Assertions.assertEquals("", state.codes[1])
     }
 
     @Test
     fun `onCodeChanged with paste distributes digits`() {
         viewModel.onCodeChanged(0, "123456")
-        Assertions.assertEquals(listOf("1", "2", "3", "4", "5", "6"), viewModel.codes)
+        Assertions.assertEquals(
+            listOf("1", "2", "3", "4", "5", "6"),
+            viewModel.uiState.value.codes
+        )
     }
 
     @Test
@@ -116,7 +122,10 @@ class VerificationCodeViewModelTest {
         advanceUntilIdle()
 
         // Assert
-        Assertions.assertEquals("確認コードが正しくありません", viewModel.codeError)
+        Assertions.assertEquals(
+            R.string.error_code_mismatch,
+            viewModel.uiState.value.codeError
+        )
     }
 
     @Test
@@ -135,8 +144,8 @@ class VerificationCodeViewModelTest {
 
             // Assert
             Assertions.assertEquals(
-                "確認コードの有効期限が切れました。再送信してください",
-                viewModel.codeError
+                R.string.error_code_expired,
+                viewModel.uiState.value.codeError
             )
         }
 
@@ -171,8 +180,8 @@ class VerificationCodeViewModelTest {
         }
 
         Assertions.assertTrue(
-            viewModel.resendTimerSeconds <= 0,
-            "Timer should have elapsed, but was ${viewModel.resendTimerSeconds}"
+            viewModel.uiState.value.resendTimerSeconds <= 0,
+            "Timer should have elapsed, but was ${viewModel.uiState.value.resendTimerSeconds}"
         )
 
         // Act
@@ -187,10 +196,13 @@ class VerificationCodeViewModelTest {
         // Assert
         Assertions.assertTrue(effect is VerificationEffect.ShowSnackbar)
         Assertions.assertEquals(
-            "確認コードを再送信しました",
-            (effect as VerificationEffect.ShowSnackbar).message
+            R.string.message_code_resent,
+            (effect as VerificationEffect.ShowSnackbar).messageResId
         )
-        Assertions.assertTrue(viewModel.resendTimerSeconds > 0, "Timer should have been reset")
+        Assertions.assertTrue(
+            viewModel.uiState.value.resendTimerSeconds > 0,
+            "Timer should have been reset"
+        )
         job.cancel()
     }
 
@@ -199,6 +211,4 @@ class VerificationCodeViewModelTest {
             viewModel.onCodeChanged(i, ch.toString())
         }
     }
-
-
 }

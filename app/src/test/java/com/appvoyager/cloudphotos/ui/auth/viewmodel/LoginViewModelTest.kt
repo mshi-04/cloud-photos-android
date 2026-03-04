@@ -1,5 +1,6 @@
 package com.appvoyager.cloudphotos.ui.auth.viewmodel
 
+import com.appvoyager.cloudphotos.R
 import com.appvoyager.cloudphotos.domain.auth.model.AuthError
 import com.appvoyager.cloudphotos.domain.auth.model.AuthResult
 import com.appvoyager.cloudphotos.domain.auth.model.SignInState
@@ -45,25 +46,28 @@ class LoginViewModelTest {
 
     @Test
     fun `initial state has empty email and password`() {
-        Assertions.assertEquals("", viewModel.email)
-        Assertions.assertEquals("", viewModel.password)
-        Assertions.assertFalse(viewModel.isLoading)
-        Assertions.assertNull(viewModel.emailError)
-        Assertions.assertNull(viewModel.passwordError)
+        val state = viewModel.uiState.value
+        Assertions.assertEquals("", state.email)
+        Assertions.assertEquals("", state.password)
+        Assertions.assertFalse(state.isLoading)
+        Assertions.assertNull(state.emailError)
+        Assertions.assertNull(state.passwordError)
     }
 
     @Test
     fun `onEmailChanged updates email and clears error`() {
         viewModel.onEmailChanged("test@example.com")
-        Assertions.assertEquals("test@example.com", viewModel.email)
-        Assertions.assertNull(viewModel.emailError)
+        val state = viewModel.uiState.value
+        Assertions.assertEquals("test@example.com", state.email)
+        Assertions.assertNull(state.emailError)
     }
 
     @Test
     fun `onPasswordChanged updates password and clears error`() {
         viewModel.onPasswordChanged("password1")
-        Assertions.assertEquals("password1", viewModel.password)
-        Assertions.assertNull(viewModel.passwordError)
+        val state = viewModel.uiState.value
+        Assertions.assertEquals("password1", state.password)
+        Assertions.assertNull(state.passwordError)
     }
 
     @Test
@@ -102,7 +106,7 @@ class LoginViewModelTest {
 
         // Assert
         Assertions.assertTrue(effect is LoginEffect.NavigateToHome)
-        Assertions.assertFalse(viewModel.isLoading)
+        Assertions.assertFalse(viewModel.uiState.value.isLoading)
         job.cancel()
     }
 
@@ -146,8 +150,8 @@ class LoginViewModelTest {
 
         // Assert
         Assertions.assertEquals(
-            "メールアドレスまたはパスワードが正しくありません",
-            viewModel.passwordError
+            R.string.error_invalid_credentials,
+            viewModel.uiState.value.passwordError
         )
     }
 
@@ -207,7 +211,10 @@ class LoginViewModelTest {
         advanceUntilIdle()
 
         // Assert
-        Assertions.assertEquals("このメールアドレスは既に登録されています", viewModel.emailError)
+        Assertions.assertEquals(
+            R.string.error_email_already_registered,
+            viewModel.uiState.value.emailError
+        )
     }
 
     @Test
@@ -221,8 +228,8 @@ class LoginViewModelTest {
         advanceUntilIdle()
 
         // Assert
-        Assertions.assertEquals("有効なメールアドレスを入力してください", viewModel.emailError)
-        Assertions.assertEquals("パスワードは8文字以上で入力してください", viewModel.passwordError)
+        val state = viewModel.uiState.value
+        Assertions.assertEquals(R.string.error_invalid_email, state.emailError)
+        Assertions.assertEquals(R.string.error_password_too_short, state.passwordError)
     }
-
 }
