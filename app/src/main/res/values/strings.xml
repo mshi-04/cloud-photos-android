@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="app_name" translatable="false">Cloud Photos</string>
 
     <!-- 確認コード入力画面 -->
     <string name="verification_code_prompt">登録メールアドレス宛てにパスコードを送信しました。\nご確認いただきご入力ください。</string>

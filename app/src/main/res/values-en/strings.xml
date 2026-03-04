@@ -1,5 +1,4 @@
 <resources>
-    <string name="app_name" translatable="false">Cloud Photos</string>
 
     <!-- screen of login verification -->
     <string name="verification_code_prompt">A verification code has been sent to your registered
