@@ -33,6 +33,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
@@ -60,23 +61,28 @@ fun ForgotPasswordScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val resources = LocalResources.current
 
+    val latestOnNavigateToResetCode = rememberUpdatedState(onNavigateToResetCode)
+    val latestOnNavigateToVerification = rememberUpdatedState(onNavigateToVerification)
+    val latestOnNavigateBack = rememberUpdatedState(onNavigateBack)
+    val latestResources = rememberUpdatedState(resources)
+
     LaunchedEffect(Unit) {
         viewModel.effect.collect { effect ->
             when (effect) {
                 is ForgotPasswordEffect.NavigateToResetCode -> {
-                    onNavigateToResetCode(effect.email.value)
+                    latestOnNavigateToResetCode.value(effect.email.value)
                 }
 
                 is ForgotPasswordEffect.NavigateToVerification -> {
-                    onNavigateToVerification(effect.email.value)
+                    latestOnNavigateToVerification.value(effect.email.value)
                 }
 
                 is ForgotPasswordEffect.NavigateBackToLogin -> {
-                    onNavigateBack()
+                    latestOnNavigateBack.value()
                 }
 
                 is ForgotPasswordEffect.ShowSnackbar -> {
-                    snackbarHostState.showSnackbar(resources.getString(effect.messageResId))
+                    snackbarHostState.showSnackbar(latestResources.value.getString(effect.messageResId))
                 }
             }
         }
@@ -195,6 +201,7 @@ private fun ForgotPasswordContent(
 
         TextButton(
             onClick = onBack,
+            enabled = !isLoading,
             modifier = Modifier.align(Alignment.CenterHorizontally)
         ) {
             Text("ログイン画面に戻る")

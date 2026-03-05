@@ -29,7 +29,7 @@ class ForgotPasswordViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(ForgotPasswordUiState())
     val uiState: StateFlow<ForgotPasswordUiState> = _uiState.asStateFlow()
 
-    private val _effect = MutableSharedFlow<ForgotPasswordEffect>()
+    private val _effect = MutableSharedFlow<ForgotPasswordEffect>(extraBufferCapacity = 1)
     val effect: SharedFlow<ForgotPasswordEffect> = _effect.asSharedFlow()
 
     fun onEmailChanged(value: String) {
@@ -60,7 +60,7 @@ class ForgotPasswordViewModel @Inject constructor(
                         _effect.emit(ForgotPasswordEffect.NavigateToResetCode(email))
                     }
 
-                    is AuthResult.Error -> handleError(result.error)
+                    is AuthResult.Error -> handleError(result.error, email)
                 }
             } finally {
                 _uiState.update { it.copy(isLoading = false) }
@@ -68,7 +68,7 @@ class ForgotPasswordViewModel @Inject constructor(
         }
     }
 
-    private suspend fun handleError(error: AuthError) {
+    private suspend fun handleError(error: AuthError, email: Email) {
         when (error) {
             is AuthError.Network -> {
                 _effect.emit(ForgotPasswordEffect.ShowSnackbar(R.string.error_network))
@@ -79,7 +79,6 @@ class ForgotPasswordViewModel @Inject constructor(
             }
 
             is AuthError.UserNotConfirmed -> {
-                val email = Email.of(_uiState.value.email)
                 _effect.emit(ForgotPasswordEffect.ShowSnackbar(R.string.error_user_not_confirmed))
                 _effect.emit(ForgotPasswordEffect.NavigateToVerification(email))
             }

@@ -158,6 +158,27 @@ class ForgotPasswordViewModelTest {
         }
 
     @Test
+    fun `onSubmit with InvalidCredentials emits ShowSnackbar with error_invalid_credentials`() =
+        runTest(testDispatcher) {
+            viewModel.onEmailChanged("test@example.com")
+            coEvery { resetPasswordUseCase(any()) } returns AuthResult.Error(
+                AuthError.InvalidCredentials()
+            )
+
+            var effect: ForgotPasswordEffect? = null
+            val job = launch { effect = viewModel.effect.first() }
+            viewModel.onSubmit()
+            advanceUntilIdle()
+
+            assertTrue(effect is ForgotPasswordEffect.ShowSnackbar)
+            assertEquals(
+                R.string.error_invalid_credentials,
+                (effect as ForgotPasswordEffect.ShowSnackbar).messageResId
+            )
+            job.cancel()
+        }
+
+    @Test
     fun `onSubmit with InvalidPassword emits ShowSnackbar with error_invalid_password`() =
         runTest(testDispatcher) {
             viewModel.onEmailChanged("test@example.com")
