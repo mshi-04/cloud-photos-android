@@ -68,6 +68,17 @@ class ForgotPasswordViewModelTest {
     }
 
     @Test
+    fun `onSubmit with invalid email sets emailError`() = runTest(testDispatcher) {
+        viewModel.onEmailChanged("invalid-email")
+        viewModel.onSubmit()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(R.string.error_invalid_email, state.emailError)
+        assertFalse(state.isLoading)
+    }
+
+    @Test
     fun `onSubmit success emits NavigateToResetCode`() = runTest(testDispatcher) {
         viewModel.onEmailChanged("test@example.com")
         coEvery { resetPasswordUseCase(any()) } returns AuthResult.Success(Unit)
