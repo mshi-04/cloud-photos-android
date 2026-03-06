@@ -59,7 +59,7 @@ import com.appvoyager.cloudphotos.ui.util.StringUtils
 @Composable
 fun ResetPasswordCodeScreen(
     viewModel: ResetPasswordCodeViewModel = hiltViewModel(),
-    onNavigateBackToLogin: () -> Unit
+    onNavigateBackToLogin: (Int?) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -72,7 +72,7 @@ fun ResetPasswordCodeScreen(
         viewModel.effect.collect { effect ->
             when (effect) {
                 is ResetPasswordCodeEffect.NavigateBackToLogin -> {
-                    latestOnNavigateBackToLogin.value()
+                    latestOnNavigateBackToLogin.value(effect.messageResId)
                 }
 
                 is ResetPasswordCodeEffect.ShowSnackbar -> {

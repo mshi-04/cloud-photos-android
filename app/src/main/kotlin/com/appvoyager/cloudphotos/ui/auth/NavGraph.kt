@@ -21,11 +21,15 @@ import com.appvoyager.cloudphotos.ui.screen.HomeScreen
 private const val TRANSITION_DURATION_MS = 300
 
 object AuthRoute {
-    const val LOGIN = "login"
+    const val LOGIN = "login?messageResId={messageResId}"
     const val VERIFICATION = "verification/{email}"
     const val FORGOT_PASSWORD = "forgot_password"
     const val RESET_PASSWORD_CODE = "reset_password_code/{email}"
     const val HOME = "home"
+
+    fun login(messageResId: Int? = null): String {
+        return if (messageResId != null) "login?messageResId=$messageResId" else "login"
+    }
 
     fun verification(email: Email): String = "verification/${Uri.encode(email.value)}"
     fun resetPasswordCode(email: Email): String = "reset_password_code/${Uri.encode(email.value)}"
@@ -43,6 +47,10 @@ fun NavGraph(
     ) {
         composable(
             route = AuthRoute.LOGIN,
+            arguments = listOf(navArgument("messageResId") {
+                type = NavType.IntType
+                defaultValue = -1
+            }),
             enterTransition = { enterForward() },
             exitTransition = { exitForward() },
             popEnterTransition = { enterBack() },
@@ -109,8 +117,8 @@ fun NavGraph(
             popExitTransition = { exitBack() }
         ) {
             ResetPasswordCodeScreen(
-                onNavigateBackToLogin = {
-                    navController.navigate(AuthRoute.LOGIN) {
+                onNavigateBackToLogin = { messageResId ->
+                    navController.navigate(AuthRoute.login(messageResId)) {
                         popUpTo(AuthRoute.LOGIN) { inclusive = true }
                     }
                 }
@@ -137,7 +145,7 @@ fun NavGraph(
             HomeScreen(
                 onSignOut = {
                     onSignOut()
-                    navController.navigate(AuthRoute.LOGIN) {
+                    navController.navigate(AuthRoute.login()) {
                         popUpTo(AuthRoute.HOME) { inclusive = true }
                     }
                 }

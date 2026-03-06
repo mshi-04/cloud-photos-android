@@ -1,5 +1,7 @@
 package com.appvoyager.cloudphotos.ui.auth.viewmodel
 
+import androidx.lifecycle.SavedStateHandle
+
 import com.appvoyager.cloudphotos.R
 import com.appvoyager.cloudphotos.domain.auth.model.AuthError
 import com.appvoyager.cloudphotos.domain.auth.model.AuthResult
@@ -36,7 +38,7 @@ class LoginViewModelTest {
     @BeforeEach
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        viewModel = LoginViewModel(signInUseCase, signUpUseCase)
+        viewModel = LoginViewModel(SavedStateHandle(), signInUseCase, signUpUseCase)
     }
 
     @AfterEach

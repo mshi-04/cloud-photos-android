@@ -1,5 +1,6 @@
 package com.appvoyager.cloudphotos.ui.auth.viewmodel
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.appvoyager.cloudphotos.R
@@ -28,6 +29,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class LoginViewModel @Inject constructor(
+    private val savedStateHandle: SavedStateHandle,
     private val signInUseCase: SignInUseCase,
     private val signUpUseCase: SignUpUseCase
 ) : ViewModel() {
@@ -35,8 +37,19 @@ class LoginViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(LoginUiState())
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
 
-    private val _effect = MutableSharedFlow<LoginEffect>()
+    private val _effect = MutableSharedFlow<LoginEffect>(extraBufferCapacity = 1)
     val effect: SharedFlow<LoginEffect> = _effect.asSharedFlow()
+
+    init {
+        savedStateHandle.get<Int>("messageResId")?.let { messageResId ->
+            if (messageResId != -1) {
+                viewModelScope.launch {
+                    _effect.emit(LoginEffect.ShowSnackbar(messageResId))
+                }
+                savedStateHandle.remove<Int>("messageResId")
+            }
+        }
+    }
 
     val isFormValid: Boolean
         get() = with(_uiState.value) {
