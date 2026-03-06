@@ -22,6 +22,8 @@ private const val TRANSITION_DURATION_MS = 300
 
 object AuthRoute {
 
+    const val NO_MESSAGE_RES_ID = -1
+
     const val HOME = "home"
     const val LOGIN = "login"
     const val FORGOT_PASSWORD = "forgot_password"
@@ -31,13 +33,17 @@ object AuthRoute {
     const val URI_RESET_PASSWORD_CODE = "reset_password_code/{email}"
 
     fun login(messageResId: Int? = null): String =
-        if (messageResId != null) URI_LOGIN.replace("{messageResId}", messageResId.toString()) else LOGIN
+        if (messageResId != null) URI_LOGIN.replace(
+            "{messageResId}",
+            messageResId.toString()
+        ) else LOGIN
 
     fun verification(email: Email): String =
         URI_VERIFICATION.replace("{email}", Uri.encode(email.value))
 
     fun resetPasswordCode(email: Email): String =
         URI_RESET_PASSWORD_CODE.replace("{email}", Uri.encode(email.value))
+
 }
 
 @Composable
@@ -54,7 +60,7 @@ fun NavGraph(
             route = AuthRoute.URI_LOGIN,
             arguments = listOf(navArgument("messageResId") {
                 type = NavType.IntType
-                defaultValue = -1
+                defaultValue = AuthRoute.NO_MESSAGE_RES_ID
             }),
             enterTransition = { enterForward() },
             exitTransition = { exitForward() },
