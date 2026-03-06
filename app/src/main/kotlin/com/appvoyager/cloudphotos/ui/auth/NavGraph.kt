@@ -67,7 +67,7 @@ fun NavGraph(
                 },
                 onNavigateToHome = {
                     navController.navigate(AuthRoute.HOME) {
-                        popUpTo(AuthRoute.LOGIN) { inclusive = true }
+                        popUpTo(AuthRoute.URI_LOGIN) { inclusive = true }
                     }
                 },
                 onNavigateToForgotPassword = {
@@ -87,7 +87,7 @@ fun NavGraph(
             VerificationCodeScreen(
                 onNavigateToHome = {
                     navController.navigate(AuthRoute.HOME) {
-                        popUpTo(AuthRoute.LOGIN) { inclusive = true }
+                        popUpTo(AuthRoute.URI_LOGIN) { inclusive = true }
                     }
                 }
             )
@@ -124,7 +124,7 @@ fun NavGraph(
             ResetPasswordCodeScreen(
                 onNavigateBackToLogin = { messageResId ->
                     navController.navigate(AuthRoute.login(messageResId)) {
-                        popUpTo(AuthRoute.LOGIN) { inclusive = true }
+                        popUpTo(AuthRoute.URI_LOGIN) { inclusive = true }
                     }
                 }
             )
