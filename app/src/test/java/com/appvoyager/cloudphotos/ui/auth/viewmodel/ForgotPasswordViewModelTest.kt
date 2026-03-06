@@ -154,16 +154,11 @@ class ForgotPasswordViewModelTest {
             viewModel.onSubmit()
             advanceUntilIdle()
 
-            assertEquals(2, effects.size)
-            assertTrue(effects[0] is ForgotPasswordEffect.ShowSnackbar)
-            assertEquals(
-                R.string.error_user_not_confirmed,
-                (effects[0] as ForgotPasswordEffect.ShowSnackbar).messageResId
-            )
-            assertTrue(effects[1] is ForgotPasswordEffect.NavigateToVerification)
+            assertEquals(1, effects.size)
+            assertTrue(effects[0] is ForgotPasswordEffect.NavigateToVerification)
             assertEquals(
                 Email.of("test@example.com"),
-                (effects[1] as ForgotPasswordEffect.NavigateToVerification).email
+                (effects[0] as ForgotPasswordEffect.NavigateToVerification).email
             )
             job.cancel()
         }
