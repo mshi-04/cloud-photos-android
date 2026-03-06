@@ -31,9 +31,13 @@ object AuthRoute {
     const val URI_RESET_PASSWORD_CODE = "reset_password_code/{email}"
 
     fun login(messageResId: Int? = null): String =
-        if (messageResId != null) "login?messageResId=${messageResId}" else LOGIN
-    fun verification(email: Email): String = "verification/${Uri.encode(email.value)}"
-    fun resetPasswordCode(email: Email): String = "reset_password_code/${Uri.encode(email.value)}"
+        if (messageResId != null) URI_LOGIN.replace("{messageResId}", messageResId.toString()) else LOGIN
+
+    fun verification(email: Email): String =
+        URI_VERIFICATION.replace("{email}", Uri.encode(email.value))
+
+    fun resetPasswordCode(email: Email): String =
+        URI_RESET_PASSWORD_CODE.replace("{email}", Uri.encode(email.value))
 }
 
 @Composable
