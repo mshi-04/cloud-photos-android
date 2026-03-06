@@ -25,12 +25,12 @@ object AuthRoute {
     const val NO_MESSAGE_RES_ID = -1
 
     const val HOME = "home"
-    const val LOGIN = "login"
-    const val FORGOT_PASSWORD = "forgot_password"
+    internal const val LOGIN = "login"
+    internal const val FORGOT_PASSWORD = "forgot_password"
 
-    const val URI_LOGIN = "login?messageResId={messageResId}"
-    const val URI_VERIFICATION = "verification/{email}"
-    const val URI_RESET_PASSWORD_CODE = "reset_password_code/{email}"
+    internal const val URI_LOGIN = "login?messageResId={messageResId}"
+    internal const val URI_VERIFICATION = "verification/{email}"
+    internal const val URI_RESET_PASSWORD_CODE = "reset_password_code/{email}"
 
     fun login(messageResId: Int? = null): String =
         if (messageResId != null) URI_LOGIN.replace(

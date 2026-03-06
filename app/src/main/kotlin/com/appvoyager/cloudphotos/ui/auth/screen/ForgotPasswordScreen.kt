@@ -177,7 +177,7 @@ private fun ForgotPasswordContent(
             keyboardActions = KeyboardActions(
                 onDone = {
                     focusManager.clearFocus()
-                    if (!isLoading) onSubmit()
+                    if (!isLoading && isFormValid) onSubmit()
                 }
             ),
             modifier = Modifier.fillMaxWidth()
@@ -187,7 +187,7 @@ private fun ForgotPasswordContent(
 
         Button(
             onClick = onSubmit,
-            enabled = !isLoading,
+            enabled = !isLoading && isFormValid,
             shape = RoundedCornerShape(24.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary
