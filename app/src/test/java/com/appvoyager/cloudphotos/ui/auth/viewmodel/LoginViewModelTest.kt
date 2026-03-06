@@ -11,7 +11,9 @@ import com.appvoyager.cloudphotos.domain.auth.usecase.SignUpUseCase
 import com.appvoyager.cloudphotos.domain.auth.valueobject.Email
 import com.appvoyager.cloudphotos.ui.auth.effect.LoginEffect
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.mockk
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -232,6 +234,80 @@ class LoginViewModelTest {
         // Assert
         val state = viewModel.uiState.value
         Assertions.assertEquals(R.string.error_invalid_email, state.emailError)
+        Assertions.assertEquals(R.string.error_password_too_short, state.passwordError)
+    }
+
+    @Test
+    fun `onSignIn guards against duplicate requests when isLoading`() =
+        runTest(testDispatcher) {
+            // Arrange
+            viewModel.onEmailChanged("test@example.com")
+            viewModel.onPasswordChanged("password1")
+            coEvery { signInUseCase(any()) } coAnswers {
+                delay(1000)
+                AuthResult.Success(SignInState.SignedIn)
+            }
+
+            // Act – call twice quickly
+            viewModel.onSignIn()
+            viewModel.onSignIn()
+            advanceUntilIdle()
+
+            // Assert – use case should only be invoked once
+            coVerify(exactly = 1) { signInUseCase(any()) }
+            Assertions.assertFalse(viewModel.uiState.value.isLoading)
+        }
+
+    @Test
+    fun `onSignUp guards against duplicate requests when isLoading`() =
+        runTest(testDispatcher) {
+            // Arrange
+            viewModel.onEmailChanged("test@example.com")
+            viewModel.onPasswordChanged("password1")
+            coEvery { signUpUseCase(any()) } coAnswers {
+                delay(1000)
+                AuthResult.Success(Unit)
+            }
+
+            // Act – call twice quickly
+            viewModel.onSignUp()
+            viewModel.onSignUp()
+            advanceUntilIdle()
+
+            // Assert – use case should only be invoked once
+            coVerify(exactly = 1) { signUpUseCase(any()) }
+            Assertions.assertFalse(viewModel.uiState.value.isLoading)
+        }
+
+    @Test
+    fun `onSignIn with invalid email only sets emailError`() = runTest(testDispatcher) {
+        // Arrange – invalid email, valid password
+        viewModel.onEmailChanged("invalid")
+        viewModel.onPasswordChanged("password1")
+
+        // Act
+        viewModel.onSignIn()
+        advanceUntilIdle()
+
+        // Assert
+        val state = viewModel.uiState.value
+        Assertions.assertEquals(R.string.error_invalid_email, state.emailError)
+        Assertions.assertNull(state.passwordError)
+    }
+
+    @Test
+    fun `onSignIn with invalid password only sets passwordError`() = runTest(testDispatcher) {
+        // Arrange – valid email, short password
+        viewModel.onEmailChanged("test@example.com")
+        viewModel.onPasswordChanged("short")
+
+        // Act
+        viewModel.onSignIn()
+        advanceUntilIdle()
+
+        // Assert
+        val state = viewModel.uiState.value
+        Assertions.assertNull(state.emailError)
         Assertions.assertEquals(R.string.error_password_too_short, state.passwordError)
     }
 }

@@ -21,16 +21,17 @@ import com.appvoyager.cloudphotos.ui.screen.HomeScreen
 private const val TRANSITION_DURATION_MS = 300
 
 object AuthRoute {
-    const val LOGIN = "login?messageResId={messageResId}"
-    const val VERIFICATION = "verification/{email}"
-    const val FORGOT_PASSWORD = "forgot_password"
-    const val RESET_PASSWORD_CODE = "reset_password_code/{email}"
+
     const val HOME = "home"
+    const val LOGIN = "login"
+    const val FORGOT_PASSWORD = "forgot_password"
 
-    fun login(messageResId: Int? = null): String {
-        return if (messageResId != null) "login?messageResId=$messageResId" else "login"
-    }
+    const val URI_LOGIN = "login?messageResId={messageResId}"
+    const val URI_VERIFICATION = "verification/{email}"
+    const val URI_RESET_PASSWORD_CODE = "reset_password_code/{email}"
 
+    fun login(messageResId: Int? = null): String =
+        if (messageResId != null) "login?messageResId=${messageResId}" else LOGIN
     fun verification(email: Email): String = "verification/${Uri.encode(email.value)}"
     fun resetPasswordCode(email: Email): String = "reset_password_code/${Uri.encode(email.value)}"
 }
@@ -46,7 +47,7 @@ fun NavGraph(
         startDestination = startDestination
     ) {
         composable(
-            route = AuthRoute.LOGIN,
+            route = AuthRoute.URI_LOGIN,
             arguments = listOf(navArgument("messageResId") {
                 type = NavType.IntType
                 defaultValue = -1
@@ -72,7 +73,7 @@ fun NavGraph(
         }
 
         composable(
-            route = AuthRoute.VERIFICATION,
+            route = AuthRoute.URI_VERIFICATION,
             arguments = listOf(navArgument("email") { type = NavType.StringType }),
             enterTransition = { enterForward() },
             exitTransition = { exitForward() },
@@ -109,7 +110,7 @@ fun NavGraph(
         }
 
         composable(
-            route = AuthRoute.RESET_PASSWORD_CODE,
+            route = AuthRoute.URI_RESET_PASSWORD_CODE,
             arguments = listOf(navArgument("email") { type = NavType.StringType }),
             enterTransition = { enterForward() },
             exitTransition = { exitForward() },
@@ -129,7 +130,7 @@ fun NavGraph(
             route = AuthRoute.HOME,
             enterTransition = {
                 val fromRoute = initialState.destination.route
-                if (fromRoute == AuthRoute.LOGIN) {
+                if (fromRoute == AuthRoute.URI_LOGIN) {
                     EnterTransition.None
                 } else {
                     slideIntoContainer(
