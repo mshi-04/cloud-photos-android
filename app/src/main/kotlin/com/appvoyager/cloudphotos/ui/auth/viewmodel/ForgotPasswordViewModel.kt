@@ -79,7 +79,6 @@ class ForgotPasswordViewModel @Inject constructor(
             }
 
             is AuthError.UserNotConfirmed -> {
-                _effect.emit(ForgotPasswordEffect.ShowSnackbar(R.string.error_user_not_confirmed))
                 _effect.emit(ForgotPasswordEffect.NavigateToVerification(email))
             }
 

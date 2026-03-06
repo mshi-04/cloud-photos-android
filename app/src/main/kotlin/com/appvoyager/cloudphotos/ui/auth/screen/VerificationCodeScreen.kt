@@ -52,7 +52,7 @@ fun VerificationCodeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    val resources = LocalResources.current
+    val latestResources = rememberUpdatedState(LocalResources.current)
 
     val latestOnNavigateToHome = rememberUpdatedState(onNavigateToHome)
 
@@ -65,7 +65,7 @@ fun VerificationCodeScreen(
                 }
 
                 is VerificationEffect.ShowSnackbar -> {
-                    snackbarHostState.showSnackbar(resources.getString(effect.messageResId))
+                    snackbarHostState.showSnackbar(latestResources.value.getString(effect.messageResId))
                 }
             }
         }
@@ -242,7 +242,7 @@ private fun VerificationContentWithErrorPreview() {
         VerificationContent(
             email = "example@email.com",
             codes = listOf("1", "2", "3", "4", "5", "6"),
-            codeError = "確認コードが正しくありません",
+            codeError = stringResource(R.string.error_code_mismatch),
             isCodeComplete = true,
             isLoading = false,
             resendTimerSeconds = 30,

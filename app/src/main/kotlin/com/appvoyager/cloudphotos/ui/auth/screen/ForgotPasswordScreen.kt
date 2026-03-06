@@ -59,7 +59,7 @@ fun ForgotPasswordScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    val resources = LocalResources.current
+    val latestResources = rememberUpdatedState(LocalResources.current)
 
     val latestOnNavigateToResetCode = rememberUpdatedState(onNavigateToResetCode)
     val latestOnNavigateToVerification = rememberUpdatedState(onNavigateToVerification)
@@ -81,7 +81,7 @@ fun ForgotPasswordScreen(
                 }
 
                 is ForgotPasswordEffect.ShowSnackbar -> {
-                    snackbarHostState.showSnackbar(resources.getString(effect.messageResId))
+                    snackbarHostState.showSnackbar(latestResources.value.getString(effect.messageResId))
                 }
             }
         }
@@ -176,7 +176,7 @@ private fun ForgotPasswordContent(
             keyboardActions = KeyboardActions(
                 onDone = {
                     focusManager.clearFocus()
-                    if (isFormValid && !isLoading) onSubmit()
+                    if (!isLoading) onSubmit()
                 }
             ),
             modifier = Modifier.fillMaxWidth()
@@ -186,7 +186,7 @@ private fun ForgotPasswordContent(
 
         Button(
             onClick = onSubmit,
-            enabled = isFormValid && !isLoading,
+            enabled = !isLoading,
             shape = RoundedCornerShape(24.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary

@@ -65,7 +65,7 @@ fun LoginScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    val resources = LocalResources.current
+    val latestResources = rememberUpdatedState(LocalResources.current)
 
     val latestOnNavigateToVerification = rememberUpdatedState(onNavigateToVerification)
     val latestOnNavigateToHome = rememberUpdatedState(onNavigateToHome)
@@ -87,7 +87,7 @@ fun LoginScreen(
                 }
 
                 is LoginEffect.ShowSnackbar -> {
-                    snackbarHostState.showSnackbar(resources.getString(effect.messageResId))
+                    snackbarHostState.showSnackbar(latestResources.value.getString(effect.messageResId))
                 }
             }
         }

@@ -7,6 +7,17 @@
     <string name="verification_code_resend">Resend</string>
     <string name="verification_code_verify">Verify</string>
 
+    <!-- Password Reset Screen -->
+    <string name="reset_password_title">Reset Password</string>
+    <string name="reset_password_description">A verification code has been sent to %1$s.\nPlease
+        enter the code and a new password.</string>
+    <string name="new_password_label">New Password</string>
+    <string name="hide_password_description">Hide Password</string>
+    <string name="show_password_description">Show Password</string>
+    <string name="reset_password_button">Reset Password</string>
+    <string name="resend_code_timer">Resend Code (%1$d)</string>
+    <string name="resend_code">Resend Code</string>
+
     <!-- Success Messages -->
     <string name="message_code_resent">Verification code has been resent</string>
     <string name="message_password_reset">Password has been reset</string>

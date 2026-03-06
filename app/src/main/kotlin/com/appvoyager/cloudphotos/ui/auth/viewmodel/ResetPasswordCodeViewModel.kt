@@ -116,7 +116,7 @@ class ResetPasswordCodeViewModel @Inject constructor(
     }
 
     fun onResend() {
-        if (!_uiState.value.isResendEnabled) return
+        if (_uiState.value.isLoading || !_uiState.value.isResendEnabled) return
         _uiState.update { it.copy(isLoading = true) }
 
         viewModelScope.launch {

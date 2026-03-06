@@ -8,6 +8,16 @@
     <string name="verification_code_resend">再送信</string>
     <string name="verification_code_verify">認証</string>
 
+    <!-- パスワードリセット画面 -->
+    <string name="reset_password_title">パスワードのリセット</string>
+    <string name="reset_password_description">確認コードを %1$s に送信しました。\nコードと新しいパスワードを入力してください。</string>
+    <string name="new_password_label">新しいパスワード</string>
+    <string name="hide_password_description">パスワードを隠す</string>
+    <string name="show_password_description">パスワードを表示</string>
+    <string name="reset_password_button">パスワードをリセット</string>
+    <string name="resend_code_timer">コードを再送信（%1$d）</string>
+    <string name="resend_code">コードを再送信</string>
+
     <!-- 成功メッセージ -->
     <string name="message_code_resent">確認コードを再送信しました</string>
     <string name="message_password_reset">パスワードをリセットしました</string>

@@ -47,6 +47,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.appvoyager.cloudphotos.R
 import com.appvoyager.cloudphotos.domain.auth.valueobject.Email
 import com.appvoyager.cloudphotos.ui.auth.component.CodeInputRow
 import com.appvoyager.cloudphotos.ui.auth.component.LoadingOverlay
@@ -62,7 +63,7 @@ fun ResetPasswordCodeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    val resources = LocalResources.current
+    val latestResources = rememberUpdatedState(LocalResources.current)
 
     val latestOnNavigateBackToLogin = rememberUpdatedState(onNavigateBackToLogin)
 
@@ -75,7 +76,7 @@ fun ResetPasswordCodeScreen(
                 }
 
                 is ResetPasswordCodeEffect.ShowSnackbar -> {
-                    snackbarHostState.showSnackbar(resources.getString(effect.messageResId))
+                    snackbarHostState.showSnackbar(latestResources.value.getString(effect.messageResId))
                 }
             }
         }
@@ -151,7 +152,7 @@ private fun ResetPasswordCodeContent(
         Spacer(modifier = Modifier.height(80.dp))
 
         Text(
-            text = "パスワードのリセット",
+            text = stringResource(R.string.reset_password_title),
             style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.onSurface
         )
@@ -159,7 +160,7 @@ private fun ResetPasswordCodeContent(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "確認コードを $maskedEmail に送信しました。\nコードと新しいパスワードを入力してください。",
+            text = stringResource(R.string.reset_password_description, maskedEmail),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -187,7 +188,7 @@ private fun ResetPasswordCodeContent(
         OutlinedTextField(
             value = newPassword,
             onValueChange = onNewPasswordChanged,
-            label = { Text("新しいパスワード") },
+            label = { Text(stringResource(R.string.new_password_label)) },
             singleLine = true,
             isError = passwordError != null,
             supportingText = passwordError?.let { error -> { Text(error) } },
@@ -204,7 +205,11 @@ private fun ResetPasswordCodeContent(
                         } else {
                             Icons.Default.Visibility
                         },
-                        contentDescription = if (isNewPasswordVisible) "パスワードを隠す" else "パスワードを表示"
+                        contentDescription = if (isNewPasswordVisible) {
+                            stringResource(R.string.hide_password_description)
+                        } else {
+                            stringResource(R.string.show_password_description)
+                        }
                     )
                 }
             },
@@ -232,7 +237,7 @@ private fun ResetPasswordCodeContent(
             ),
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("パスワードをリセット")
+            Text(stringResource(R.string.reset_password_button))
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -244,9 +249,9 @@ private fun ResetPasswordCodeContent(
         ) {
             Text(
                 text = if (resendTimerSeconds > 0) {
-                    "コードを再送信（$resendTimerSeconds）"
+                    stringResource(R.string.resend_code_timer, resendTimerSeconds)
                 } else {
-                    "コードを再送信"
+                    stringResource(R.string.resend_code)
                 }
             )
         }
@@ -288,8 +293,8 @@ private fun ResetPasswordCodeContentWithErrorPreview() {
             codes = listOf("1", "2", "3", "4", "5", "6"),
             newPassword = "pass",
             isNewPasswordVisible = false,
-            codeError = "確認コードが正しくありません",
-            passwordError = "パスワードは8文字以上で入力してください",
+            codeError = stringResource(R.string.error_code_mismatch),
+            passwordError = stringResource(R.string.error_password_too_short),
             isFormValid = false,
             isLoading = false,
             resendTimerSeconds = 0,
