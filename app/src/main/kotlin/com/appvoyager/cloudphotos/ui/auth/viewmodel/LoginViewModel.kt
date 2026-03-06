@@ -71,9 +71,9 @@ class LoginViewModel @Inject constructor(
 
     fun onSignIn() {
         if (_uiState.value.isLoading || !validateForm()) return
+        _uiState.update { it.copy(isLoading = true) }
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
             try {
                 val state = _uiState.value
                 val email = Email.of(state.email)
@@ -90,9 +90,9 @@ class LoginViewModel @Inject constructor(
 
     fun onSignUp() {
         if (_uiState.value.isLoading || !validateForm()) return
+        _uiState.update { it.copy(isLoading = true) }
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
             try {
                 val state = _uiState.value
                 val email = Email.of(state.email)

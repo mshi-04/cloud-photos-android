@@ -41,20 +41,12 @@ class ForgotPasswordViewModel @Inject constructor(
     }
 
     fun onSubmit() {
-        if (_uiState.value.isLoading) return
+        if (_uiState.value.isLoading || !validateForm()) return
+        _uiState.update { it.copy(isLoading = true) }
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
             try {
-                val email = try {
-                    Email.of(_uiState.value.email)
-                } catch (_: IllegalArgumentException) {
-                    _uiState.update {
-                        it.copy(emailError = R.string.error_invalid_email)
-                    }
-                    return@launch
-                }
-
+                val email = Email.of(_uiState.value.email)
                 when (val result = resetPasswordUseCase(ResetPasswordRequest(email))) {
                     is AuthResult.Success -> {
                         _effect.emit(ForgotPasswordEffect.NavigateToResetCode(email))
@@ -66,6 +58,14 @@ class ForgotPasswordViewModel @Inject constructor(
                 _uiState.update { it.copy(isLoading = false) }
             }
         }
+    }
+
+    private fun validateForm(): Boolean {
+        if (!_uiState.value.isFormValid) {
+            _uiState.update { it.copy(emailError = R.string.error_invalid_email) }
+            return false
+        }
+        return true
     }
 
     private suspend fun handleError(error: AuthError, email: Email) {

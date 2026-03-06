@@ -27,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalResources
@@ -53,11 +54,16 @@ fun VerificationCodeScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val resources = LocalResources.current
 
+    val latestOnNavigateToHome = rememberUpdatedState(onNavigateToHome)
+
     LaunchedEffect(Unit) {
         viewModel.startTimer()
         viewModel.effect.collect { effect ->
             when (effect) {
-                is VerificationEffect.NavigateToHome -> onNavigateToHome()
+                is VerificationEffect.NavigateToHome -> {
+                    latestOnNavigateToHome.value()
+                }
+
                 is VerificationEffect.ShowSnackbar -> {
                     snackbarHostState.showSnackbar(resources.getString(effect.messageResId))
                 }

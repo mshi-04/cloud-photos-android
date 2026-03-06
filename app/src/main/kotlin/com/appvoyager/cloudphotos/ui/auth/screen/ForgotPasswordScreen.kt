@@ -64,7 +64,6 @@ fun ForgotPasswordScreen(
     val latestOnNavigateToResetCode = rememberUpdatedState(onNavigateToResetCode)
     val latestOnNavigateToVerification = rememberUpdatedState(onNavigateToVerification)
     val latestOnNavigateBack = rememberUpdatedState(onNavigateBack)
-    val latestResources = rememberUpdatedState(resources)
 
     LaunchedEffect(Unit) {
         viewModel.effect.collect { effect ->
@@ -82,7 +81,7 @@ fun ForgotPasswordScreen(
                 }
 
                 is ForgotPasswordEffect.ShowSnackbar -> {
-                    snackbarHostState.showSnackbar(latestResources.value.getString(effect.messageResId))
+                    snackbarHostState.showSnackbar(resources.getString(effect.messageResId))
                 }
             }
         }

@@ -87,10 +87,10 @@ class ResetPasswordCodeViewModel @Inject constructor(
 
     fun onConfirm() {
         if (_uiState.value.isLoading || !validateForm()) return
+        _uiState.update { it.copy(isLoading = true) }
         val fullCode = _uiState.value.codes.joinToString("")
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
             try {
                 val emailVO = Email.of(email)
                 val code = ConfirmationCode.of(fullCode)
@@ -117,9 +117,9 @@ class ResetPasswordCodeViewModel @Inject constructor(
 
     fun onResend() {
         if (!_uiState.value.isResendEnabled) return
+        _uiState.update { it.copy(isLoading = true) }
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
             try {
                 val emailVO = Email.of(email)
                 when (val result = resetPasswordUseCase(ResetPasswordRequest(emailVO))) {

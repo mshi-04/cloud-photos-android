@@ -33,6 +33,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
@@ -63,12 +64,14 @@ fun ResetPasswordCodeScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val resources = LocalResources.current
 
+    val latestOnNavigateBackToLogin = rememberUpdatedState(onNavigateBackToLogin)
+
     LaunchedEffect(Unit) {
         viewModel.startTimerIfNeeded()
         viewModel.effect.collect { effect ->
             when (effect) {
                 is ResetPasswordCodeEffect.NavigateBackToLogin -> {
-                    onNavigateBackToLogin()
+                    latestOnNavigateBackToLogin.value()
                 }
 
                 is ResetPasswordCodeEffect.ShowSnackbar -> {

@@ -36,6 +36,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
@@ -66,19 +67,23 @@ fun LoginScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val resources = LocalResources.current
 
+    val latestOnNavigateToVerification = rememberUpdatedState(onNavigateToVerification)
+    val latestOnNavigateToHome = rememberUpdatedState(onNavigateToHome)
+    val latestOnNavigateToForgotPassword = rememberUpdatedState(onNavigateToForgotPassword)
+
     LaunchedEffect(Unit) {
         viewModel.effect.collect { effect ->
             when (effect) {
                 is LoginEffect.NavigateToVerification -> {
-                    onNavigateToVerification(effect.email.value)
+                    latestOnNavigateToVerification.value(effect.email.value)
                 }
 
                 is LoginEffect.NavigateToHome -> {
-                    onNavigateToHome()
+                    latestOnNavigateToHome.value()
                 }
 
                 is LoginEffect.NavigateToForgotPassword -> {
-                    onNavigateToForgotPassword()
+                    latestOnNavigateToForgotPassword.value()
                 }
 
                 is LoginEffect.ShowSnackbar -> {
@@ -87,7 +92,6 @@ fun LoginScreen(
             }
         }
     }
-
 
     BackHandler(enabled = uiState.isLoading) { }
 
