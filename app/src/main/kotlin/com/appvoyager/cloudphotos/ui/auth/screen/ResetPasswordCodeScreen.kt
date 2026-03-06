@@ -249,9 +249,9 @@ private fun ResetPasswordCodeContent(
         ) {
             Text(
                 text = if (resendTimerSeconds > 0) {
-                    stringResource(R.string.resend_code_timer, resendTimerSeconds)
+                    stringResource(R.string.reset_password_resend_timer, resendTimerSeconds)
                 } else {
-                    stringResource(R.string.resend_code)
+                    stringResource(R.string.reset_password_resend)
                 }
             )
         }

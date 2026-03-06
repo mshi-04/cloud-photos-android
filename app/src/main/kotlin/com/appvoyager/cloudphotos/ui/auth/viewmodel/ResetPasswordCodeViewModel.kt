@@ -101,8 +101,8 @@ class ResetPasswordCodeViewModel @Inject constructor(
 
                 when (result) {
                     is AuthResult.Success -> {
-                        _effect.emit(ResetPasswordCodeEffect.ShowSnackbar(R.string.message_password_reset))
                         _effect.emit(ResetPasswordCodeEffect.NavigateBackToLogin)
+                        _effect.emit(ResetPasswordCodeEffect.ShowSnackbar(R.string.message_password_reset))
                     }
 
                     is AuthResult.Error -> handleConfirmError(result.error)

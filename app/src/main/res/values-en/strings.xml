@@ -15,8 +15,8 @@
     <string name="hide_password_description">Hide Password</string>
     <string name="show_password_description">Show Password</string>
     <string name="reset_password_button">Reset Password</string>
-    <string name="resend_code_timer">Resend Code (%1$d)</string>
-    <string name="resend_code">Resend Code</string>
+    <string name="reset_password_resend_timer">Resend Code (%1$d)</string>
+    <string name="reset_password_resend">Resend Code</string>
 
     <!-- Success Messages -->
     <string name="message_code_resent">Verification code has been resent</string>

@@ -51,6 +51,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.appvoyager.cloudphotos.domain.auth.valueobject.Email
 import com.appvoyager.cloudphotos.ui.auth.component.LoadingOverlay
 import com.appvoyager.cloudphotos.ui.auth.effect.LoginEffect
 import com.appvoyager.cloudphotos.ui.auth.viewmodel.LoginViewModel
@@ -59,7 +60,7 @@ import com.appvoyager.cloudphotos.ui.theme.CloudPhotosTheme
 @Composable
 fun LoginScreen(
     viewModel: LoginViewModel = hiltViewModel(),
-    onNavigateToVerification: (String) -> Unit,
+    onNavigateToVerification: (Email) -> Unit,
     onNavigateToHome: () -> Unit,
     onNavigateToForgotPassword: () -> Unit
 ) {
@@ -75,7 +76,7 @@ fun LoginScreen(
         viewModel.effect.collect { effect ->
             when (effect) {
                 is LoginEffect.NavigateToVerification -> {
-                    latestOnNavigateToVerification.value(effect.email.value)
+                    latestOnNavigateToVerification.value(effect.email)
                 }
 
                 is LoginEffect.NavigateToHome -> {

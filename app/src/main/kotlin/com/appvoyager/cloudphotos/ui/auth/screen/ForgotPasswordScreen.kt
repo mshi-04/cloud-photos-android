@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import com.appvoyager.cloudphotos.domain.auth.valueobject.Email
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
@@ -53,8 +54,8 @@ import com.appvoyager.cloudphotos.ui.theme.CloudPhotosTheme
 @Composable
 fun ForgotPasswordScreen(
     viewModel: ForgotPasswordViewModel = hiltViewModel(),
-    onNavigateToResetCode: (String) -> Unit,
-    onNavigateToVerification: (String) -> Unit,
+    onNavigateToResetCode: (Email) -> Unit,
+    onNavigateToVerification: (Email) -> Unit,
     onNavigateBack: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -69,11 +70,11 @@ fun ForgotPasswordScreen(
         viewModel.effect.collect { effect ->
             when (effect) {
                 is ForgotPasswordEffect.NavigateToResetCode -> {
-                    latestOnNavigateToResetCode.value(effect.email.value)
+                    latestOnNavigateToResetCode.value(effect.email)
                 }
 
                 is ForgotPasswordEffect.NavigateToVerification -> {
-                    latestOnNavigateToVerification.value(effect.email.value)
+                    latestOnNavigateToVerification.value(effect.email)
                 }
 
                 is ForgotPasswordEffect.NavigateBackToLogin -> {

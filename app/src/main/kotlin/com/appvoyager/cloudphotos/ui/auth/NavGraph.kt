@@ -50,7 +50,7 @@ fun NavGraph(
         ) {
             LoginScreen(
                 onNavigateToVerification = { email ->
-                    navController.navigate(AuthRoute.verification(Email.of(email)))
+                    navController.navigate(AuthRoute.verification(email))
                 },
                 onNavigateToHome = {
                     navController.navigate(AuthRoute.HOME) {
@@ -89,10 +89,10 @@ fun NavGraph(
         ) {
             ForgotPasswordScreen(
                 onNavigateToResetCode = { email ->
-                    navController.navigate(AuthRoute.resetPasswordCode(Email.of(email)))
+                    navController.navigate(AuthRoute.resetPasswordCode(email))
                 },
                 onNavigateToVerification = { email ->
-                    navController.navigate(AuthRoute.verification(Email.of(email)))
+                    navController.navigate(AuthRoute.verification(email))
                 },
                 onNavigateBack = {
                     navController.popBackStack()
