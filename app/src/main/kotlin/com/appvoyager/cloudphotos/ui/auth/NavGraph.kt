@@ -150,9 +150,6 @@ fun NavGraph(
             HomeScreen(
                 onSignOut = {
                     onSignOut()
-                    navController.navigate(AuthRoute.login()) {
-                        popUpTo(AuthRoute.HOME) { inclusive = true }
-                    }
                 }
             )
         }

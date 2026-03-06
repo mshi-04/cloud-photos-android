@@ -176,6 +176,7 @@ class LoginViewModelTest {
 
         // Assert
         Assertions.assertTrue(effect is LoginEffect.ShowSnackbar)
+        Assertions.assertEquals(R.string.error_network, (effect as LoginEffect.ShowSnackbar).messageResId)
         job.cancel()
     }
 
@@ -250,6 +251,7 @@ class LoginViewModelTest {
 
             // Act – call twice quickly
             viewModel.onSignIn()
+            Assertions.assertTrue(viewModel.uiState.value.isLoading, "Expected isLoading to be true immediately after first call")
             viewModel.onSignIn()
             advanceUntilIdle()
 
@@ -271,6 +273,7 @@ class LoginViewModelTest {
 
             // Act – call twice quickly
             viewModel.onSignUp()
+            Assertions.assertTrue(viewModel.uiState.value.isLoading, "Expected isLoading to be true immediately after first call")
             viewModel.onSignUp()
             advanceUntilIdle()
 
