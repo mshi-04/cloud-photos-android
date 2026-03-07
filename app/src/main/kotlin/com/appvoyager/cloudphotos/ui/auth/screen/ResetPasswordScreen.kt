@@ -57,7 +57,7 @@ import com.appvoyager.cloudphotos.ui.theme.CloudPhotosTheme
 import com.appvoyager.cloudphotos.ui.util.StringUtils
 
 @Composable
-fun ResetPasswordCodeScreen(
+fun ResetPasswordScreen(
     viewModel: ResetPasswordViewModel = hiltViewModel(),
     onNavigateBackToLogin: (Int?) -> Unit
 ) {

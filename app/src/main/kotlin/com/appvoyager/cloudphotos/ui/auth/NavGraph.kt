@@ -14,7 +14,7 @@ import androidx.navigation.navArgument
 import com.appvoyager.cloudphotos.domain.auth.valueobject.Email
 import com.appvoyager.cloudphotos.ui.auth.screen.ForgotPasswordScreen
 import com.appvoyager.cloudphotos.ui.auth.screen.LoginScreen
-import com.appvoyager.cloudphotos.ui.auth.screen.ResetPasswordCodeScreen
+import com.appvoyager.cloudphotos.ui.auth.screen.ResetPasswordScreen
 import com.appvoyager.cloudphotos.ui.auth.screen.VerificationCodeScreen
 import com.appvoyager.cloudphotos.ui.screen.HomeScreen
 
@@ -127,7 +127,7 @@ fun NavGraph(
             popEnterTransition = { enterBack() },
             popExitTransition = { exitBack() }
         ) {
-            ResetPasswordCodeScreen(
+            ResetPasswordScreen(
                 onNavigateBackToLogin = { messageResId ->
                     navController.navigate(AuthRoute.login(messageResId)) {
                         popUpTo(AuthRoute.URI_LOGIN) { inclusive = true }
