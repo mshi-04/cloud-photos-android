@@ -1,6 +1,7 @@
 package com.appvoyager.cloudphotos.domain.settings.usecase
 
 import com.appvoyager.cloudphotos.domain.settings.repository.SettingsRepository
+import com.appvoyager.cloudphotos.domain.settings.valueobject.GridColumnCount
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.flowOf
@@ -24,7 +25,7 @@ class GetGridColumnCountUseCaseTest {
     @Test
     fun `invoke returns flow of grid column count from repository`() = runTest {
         // Arrange
-        val expectedCount = 3
+        val expectedCount = GridColumnCount.of(3)
         every { settingsRepository.gridColumnCount } returns flowOf(expectedCount)
 
         // Act

@@ -1,6 +1,7 @@
 package com.appvoyager.cloudphotos.domain.settings.usecase
 
 import com.appvoyager.cloudphotos.domain.settings.repository.SettingsRepository
+import com.appvoyager.cloudphotos.domain.settings.valueobject.GridColumnCount
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -22,7 +23,7 @@ class SetGridColumnCountUseCaseTest {
     @Test
     fun `invoke calls setGridColumnCount on repository with correct value`() = runTest {
         // Arrange
-        val countToSet = 4
+        val countToSet = GridColumnCount.of(4)
         coEvery { settingsRepository.setGridColumnCount(any()) } returns Unit
 
         // Act
