@@ -13,8 +13,8 @@ import com.appvoyager.cloudphotos.domain.auth.usecase.ResetPasswordUseCase
 import com.appvoyager.cloudphotos.domain.auth.valueobject.ConfirmationCode
 import com.appvoyager.cloudphotos.domain.auth.valueobject.Email
 import com.appvoyager.cloudphotos.domain.auth.valueobject.Password
-import com.appvoyager.cloudphotos.ui.auth.effect.ResetPasswordCodeEffect
-import com.appvoyager.cloudphotos.ui.auth.uistate.ResetPasswordCodeUiState
+import com.appvoyager.cloudphotos.ui.auth.effect.ResetPasswordEffect
+import com.appvoyager.cloudphotos.ui.auth.uistate.ResetPasswordUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -28,7 +28,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class ResetPasswordCodeViewModel @Inject constructor(
+class ResetPasswordViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val confirmResetPasswordUseCase: ConfirmResetPasswordUseCase,
     private val resetPasswordUseCase: ResetPasswordUseCase
@@ -37,13 +37,13 @@ class ResetPasswordCodeViewModel @Inject constructor(
     val email: String = savedStateHandle.get<String>(ARG_EMAIL)
         ?: error("Missing required nav argument: $ARG_EMAIL")
 
-    private val _uiState = MutableStateFlow(ResetPasswordCodeUiState())
-    val uiState: StateFlow<ResetPasswordCodeUiState> = _uiState.asStateFlow()
+    private val _uiState = MutableStateFlow(ResetPasswordUiState())
+    val uiState: StateFlow<ResetPasswordUiState> = _uiState.asStateFlow()
 
     private var isTimerStarted = false
 
-    private val _effect = MutableSharedFlow<ResetPasswordCodeEffect>(extraBufferCapacity = 1)
-    val effect: SharedFlow<ResetPasswordCodeEffect> = _effect.asSharedFlow()
+    private val _effect = MutableSharedFlow<ResetPasswordEffect>(extraBufferCapacity = 1)
+    val effect: SharedFlow<ResetPasswordEffect> = _effect.asSharedFlow()
 
 
     fun startTimerIfNeeded() {
@@ -101,7 +101,7 @@ class ResetPasswordCodeViewModel @Inject constructor(
 
                 when (result) {
                     is AuthResult.Success -> {
-                        _effect.emit(ResetPasswordCodeEffect.NavigateBackToLogin(R.string.message_password_reset))
+                        _effect.emit(ResetPasswordEffect.NavigateBackToLogin(R.string.message_password_reset))
                     }
 
                     is AuthResult.Error -> handleConfirmError(result.error)
@@ -123,14 +123,14 @@ class ResetPasswordCodeViewModel @Inject constructor(
                 val emailVO = Email.of(email)
                 when (val result = resetPasswordUseCase(ResetPasswordRequest(emailVO))) {
                     is AuthResult.Success -> {
-                        _effect.emit(ResetPasswordCodeEffect.ShowSnackbar(R.string.message_code_resent))
+                        _effect.emit(ResetPasswordEffect.ShowSnackbar(R.string.message_code_resent))
                         startResendTimer()
                     }
 
                     is AuthResult.Error -> handleResendError(result.error)
                 }
             } catch (_: IllegalArgumentException) {
-                _effect.emit(ResetPasswordCodeEffect.ShowSnackbar(R.string.error_unknown))
+                _effect.emit(ResetPasswordEffect.ShowSnackbar(R.string.error_unknown))
             } finally {
                 _uiState.update { it.copy(isLoading = false) }
             }
@@ -161,11 +161,11 @@ class ResetPasswordCodeViewModel @Inject constructor(
             }
 
             is AuthError.Network -> {
-                _effect.emit(ResetPasswordCodeEffect.ShowSnackbar(R.string.error_network))
+                _effect.emit(ResetPasswordEffect.ShowSnackbar(R.string.error_network))
             }
 
             is AuthError.TooManyRequests -> {
-                _effect.emit(ResetPasswordCodeEffect.ShowSnackbar(R.string.error_too_many_requests))
+                _effect.emit(ResetPasswordEffect.ShowSnackbar(R.string.error_too_many_requests))
             }
 
             is AuthError.InvalidCredentials,
@@ -173,7 +173,7 @@ class ResetPasswordCodeViewModel @Inject constructor(
             is AuthError.Unknown,
             is AuthError.UserNotConfirmed,
             is AuthError.UsernameAlreadyExists -> {
-                _effect.emit(ResetPasswordCodeEffect.ShowSnackbar(R.string.error_unknown))
+                _effect.emit(ResetPasswordEffect.ShowSnackbar(R.string.error_unknown))
             }
         }
     }
@@ -181,11 +181,11 @@ class ResetPasswordCodeViewModel @Inject constructor(
     private suspend fun handleResendError(error: AuthError) {
         when (error) {
             is AuthError.Network -> {
-                _effect.emit(ResetPasswordCodeEffect.ShowSnackbar(R.string.error_network))
+                _effect.emit(ResetPasswordEffect.ShowSnackbar(R.string.error_network))
             }
 
             is AuthError.TooManyRequests -> {
-                _effect.emit(ResetPasswordCodeEffect.ShowSnackbar(R.string.error_too_many_requests))
+                _effect.emit(ResetPasswordEffect.ShowSnackbar(R.string.error_too_many_requests))
             }
 
             is AuthError.CodeExpired,
@@ -195,13 +195,13 @@ class ResetPasswordCodeViewModel @Inject constructor(
             is AuthError.Unknown,
             is AuthError.UserNotConfirmed,
             is AuthError.UsernameAlreadyExists -> {
-                _effect.emit(ResetPasswordCodeEffect.ShowSnackbar(R.string.error_resend_failed))
+                _effect.emit(ResetPasswordEffect.ShowSnackbar(R.string.error_resend_failed))
             }
         }
     }
 
     private fun startResendTimer() {
-        _uiState.update { it.copy(resendTimerSeconds = ResetPasswordCodeUiState.DEFAULT_RESEND_COOLDOWN_SECONDS) }
+        _uiState.update { it.copy(resendTimerSeconds = ResetPasswordUiState.DEFAULT_RESEND_COOLDOWN_SECONDS) }
         viewModelScope.launch {
             while (_uiState.value.resendTimerSeconds > 0) {
                 delay(1_000L)

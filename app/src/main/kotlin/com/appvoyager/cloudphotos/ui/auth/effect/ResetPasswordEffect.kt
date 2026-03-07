@@ -2,10 +2,10 @@ package com.appvoyager.cloudphotos.ui.auth.effect
 
 import androidx.annotation.StringRes
 
-sealed class ResetPasswordCodeEffect {
+sealed class ResetPasswordEffect {
     data class NavigateBackToLogin(
         @param:StringRes val messageResId: Int? = null
-    ) : ResetPasswordCodeEffect()
+    ) : ResetPasswordEffect()
 
-    data class ShowSnackbar(@param:StringRes val messageResId: Int) : ResetPasswordCodeEffect()
+    data class ShowSnackbar(@param:StringRes val messageResId: Int) : ResetPasswordEffect()
 }

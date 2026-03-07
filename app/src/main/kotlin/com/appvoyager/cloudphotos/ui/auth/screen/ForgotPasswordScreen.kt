@@ -54,7 +54,7 @@ import com.appvoyager.cloudphotos.ui.theme.CloudPhotosTheme
 @Composable
 fun ForgotPasswordScreen(
     viewModel: ForgotPasswordViewModel = hiltViewModel(),
-    onNavigateToResetCode: (Email) -> Unit,
+    onNavigateToResetPassword: (Email) -> Unit,
     onNavigateToVerification: (Email) -> Unit,
     onNavigateBack: () -> Unit
 ) {
@@ -62,15 +62,15 @@ fun ForgotPasswordScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val latestResources = rememberUpdatedState(LocalResources.current)
 
-    val latestOnNavigateToResetCode = rememberUpdatedState(onNavigateToResetCode)
+    val latestOnNavigateToResetPassword = rememberUpdatedState(onNavigateToResetPassword)
     val latestOnNavigateToVerification = rememberUpdatedState(onNavigateToVerification)
     val latestOnNavigateBack = rememberUpdatedState(onNavigateBack)
 
     LaunchedEffect(Unit) {
         viewModel.effect.collect { effect ->
             when (effect) {
-                is ForgotPasswordEffect.NavigateToResetCode -> {
-                    latestOnNavigateToResetCode.value(effect.email)
+                is ForgotPasswordEffect.NavigateToResetPassword -> {
+                    latestOnNavigateToResetPassword.value(effect.email)
                 }
 
                 is ForgotPasswordEffect.NavigateToVerification -> {

@@ -1,21 +1,40 @@
-package com.appvoyager.cloudphotos.data.auth.util
+---
+name: android-auth-error
+description: "Use when adding new AuthError types, modifying AuthErrorMapper, handling auth errors in DataSource, or mapping Cognito exceptions to domain errors"
+---
 
-import aws.sdk.kotlin.services.cognitoidentityprovider.model.CodeMismatchException
-import aws.sdk.kotlin.services.cognitoidentityprovider.model.ExpiredCodeException
-import aws.sdk.kotlin.services.cognitoidentityprovider.model.InvalidPasswordException
-import aws.sdk.kotlin.services.cognitoidentityprovider.model.LimitExceededException
-import aws.sdk.kotlin.services.cognitoidentityprovider.model.NotAuthorizedException
-import aws.sdk.kotlin.services.cognitoidentityprovider.model.TooManyRequestsException
-import aws.sdk.kotlin.services.cognitoidentityprovider.model.UserNotConfirmedException
-import aws.sdk.kotlin.services.cognitoidentityprovider.model.UserNotFoundException
-import aws.sdk.kotlin.services.cognitoidentityprovider.model.UsernameExistsException
-import com.amplifyframework.auth.exceptions.ServiceException
-import com.amplifyframework.auth.exceptions.SessionExpiredException
-import com.amplifyframework.auth.exceptions.SignedOutException
-import com.amplifyframework.auth.exceptions.ValidationException
-import com.appvoyager.cloudphotos.domain.auth.model.AuthError
-import java.io.IOException
+# Auth Error Handling Guidelines
 
+## Structure
+```text
+domain/auth/model/AuthError.kt        ← sealed class (Domain層)
+data/auth/util/AuthErrorMapper.kt     ← Cognitoの例外をAuthErrorにマップ (Data層)
+```
+
+## Rules
+1. AuthError は Domain層。AWS/Amplify依存を一切持たない
+2. AuthErrorMapper は `internal object`。Data層の外に公開しない
+3. 新しいCognito例外は必ず AuthErrorMapper に追加する
+4. `Unknown` はログ専用の逃げ道。causeをDomain層に漏らさない
+5. アカウント列挙攻撃対策: `UserNotFoundException` は `InvalidCredentials` にマップする（ユーザーの存在を明かさない）
+
+## AuthError sealed class
+```kotlin
+sealed class AuthError(open val message: String?) {
+    data class CodeExpired(override val message: String? = null) : AuthError(message)
+    data class CodeMismatch(override val message: String? = null) : AuthError(message)
+    data class InvalidCredentials(override val message: String? = null) : AuthError(message)
+    data class InvalidPassword(override val message: String? = null) : AuthError(message)
+    data class Network(override val message: String? = null) : AuthError(message)
+    data class TooManyRequests(override val message: String? = null) : AuthError(message)
+    data class Unknown(override val message: String? = null) : AuthError(message)
+    data class UserNotConfirmed(override val message: String? = null) : AuthError(message)
+    data class UsernameAlreadyExists(override val message: String? = null) : AuthError(message)
+}
+```
+
+## AuthErrorMapper Pattern
+```kotlin
 internal object AuthErrorMapper {
 
     fun map(throwable: Throwable): AuthError =
@@ -40,6 +59,7 @@ internal object AuthErrorMapper {
             is UserNotConfirmedException -> AuthError.UserNotConfirmed(cause.message)
             is UsernameExistsException -> AuthError.UsernameAlreadyExists(cause.message)
             is UserNotFoundException -> AuthError.InvalidCredentials(cause.message)
+            // UserNotFoundException は InvalidCredentials にマップ（アカウント列挙攻撃対策）
             else -> AuthError.Unknown(exception.message)
         }
 
@@ -50,5 +70,5 @@ internal object AuthErrorMapper {
             else -> AuthError.Unknown(exception.message)
         }
     }
-
 }
+```

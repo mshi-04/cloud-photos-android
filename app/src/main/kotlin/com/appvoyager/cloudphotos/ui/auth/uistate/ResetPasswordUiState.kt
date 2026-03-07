@@ -2,7 +2,7 @@ package com.appvoyager.cloudphotos.ui.auth.uistate
 
 import androidx.annotation.StringRes
 
-data class ResetPasswordCodeUiState(
+data class ResetPasswordUiState(
     val codes: List<String> = List(6) { "" },
     val newPassword: String = "",
     val isNewPasswordVisible: Boolean = false,
