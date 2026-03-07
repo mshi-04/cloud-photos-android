@@ -31,15 +31,21 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.appvoyager.cloudphotos.domain.auth.valueobject.Email
 import com.appvoyager.cloudphotos.ui.auth.component.LoadingOverlay
 import com.appvoyager.cloudphotos.ui.auth.effect.ForgotPasswordEffect
 import com.appvoyager.cloudphotos.ui.auth.viewmodel.ForgotPasswordViewModel
@@ -48,33 +54,44 @@ import com.appvoyager.cloudphotos.ui.theme.CloudPhotosTheme
 @Composable
 fun ForgotPasswordScreen(
     viewModel: ForgotPasswordViewModel = hiltViewModel(),
-    onNavigateToResetCode: (String) -> Unit,
+    onNavigateToResetCode: (Email) -> Unit,
+    onNavigateToVerification: (Email) -> Unit,
     onNavigateBack: () -> Unit
 ) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val latestResources = rememberUpdatedState(LocalResources.current)
+
+    val latestOnNavigateToResetCode = rememberUpdatedState(onNavigateToResetCode)
+    val latestOnNavigateToVerification = rememberUpdatedState(onNavigateToVerification)
+    val latestOnNavigateBack = rememberUpdatedState(onNavigateBack)
 
     LaunchedEffect(Unit) {
         viewModel.effect.collect { effect ->
             when (effect) {
                 is ForgotPasswordEffect.NavigateToResetCode -> {
-                    onNavigateToResetCode(effect.email.value)
+                    latestOnNavigateToResetCode.value(effect.email)
+                }
+
+                is ForgotPasswordEffect.NavigateToVerification -> {
+                    latestOnNavigateToVerification.value(effect.email)
                 }
 
                 is ForgotPasswordEffect.NavigateBackToLogin -> {
-                    onNavigateBack()
+                    latestOnNavigateBack.value()
                 }
 
                 is ForgotPasswordEffect.ShowSnackbar -> {
-                    snackbarHostState.showSnackbar(effect.message)
+                    snackbarHostState.showSnackbar(latestResources.value.getString(effect.messageResId))
                 }
             }
         }
     }
 
-    BackHandler(enabled = viewModel.isLoading) { }
+    BackHandler(enabled = uiState.isLoading) { }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -82,17 +99,17 @@ fun ForgotPasswordScreen(
                 .padding(innerPadding)
         ) {
             ForgotPasswordContent(
-                email = viewModel.email,
-                emailError = viewModel.emailError,
-                isFormValid = viewModel.isFormValid,
-                isLoading = viewModel.isLoading,
+                email = uiState.email,
+                emailError = uiState.emailError?.let { stringResource(it) },
+                isFormValid = uiState.isFormValid,
+                isLoading = uiState.isLoading,
                 onEmailChanged = { viewModel.onEmailChanged(it) },
                 onClearEmail = { viewModel.onClearEmail() },
                 onSubmit = { viewModel.onSubmit() },
                 onBack = onNavigateBack
             )
 
-            if (viewModel.isLoading) {
+            if (uiState.isLoading) {
                 LoadingOverlay()
             }
         }
@@ -119,7 +136,7 @@ private fun ForgotPasswordContent(
             .verticalScroll(rememberScrollState())
             .imePadding()
             .padding(horizontal = 24.dp),
-        verticalArrangement = Arrangement.Center,
+        verticalArrangement = Arrangement.Center
     ) {
         Spacer(modifier = Modifier.height(80.dp))
 
@@ -155,12 +172,12 @@ private fun ForgotPasswordContent(
             },
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Email,
-                imeAction = ImeAction.Done,
+                imeAction = ImeAction.Done
             ),
             keyboardActions = KeyboardActions(
                 onDone = {
                     focusManager.clearFocus()
-                    if (isFormValid && !isLoading) onSubmit()
+                    if (!isLoading && isFormValid) onSubmit()
                 }
             ),
             modifier = Modifier.fillMaxWidth()
@@ -170,10 +187,10 @@ private fun ForgotPasswordContent(
 
         Button(
             onClick = onSubmit,
-            enabled = isFormValid && !isLoading,
+            enabled = !isLoading && isFormValid,
             shape = RoundedCornerShape(24.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
+                containerColor = MaterialTheme.colorScheme.primary
             ),
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -184,7 +201,8 @@ private fun ForgotPasswordContent(
 
         TextButton(
             onClick = onBack,
-            modifier = Modifier.align(Alignment.CenterHorizontally),
+            enabled = !isLoading,
+            modifier = Modifier.align(Alignment.CenterHorizontally)
         ) {
             Text("ログイン画面に戻る")
         }

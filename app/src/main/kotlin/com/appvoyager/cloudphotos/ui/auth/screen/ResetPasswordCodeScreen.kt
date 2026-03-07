@@ -31,10 +31,14 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -42,6 +46,8 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.appvoyager.cloudphotos.R
 import com.appvoyager.cloudphotos.domain.auth.valueobject.Email
 import com.appvoyager.cloudphotos.ui.auth.component.CodeInputRow
 import com.appvoyager.cloudphotos.ui.auth.component.LoadingOverlay
@@ -53,29 +59,33 @@ import com.appvoyager.cloudphotos.ui.util.StringUtils
 @Composable
 fun ResetPasswordCodeScreen(
     viewModel: ResetPasswordCodeViewModel = hiltViewModel(),
-    onNavigateBackToLogin: () -> Unit
+    onNavigateBackToLogin: (Int?) -> Unit
 ) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val latestResources = rememberUpdatedState(LocalResources.current)
+
+    val latestOnNavigateBackToLogin = rememberUpdatedState(onNavigateBackToLogin)
 
     LaunchedEffect(Unit) {
         viewModel.startTimerIfNeeded()
         viewModel.effect.collect { effect ->
             when (effect) {
                 is ResetPasswordCodeEffect.NavigateBackToLogin -> {
-                    onNavigateBackToLogin()
+                    latestOnNavigateBackToLogin.value(effect.messageResId)
                 }
 
                 is ResetPasswordCodeEffect.ShowSnackbar -> {
-                    snackbarHostState.showSnackbar(effect.message)
+                    snackbarHostState.showSnackbar(latestResources.value.getString(effect.messageResId))
                 }
             }
         }
     }
 
-    BackHandler(enabled = viewModel.isLoading) { }
+    BackHandler(enabled = uiState.isLoading) { }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -84,15 +94,15 @@ fun ResetPasswordCodeScreen(
         ) {
             ResetPasswordCodeContent(
                 email = viewModel.email,
-                codes = viewModel.codes,
-                newPassword = viewModel.newPassword,
-                isNewPasswordVisible = viewModel.isNewPasswordVisible,
-                codeError = viewModel.codeError,
-                passwordError = viewModel.passwordError,
-                isFormValid = viewModel.isFormValid,
-                isLoading = viewModel.isLoading,
-                resendTimerSeconds = viewModel.resendTimerSeconds,
-                isResendEnabled = viewModel.isResendEnabled,
+                codes = uiState.codes,
+                newPassword = uiState.newPassword,
+                isNewPasswordVisible = uiState.isNewPasswordVisible,
+                codeError = uiState.codeError?.let { stringResource(it) },
+                passwordError = uiState.passwordError?.let { stringResource(it) },
+                isFormValid = uiState.isFormValid,
+                isLoading = uiState.isLoading,
+                resendTimerSeconds = uiState.resendTimerSeconds,
+                isResendEnabled = uiState.isResendEnabled,
                 onCodeChanged = { index, value -> viewModel.onCodeChanged(index, value) },
                 onNewPasswordChanged = { viewModel.onNewPasswordChanged(it) },
                 onTogglePasswordVisibility = { viewModel.onToggleNewPasswordVisibility() },
@@ -100,7 +110,7 @@ fun ResetPasswordCodeScreen(
                 onResend = { viewModel.onResend() }
             )
 
-            if (viewModel.isLoading) {
+            if (uiState.isLoading) {
                 LoadingOverlay()
             }
         }
@@ -142,7 +152,7 @@ private fun ResetPasswordCodeContent(
         Spacer(modifier = Modifier.height(80.dp))
 
         Text(
-            text = "パスワードのリセット",
+            text = stringResource(R.string.reset_password_title),
             style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.onSurface
         )
@@ -150,7 +160,7 @@ private fun ResetPasswordCodeContent(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "確認コードを $maskedEmail に送信しました。\nコードと新しいパスワードを入力してください。",
+            text = stringResource(R.string.reset_password_description, maskedEmail),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -178,7 +188,7 @@ private fun ResetPasswordCodeContent(
         OutlinedTextField(
             value = newPassword,
             onValueChange = onNewPasswordChanged,
-            label = { Text("新しいパスワード") },
+            label = { Text(stringResource(R.string.new_password_label)) },
             singleLine = true,
             isError = passwordError != null,
             supportingText = passwordError?.let { error -> { Text(error) } },
@@ -195,7 +205,11 @@ private fun ResetPasswordCodeContent(
                         } else {
                             Icons.Default.Visibility
                         },
-                        contentDescription = if (isNewPasswordVisible) "パスワードを隠す" else "パスワードを表示"
+                        contentDescription = if (isNewPasswordVisible) {
+                            stringResource(R.string.hide_password_description)
+                        } else {
+                            stringResource(R.string.show_password_description)
+                        }
                     )
                 }
             },
@@ -223,7 +237,7 @@ private fun ResetPasswordCodeContent(
             ),
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("パスワードをリセット")
+            Text(stringResource(R.string.reset_password_button))
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -235,9 +249,9 @@ private fun ResetPasswordCodeContent(
         ) {
             Text(
                 text = if (resendTimerSeconds > 0) {
-                    "コードを再送信（$resendTimerSeconds）"
+                    stringResource(R.string.reset_password_resend_timer, resendTimerSeconds)
                 } else {
-                    "コードを再送信"
+                    stringResource(R.string.reset_password_resend)
                 }
             )
         }
@@ -279,8 +293,8 @@ private fun ResetPasswordCodeContentWithErrorPreview() {
             codes = listOf("1", "2", "3", "4", "5", "6"),
             newPassword = "pass",
             isNewPasswordVisible = false,
-            codeError = "確認コードが正しくありません",
-            passwordError = "パスワードは8文字以上で入力してください",
+            codeError = stringResource(R.string.error_code_mismatch),
+            passwordError = stringResource(R.string.error_password_too_short),
             isFormValid = false,
             isLoading = false,
             resendTimerSeconds = 0,

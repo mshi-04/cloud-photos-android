@@ -25,12 +25,18 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.appvoyager.cloudphotos.R
 import com.appvoyager.cloudphotos.domain.auth.valueobject.Email
 import com.appvoyager.cloudphotos.ui.auth.component.CodeInputRow
 import com.appvoyager.cloudphotos.ui.auth.component.LoadingOverlay
@@ -44,24 +50,31 @@ fun VerificationCodeScreen(
     viewModel: VerificationCodeViewModel = hiltViewModel(),
     onNavigateToHome: () -> Unit
 ) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val latestResources = rememberUpdatedState(LocalResources.current)
+
+    val latestOnNavigateToHome = rememberUpdatedState(onNavigateToHome)
 
     LaunchedEffect(Unit) {
         viewModel.startTimer()
         viewModel.effect.collect { effect ->
             when (effect) {
-                is VerificationEffect.NavigateToHome -> onNavigateToHome()
+                is VerificationEffect.NavigateToHome -> {
+                    latestOnNavigateToHome.value()
+                }
+
                 is VerificationEffect.ShowSnackbar -> {
-                    snackbarHostState.showSnackbar(effect.message)
+                    snackbarHostState.showSnackbar(latestResources.value.getString(effect.messageResId))
                 }
             }
         }
     }
 
-    BackHandler(enabled = viewModel.isLoading) { }
+    BackHandler(enabled = uiState.isLoading) { }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -70,18 +83,18 @@ fun VerificationCodeScreen(
         ) {
             VerificationContent(
                 email = viewModel.email,
-                codes = viewModel.codes,
-                codeError = viewModel.codeError,
-                isCodeComplete = viewModel.isCodeComplete,
-                isLoading = viewModel.isLoading,
-                resendTimerSeconds = viewModel.resendTimerSeconds,
-                isResendEnabled = viewModel.isResendEnabled,
+                codes = uiState.codes,
+                codeError = uiState.codeError?.let { stringResource(it) },
+                isCodeComplete = uiState.isCodeComplete,
+                isLoading = uiState.isLoading,
+                resendTimerSeconds = uiState.resendTimerSeconds,
+                isResendEnabled = uiState.isResendEnabled,
                 onCodeChanged = { index, value -> viewModel.onCodeChanged(index, value) },
                 onVerify = { viewModel.onVerify() },
                 onResend = { viewModel.onResend() }
             )
 
-            if (viewModel.isLoading) {
+            if (uiState.isLoading) {
                 LoadingOverlay()
             }
         }
@@ -110,12 +123,12 @@ private fun VerificationContent(
             .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
             .imePadding()
-            .padding(horizontal = 24.dp),
+            .padding(horizontal = 24.dp)
     ) {
         Spacer(modifier = Modifier.height(80.dp))
 
         Text(
-            text = "登録メールアドレス宛てにパスコードを送信しました。\nご確認いただきご入力ください。",
+            text = stringResource(R.string.verification_code_prompt),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurface
         )
@@ -157,14 +170,14 @@ private fun VerificationContent(
         ) {
             TextButton(
                 onClick = onResend,
-                enabled = isResendEnabled,
+                enabled = isResendEnabled
             ) {
                 Text(
                     text = if (resendTimerSeconds > 0) {
-                        "再送信（$resendTimerSeconds）"
+                        stringResource(R.string.verification_code_resend_timer, resendTimerSeconds)
                     } else {
-                        "再送信"
-                    },
+                        stringResource(R.string.verification_code_resend)
+                    }
                 )
             }
 
@@ -174,9 +187,9 @@ private fun VerificationContent(
                 shape = RoundedCornerShape(24.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary
-                ),
+                )
             ) {
-                Text("認証")
+                Text(stringResource(R.string.verification_code_verify))
             }
         }
 
@@ -229,7 +242,7 @@ private fun VerificationContentWithErrorPreview() {
         VerificationContent(
             email = "example@email.com",
             codes = listOf("1", "2", "3", "4", "5", "6"),
-            codeError = "確認コードが正しくありません",
+            codeError = stringResource(R.string.error_code_mismatch),
             isCodeComplete = true,
             isLoading = false,
             resendTimerSeconds = 30,

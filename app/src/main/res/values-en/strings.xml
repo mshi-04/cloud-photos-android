@@ -1,0 +1,44 @@
+<resources>
+
+    <!-- screen of login verification -->
+    <string name="verification_code_prompt">A verification code has been sent to your registered
+        email address.\nPlease check and enter it below.</string>
+    <string name="verification_code_resend_timer">Resend (%1$d)</string>
+    <string name="verification_code_resend">Resend</string>
+    <string name="verification_code_verify">Verify</string>
+
+    <!-- Password Reset Screen -->
+    <string name="reset_password_title">Reset Password</string>
+    <string name="reset_password_description">A verification code has been sent to %1$s.\nPlease
+        enter the code and a new password.</string>
+    <string name="new_password_label">New Password</string>
+    <string name="hide_password_description">Hide Password</string>
+    <string name="show_password_description">Show Password</string>
+    <string name="reset_password_button">Reset Password</string>
+    <string name="reset_password_resend_timer">Resend Code (%1$d)</string>
+    <string name="reset_password_resend">Resend Code</string>
+
+    <!-- Success Messages -->
+    <string name="message_code_resent">Verification code has been resent</string>
+    <string name="message_password_reset">Password has been reset</string>
+
+    <!-- Error Messages -->
+    <string name="error_invalid_credentials">Incorrect email address or password</string>
+    <string name="error_network">A network error has occurred</string>
+    <string name="error_invalid_password">Incorrect password</string>
+    <string name="error_too_many_requests">Please wait a moment and try again</string>
+    <string name="error_unknown">An error has occurred</string>
+    <string name="error_invalid_email">Please enter a valid email address</string>
+    <string name="error_check_input">Please check your input</string>
+    <string name="error_password_too_short">Password must be at least 8 characters</string>
+    <string name="error_email_already_registered">This email address cannot be registered</string>
+    <string name="error_additional_auth_required">Additional authentication step required</string>
+    <string name="error_code_mismatch">Incorrect verification code</string>
+    <string name="error_code_expired">Verification code has expired. Please resend</string>
+    <string name="error_confirm_code">Please enter the correct verification code</string>
+    <string name="error_enter_code">Please enter the verification code</string>
+    <string name="error_resend_failed">Failed to resend</string>
+    <string name="error_user_not_confirmed">Please verify your email address before resetting your
+        password</string>
+
+</resources>

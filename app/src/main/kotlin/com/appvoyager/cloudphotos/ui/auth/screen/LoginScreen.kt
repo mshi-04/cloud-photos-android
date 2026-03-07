@@ -34,11 +34,15 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -46,6 +50,8 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.appvoyager.cloudphotos.domain.auth.valueobject.Email
 import com.appvoyager.cloudphotos.ui.auth.component.LoadingOverlay
 import com.appvoyager.cloudphotos.ui.auth.effect.LoginEffect
 import com.appvoyager.cloudphotos.ui.auth.viewmodel.LoginViewModel
@@ -54,37 +60,41 @@ import com.appvoyager.cloudphotos.ui.theme.CloudPhotosTheme
 @Composable
 fun LoginScreen(
     viewModel: LoginViewModel = hiltViewModel(),
-    onNavigateToVerification: (String) -> Unit,
+    onNavigateToVerification: (Email) -> Unit,
     onNavigateToHome: () -> Unit,
     onNavigateToForgotPassword: () -> Unit
 ) {
-
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val latestResources = rememberUpdatedState(LocalResources.current)
+
+    val latestOnNavigateToVerification = rememberUpdatedState(onNavigateToVerification)
+    val latestOnNavigateToHome = rememberUpdatedState(onNavigateToHome)
+    val latestOnNavigateToForgotPassword = rememberUpdatedState(onNavigateToForgotPassword)
 
     LaunchedEffect(Unit) {
         viewModel.effect.collect { effect ->
             when (effect) {
                 is LoginEffect.NavigateToVerification -> {
-                    onNavigateToVerification(effect.email.value)
+                    latestOnNavigateToVerification.value(effect.email)
                 }
 
                 is LoginEffect.NavigateToHome -> {
-                    onNavigateToHome()
+                    latestOnNavigateToHome.value()
                 }
 
                 is LoginEffect.NavigateToForgotPassword -> {
-                    onNavigateToForgotPassword()
+                    latestOnNavigateToForgotPassword.value()
                 }
 
                 is LoginEffect.ShowSnackbar -> {
-                    snackbarHostState.showSnackbar(effect.message)
+                    snackbarHostState.showSnackbar(latestResources.value.getString(effect.messageResId))
                 }
             }
         }
     }
 
-
-    BackHandler(enabled = viewModel.isLoading) { }
+    BackHandler(enabled = uiState.isLoading) { }
 
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
@@ -95,13 +105,13 @@ fun LoginScreen(
                 .padding(innerPadding)
         ) {
             LoginContent(
-                email = viewModel.email,
-                password = viewModel.password,
-                isPasswordVisible = viewModel.isPasswordVisible,
-                emailError = viewModel.emailError,
-                passwordError = viewModel.passwordError,
+                email = uiState.email,
+                password = uiState.password,
+                isPasswordVisible = uiState.isPasswordVisible,
+                emailError = uiState.emailError?.let { stringResource(it) },
+                passwordError = uiState.passwordError?.let { stringResource(it) },
                 isFormValid = viewModel.isFormValid,
-                isLoading = viewModel.isLoading,
+                isLoading = uiState.isLoading,
                 onEmailChanged = { viewModel.onEmailChanged(it) },
                 onPasswordChanged = { viewModel.onPasswordChanged(it) },
                 onTogglePasswordVisibility = { viewModel.onTogglePasswordVisibility() },
@@ -113,7 +123,7 @@ fun LoginScreen(
             )
 
 
-            if (viewModel.isLoading) {
+            if (uiState.isLoading) {
                 LoadingOverlay()
             }
         }
@@ -168,7 +178,7 @@ private fun LoginContent(
             },
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Email,
-                imeAction = ImeAction.Next,
+                imeAction = ImeAction.Next
             ),
             keyboardActions = KeyboardActions(
                 onNext = { focusManager.moveFocus(FocusDirection.Down) }

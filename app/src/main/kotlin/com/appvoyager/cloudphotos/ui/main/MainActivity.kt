@@ -49,7 +49,7 @@ class MainActivity : ComponentActivity() {
                     }
 
                     is MainUiState.Unauthenticated -> {
-                        NavGraph(startDestination = AuthRoute.LOGIN)
+                        NavGraph(startDestination = AuthRoute.login())
                     }
                 }
             }
