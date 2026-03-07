@@ -6,7 +6,7 @@ description: "Use when creating or modifying UseCase, Repository interface, Repo
 # Clean Architecture Guidelines
 
 ## Package Structure
-```
+```text
 com.appvoyager.cloudphotos
 ├── domain
 │   └── {feature}
@@ -33,6 +33,9 @@ com.appvoyager.cloudphotos
 ```kotlin
 package com.appvoyager.cloudphotos.domain.{feature}.usecase
 
+import com.appvoyager.cloudphotos.domain.{feature}.model.HogeResult
+import com.appvoyager.cloudphotos.domain.{feature}.repository.HogeRepository
+import com.appvoyager.cloudphotos.domain.{feature}.request.HogeRequest
 import javax.inject.Inject
 
 class HogeUseCase @Inject constructor(
@@ -47,6 +50,9 @@ class HogeUseCase @Inject constructor(
 ```kotlin
 package com.appvoyager.cloudphotos.domain.{feature}.repository
 
+import com.appvoyager.cloudphotos.domain.{feature}.model.HogeResult
+import com.appvoyager.cloudphotos.domain.{feature}.request.HogeRequest
+
 interface HogeRepository {
     suspend fun hoge(request: HogeRequest): HogeResult
 }
@@ -56,6 +62,10 @@ interface HogeRepository {
 ```kotlin
 package com.appvoyager.cloudphotos.data.{feature}.repository
 
+import com.appvoyager.cloudphotos.data.{feature}.datasource.HogeDataSource
+import com.appvoyager.cloudphotos.domain.{feature}.model.HogeResult
+import com.appvoyager.cloudphotos.domain.{feature}.repository.HogeRepository
+import com.appvoyager.cloudphotos.domain.{feature}.request.HogeRequest
 import javax.inject.Inject
 
 class HogeRepositoryImpl @Inject constructor(

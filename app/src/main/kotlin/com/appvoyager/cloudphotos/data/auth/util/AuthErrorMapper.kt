@@ -7,6 +7,7 @@ import aws.sdk.kotlin.services.cognitoidentityprovider.model.LimitExceededExcept
 import aws.sdk.kotlin.services.cognitoidentityprovider.model.NotAuthorizedException
 import aws.sdk.kotlin.services.cognitoidentityprovider.model.TooManyRequestsException
 import aws.sdk.kotlin.services.cognitoidentityprovider.model.UserNotConfirmedException
+import aws.sdk.kotlin.services.cognitoidentityprovider.model.UserNotFoundException
 import aws.sdk.kotlin.services.cognitoidentityprovider.model.UsernameExistsException
 import com.amplifyframework.auth.exceptions.ServiceException
 import com.amplifyframework.auth.exceptions.SessionExpiredException
@@ -38,6 +39,7 @@ internal object AuthErrorMapper {
             is TooManyRequestsException -> AuthError.TooManyRequests(cause.message)
             is UserNotConfirmedException -> AuthError.UserNotConfirmed(cause.message)
             is UsernameExistsException -> AuthError.UsernameAlreadyExists(cause.message)
+            is UserNotFoundException -> AuthError.InvalidCredentials(cause.message)
             else -> AuthError.Unknown(exception.message)
         }
 

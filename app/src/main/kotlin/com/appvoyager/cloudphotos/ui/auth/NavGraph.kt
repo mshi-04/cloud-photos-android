@@ -30,7 +30,7 @@ object AuthRoute {
 
     internal const val URI_LOGIN = "login?messageResId={messageResId}"
     internal const val URI_VERIFICATION = "verification/{email}"
-    internal const val URI_RESET_PASSWORD_CODE = "reset_password_code/{email}"
+    internal const val URI_RESET_PASSWORD = "reset_password/{email}"
 
     fun login(messageResId: Int? = null): String =
         if (messageResId != null) URI_LOGIN.replace(
@@ -41,8 +41,8 @@ object AuthRoute {
     fun verification(email: Email): String =
         URI_VERIFICATION.replace("{email}", Uri.encode(email.value))
 
-    fun resetPasswordCode(email: Email): String =
-        URI_RESET_PASSWORD_CODE.replace("{email}", Uri.encode(email.value))
+    fun resetPassword(email: Email): String =
+        URI_RESET_PASSWORD.replace("{email}", Uri.encode(email.value))
 
 }
 
@@ -108,7 +108,7 @@ fun NavGraph(
         ) {
             ForgotPasswordScreen(
                 onNavigateToResetCode = { email ->
-                    navController.navigate(AuthRoute.resetPasswordCode(email))
+                    navController.navigate(AuthRoute.resetPassword(email))
                 },
                 onNavigateToVerification = { email ->
                     navController.navigate(AuthRoute.verification(email))
@@ -120,7 +120,7 @@ fun NavGraph(
         }
 
         composable(
-            route = AuthRoute.URI_RESET_PASSWORD_CODE,
+            route = AuthRoute.URI_RESET_PASSWORD,
             arguments = listOf(navArgument("email") { type = NavType.StringType }),
             enterTransition = { enterForward() },
             exitTransition = { exitForward() },

@@ -7,7 +7,7 @@ description: "Use when creating or modifying Composable screens, components, or 
 
 ## Screen Structure
 Screen（hiltViewModel付き）とContent（stateless）を必ず分離する
-```
+```text
 HogeScreen        ← ViewModelを持つ、effectを収集する
 └── HogeContent   ← stateless、全状態をパラメータで受け取る
 ```

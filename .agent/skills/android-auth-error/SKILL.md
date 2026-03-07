@@ -6,7 +6,7 @@ description: "Use when adding new AuthError types, modifying AuthErrorMapper, ha
 # Auth Error Handling Guidelines
 
 ## Structure
-```
+```text
 domain/auth/model/AuthError.kt        ← sealed class (Domain層)
 data/auth/util/AuthErrorMapper.kt     ← Cognitoの例外をAuthErrorにマップ (Data層)
 ```
@@ -58,6 +58,7 @@ internal object AuthErrorMapper {
             is TooManyRequestsException -> AuthError.TooManyRequests(cause.message)
             is UserNotConfirmedException -> AuthError.UserNotConfirmed(cause.message)
             is UsernameExistsException -> AuthError.UsernameAlreadyExists(cause.message)
+            is UserNotFoundException -> AuthError.InvalidCredentials(cause.message)
             // UserNotFoundException は InvalidCredentials にマップ（アカウント列挙攻撃対策）
             else -> AuthError.Unknown(exception.message)
         }
