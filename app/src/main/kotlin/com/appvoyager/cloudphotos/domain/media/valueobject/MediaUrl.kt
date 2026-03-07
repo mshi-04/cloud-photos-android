@@ -20,13 +20,14 @@ value class MediaUrl private constructor(val value: String) {
             return if (isValidUrl(trimmed)) MediaUrl(trimmed) else null
         }
 
+        @Suppress("SwallowedException")
         private fun isValidUrl(url: String): Boolean {
             return try {
                 URI(url).toURL()
                 true
-            } catch (e: URISyntaxException) {
+            } catch (_: URISyntaxException) {
                 false
-            } catch (e: MalformedURLException) {
+            } catch (_: MalformedURLException) {
                 false
             }
         }

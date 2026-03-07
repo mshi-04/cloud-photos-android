@@ -34,10 +34,15 @@ class UserIdTest {
 
     @Test
     fun `constructor throws when whitespace only`() {
+        // Arrange
         val raw = "   "
+
+        // Act
         val ex = assertThrows<IllegalArgumentException> {
             UserId(raw)
         }
+
+        // Assert
         assertEquals("UserId must not be blank.", ex.message)
     }
 
