@@ -51,14 +51,14 @@ import com.appvoyager.cloudphotos.R
 import com.appvoyager.cloudphotos.domain.auth.valueobject.Email
 import com.appvoyager.cloudphotos.ui.auth.component.CodeInputRow
 import com.appvoyager.cloudphotos.ui.auth.component.LoadingOverlay
-import com.appvoyager.cloudphotos.ui.auth.effect.ResetPasswordCodeEffect
-import com.appvoyager.cloudphotos.ui.auth.viewmodel.ResetPasswordCodeViewModel
+import com.appvoyager.cloudphotos.ui.auth.effect.ResetPasswordEffect
+import com.appvoyager.cloudphotos.ui.auth.viewmodel.ResetPasswordViewModel
 import com.appvoyager.cloudphotos.ui.theme.CloudPhotosTheme
 import com.appvoyager.cloudphotos.ui.util.StringUtils
 
 @Composable
 fun ResetPasswordCodeScreen(
-    viewModel: ResetPasswordCodeViewModel = hiltViewModel(),
+    viewModel: ResetPasswordViewModel = hiltViewModel(),
     onNavigateBackToLogin: (Int?) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -71,11 +71,11 @@ fun ResetPasswordCodeScreen(
         viewModel.startTimerIfNeeded()
         viewModel.effect.collect { effect ->
             when (effect) {
-                is ResetPasswordCodeEffect.NavigateBackToLogin -> {
+                is ResetPasswordEffect.NavigateBackToLogin -> {
                     latestOnNavigateBackToLogin.value(effect.messageResId)
                 }
 
-                is ResetPasswordCodeEffect.ShowSnackbar -> {
+                is ResetPasswordEffect.ShowSnackbar -> {
                     snackbarHostState.showSnackbar(latestResources.value.getString(effect.messageResId))
                 }
             }
