@@ -14,21 +14,36 @@ import androidx.navigation.navArgument
 import com.appvoyager.cloudphotos.domain.auth.valueobject.Email
 import com.appvoyager.cloudphotos.ui.auth.screen.ForgotPasswordScreen
 import com.appvoyager.cloudphotos.ui.auth.screen.LoginScreen
-import com.appvoyager.cloudphotos.ui.auth.screen.ResetPasswordCodeScreen
+import com.appvoyager.cloudphotos.ui.auth.screen.ResetPasswordScreen
 import com.appvoyager.cloudphotos.ui.auth.screen.VerificationCodeScreen
 import com.appvoyager.cloudphotos.ui.screen.HomeScreen
 
 private const val TRANSITION_DURATION_MS = 300
 
 object AuthRoute {
-    const val LOGIN = "login"
-    const val VERIFICATION = "verification/{email}"
-    const val FORGOT_PASSWORD = "forgot_password"
-    const val RESET_PASSWORD_CODE = "reset_password_code/{email}"
-    const val HOME = "home"
 
-    fun verification(email: Email): String = "verification/${Uri.encode(email.value)}"
-    fun resetPasswordCode(email: Email): String = "reset_password_code/${Uri.encode(email.value)}"
+    const val NO_MESSAGE_RES_ID = -1
+
+    const val HOME = "home"
+    internal const val LOGIN = "login"
+    internal const val FORGOT_PASSWORD = "forgot_password"
+
+    internal const val URI_LOGIN = "login?messageResId={messageResId}"
+    internal const val URI_VERIFICATION = "verification/{email}"
+    internal const val URI_RESET_PASSWORD = "reset_password/{email}"
+
+    fun login(messageResId: Int? = null): String =
+        if (messageResId != null) URI_LOGIN.replace(
+            "{messageResId}",
+            messageResId.toString()
+        ) else LOGIN
+
+    fun verification(email: Email): String =
+        URI_VERIFICATION.replace("{email}", Uri.encode(email.value))
+
+    fun resetPassword(email: Email): String =
+        URI_RESET_PASSWORD.replace("{email}", Uri.encode(email.value))
+
 }
 
 @Composable
@@ -42,7 +57,11 @@ fun NavGraph(
         startDestination = startDestination
     ) {
         composable(
-            route = AuthRoute.LOGIN,
+            route = AuthRoute.URI_LOGIN,
+            arguments = listOf(navArgument("messageResId") {
+                type = NavType.IntType
+                defaultValue = AuthRoute.NO_MESSAGE_RES_ID
+            }),
             enterTransition = { enterForward() },
             exitTransition = { exitForward() },
             popEnterTransition = { enterBack() },
@@ -50,11 +69,11 @@ fun NavGraph(
         ) {
             LoginScreen(
                 onNavigateToVerification = { email ->
-                    navController.navigate(AuthRoute.verification(Email.of(email)))
+                    navController.navigate(AuthRoute.verification(email))
                 },
                 onNavigateToHome = {
                     navController.navigate(AuthRoute.HOME) {
-                        popUpTo(AuthRoute.LOGIN) { inclusive = true }
+                        popUpTo(AuthRoute.URI_LOGIN) { inclusive = true }
                     }
                 },
                 onNavigateToForgotPassword = {
@@ -64,7 +83,7 @@ fun NavGraph(
         }
 
         composable(
-            route = AuthRoute.VERIFICATION,
+            route = AuthRoute.URI_VERIFICATION,
             arguments = listOf(navArgument("email") { type = NavType.StringType }),
             enterTransition = { enterForward() },
             exitTransition = { exitForward() },
@@ -74,7 +93,7 @@ fun NavGraph(
             VerificationCodeScreen(
                 onNavigateToHome = {
                     navController.navigate(AuthRoute.HOME) {
-                        popUpTo(AuthRoute.LOGIN) { inclusive = true }
+                        popUpTo(AuthRoute.URI_LOGIN) { inclusive = true }
                     }
                 }
             )
@@ -88,8 +107,11 @@ fun NavGraph(
             popExitTransition = { exitBack() }
         ) {
             ForgotPasswordScreen(
-                onNavigateToResetCode = { email ->
-                    navController.navigate(AuthRoute.resetPasswordCode(Email.of(email)))
+                onNavigateToResetPassword = { email ->
+                    navController.navigate(AuthRoute.resetPassword(email))
+                },
+                onNavigateToVerification = { email ->
+                    navController.navigate(AuthRoute.verification(email))
                 },
                 onNavigateBack = {
                     navController.popBackStack()
@@ -98,17 +120,17 @@ fun NavGraph(
         }
 
         composable(
-            route = AuthRoute.RESET_PASSWORD_CODE,
+            route = AuthRoute.URI_RESET_PASSWORD,
             arguments = listOf(navArgument("email") { type = NavType.StringType }),
             enterTransition = { enterForward() },
             exitTransition = { exitForward() },
             popEnterTransition = { enterBack() },
             popExitTransition = { exitBack() }
         ) {
-            ResetPasswordCodeScreen(
-                onNavigateBackToLogin = {
-                    navController.navigate(AuthRoute.LOGIN) {
-                        popUpTo(AuthRoute.LOGIN) { inclusive = true }
+            ResetPasswordScreen(
+                onNavigateBackToLogin = { messageResId ->
+                    navController.navigate(AuthRoute.login(messageResId)) {
+                        popUpTo(AuthRoute.URI_LOGIN) { inclusive = true }
                     }
                 }
             )
@@ -118,7 +140,7 @@ fun NavGraph(
             route = AuthRoute.HOME,
             enterTransition = {
                 val fromRoute = initialState.destination.route
-                if (fromRoute == AuthRoute.LOGIN) {
+                if (fromRoute == AuthRoute.URI_LOGIN) {
                     EnterTransition.None
                 } else {
                     slideIntoContainer(
@@ -134,9 +156,6 @@ fun NavGraph(
             HomeScreen(
                 onSignOut = {
                     onSignOut()
-                    navController.navigate(AuthRoute.LOGIN) {
-                        popUpTo(AuthRoute.HOME) { inclusive = true }
-                    }
                 }
             )
         }

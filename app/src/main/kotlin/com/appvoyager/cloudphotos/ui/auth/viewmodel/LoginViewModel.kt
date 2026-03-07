@@ -1,10 +1,9 @@
 package com.appvoyager.cloudphotos.ui.auth.viewmodel
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.appvoyager.cloudphotos.R
 import com.appvoyager.cloudphotos.domain.auth.model.AuthError
 import com.appvoyager.cloudphotos.domain.auth.model.AuthResult
 import com.appvoyager.cloudphotos.domain.auth.model.SignInState
@@ -15,66 +14,66 @@ import com.appvoyager.cloudphotos.domain.auth.usecase.SignUpUseCase
 import com.appvoyager.cloudphotos.domain.auth.valueobject.Email
 import com.appvoyager.cloudphotos.domain.auth.valueobject.Password
 import com.appvoyager.cloudphotos.ui.auth.effect.LoginEffect
+import com.appvoyager.cloudphotos.ui.auth.uistate.LoginUiState
 import com.appvoyager.cloudphotos.ui.util.ValidationUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class LoginViewModel @Inject constructor(
+    private val savedStateHandle: SavedStateHandle,
     private val signInUseCase: SignInUseCase,
     private val signUpUseCase: SignUpUseCase
 ) : ViewModel() {
 
-    var email by mutableStateOf("")
-        private set
+    private val _uiState = MutableStateFlow(LoginUiState())
+    val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
 
-    var password by mutableStateOf("")
-        private set
-
-    var isPasswordVisible by mutableStateOf(false)
-        private set
-
-    var isLoading by mutableStateOf(false)
-        private set
-
-    var emailError by mutableStateOf<String?>(null)
-        private set
-
-    var passwordError by mutableStateOf<String?>(null)
-        private set
-
-    private val _effect = MutableSharedFlow<LoginEffect>()
+    private val _effect = MutableSharedFlow<LoginEffect>(extraBufferCapacity = 1)
     val effect: SharedFlow<LoginEffect> = _effect.asSharedFlow()
 
+    init {
+        savedStateHandle.get<Int>("messageResId")?.let { messageResId ->
+            if (messageResId != -1) {
+                viewModelScope.launch {
+                    _effect.emit(LoginEffect.ShowSnackbar(messageResId))
+                }
+                savedStateHandle.remove<Int>("messageResId")
+            }
+        }
+    }
+
     val isFormValid: Boolean
-        get() = email.isNotBlank() && ValidationUtils.isValidEmailFormat(email) && password.length >= 8
+        get() = with(_uiState.value) {
+            email.isNotBlank() && ValidationUtils.isValidEmailFormat(email) && password.length >= 8
+        }
 
     fun onEmailChanged(value: String) {
-        email = value
-        emailError = null
+        _uiState.update { it.copy(email = value, emailError = null) }
     }
 
     fun onPasswordChanged(value: String) {
-        password = value
-        passwordError = null
+        _uiState.update { it.copy(password = value, passwordError = null) }
     }
 
     fun onTogglePasswordVisibility() {
-        isPasswordVisible = !isPasswordVisible
+        _uiState.update { it.copy(isPasswordVisible = !it.isPasswordVisible) }
     }
 
     fun onClearEmail() {
-        email = ""
-        emailError = null
+        _uiState.update { it.copy(email = "", emailError = null) }
     }
 
     fun onClearPassword() {
-        password = ""
-        passwordError = null
+        _uiState.update { it.copy(password = "", passwordError = null) }
     }
 
     fun onForgotPassword() {
@@ -84,100 +83,113 @@ class LoginViewModel @Inject constructor(
     }
 
     fun onSignIn() {
-        if (!validateForm()) return
+        if (_uiState.value.isLoading || !validateForm()) return
+        _uiState.update { it.copy(isLoading = true) }
 
         viewModelScope.launch {
-            isLoading = true
             try {
-                val email = Email.of(email)
-                val password = Password.of(password)
+                val state = _uiState.value
+                val email = Email.of(state.email)
+                val password = Password.of(state.password)
                 val result = signInUseCase(SignInRequest(email, password))
-                handleSignInResult(result)
+                handleSignInResult(result, email)
             } catch (_: IllegalArgumentException) {
-                emailError = "入力内容を確認してください"
+                _uiState.update { it.copy(emailError = R.string.error_check_input) }
             } finally {
-                isLoading = false
+                _uiState.update { it.copy(isLoading = false) }
             }
         }
     }
 
     fun onSignUp() {
-        if (!validateForm()) return
+        if (_uiState.value.isLoading || !validateForm()) return
+        _uiState.update { it.copy(isLoading = true) }
 
         viewModelScope.launch {
-            isLoading = true
             try {
-                val email = Email.of(email)
-                val password = Password.of(password)
+                val state = _uiState.value
+                val email = Email.of(state.email)
+                val password = Password.of(state.password)
                 val result = signUpUseCase(SignUpRequest(email, password))
-                handleSignUpResult(result)
+                handleSignUpResult(result, email)
             } catch (_: IllegalArgumentException) {
-                emailError = "入力内容を確認してください"
+                _uiState.update { it.copy(emailError = R.string.error_check_input) }
             } finally {
-                isLoading = false
+                _uiState.update { it.copy(isLoading = false) }
             }
         }
     }
 
-    private suspend fun handleSignInResult(result: AuthResult<SignInState>) {
+    private suspend fun handleSignInResult(result: AuthResult<SignInState>, requestedEmail: Email) {
         when (result) {
             is AuthResult.Success -> {
                 when (result.value) {
                     is SignInState.SignedIn -> _effect.emit(LoginEffect.NavigateToHome)
-                    else -> _effect.emit(LoginEffect.ShowSnackbar("追加の認証ステップが必要です"))
+                    is SignInState.MFARequired,
+                    is SignInState.NewPasswordRequired,
+                    is SignInState.AdditionalStepRequired -> _effect.emit(LoginEffect.ShowSnackbar(R.string.error_additional_auth_required))
                 }
             }
 
-            is AuthResult.Error -> handleAuthError(result.error, isSignUp = false)
+            is AuthResult.Error -> handleAuthError(result.error, requestedEmail)
         }
     }
 
-    private suspend fun handleSignUpResult(result: AuthResult<Unit>) {
+    private suspend fun handleSignUpResult(result: AuthResult<Unit>, requestedEmail: Email) {
         when (result) {
-            is AuthResult.Success -> _effect.emit(LoginEffect.NavigateToVerification(Email.of(email)))
-            is AuthResult.Error -> handleAuthError(result.error, isSignUp = true)
+            is AuthResult.Success -> {
+                _effect.emit(LoginEffect.NavigateToVerification(requestedEmail))
+            }
+
+            is AuthResult.Error -> handleAuthError(result.error, requestedEmail)
         }
     }
 
-    private suspend fun handleAuthError(error: AuthError, isSignUp: Boolean) {
+    private suspend fun handleAuthError(error: AuthError, requestedEmail: Email) {
         when (error) {
             is AuthError.InvalidCredentials -> {
-                passwordError = "メールアドレスまたはパスワードが正しくありません"
+                _uiState.update { it.copy(passwordError = R.string.error_invalid_credentials) }
+            }
+
+            is AuthError.InvalidPassword -> {
+                _uiState.update { it.copy(passwordError = R.string.error_invalid_password) }
             }
 
             is AuthError.UserNotConfirmed -> {
-                _effect.emit(LoginEffect.NavigateToVerification(Email.of(email)))
+                _effect.emit(LoginEffect.NavigateToVerification(requestedEmail))
             }
 
             is AuthError.UsernameAlreadyExists -> {
-                emailError = "このメールアドレスは既に登録されています"
+                _uiState.update { it.copy(emailError = R.string.error_email_already_registered) }
             }
 
             is AuthError.Network -> {
-                _effect.emit(LoginEffect.ShowSnackbar("ネットワークエラーが発生しました"))
+                _effect.emit(LoginEffect.ShowSnackbar(R.string.error_network))
             }
 
             is AuthError.TooManyRequests -> {
-                _effect.emit(LoginEffect.ShowSnackbar("リクエストが多すぎます。しばらくしてから再試行してください"))
+                _effect.emit(LoginEffect.ShowSnackbar(R.string.error_too_many_requests))
             }
 
-            else -> {
-                _effect.emit(LoginEffect.ShowSnackbar("エラーが発生しました"))
+            is AuthError.CodeExpired,
+            is AuthError.CodeMismatch,
+            is AuthError.Unknown -> {
+                _effect.emit(LoginEffect.ShowSnackbar(R.string.error_unknown))
             }
         }
     }
 
     private fun validateForm(): Boolean {
         var valid = true
-        if (email.isBlank() || !ValidationUtils.isValidEmailFormat(email)) {
-            emailError = "有効なメールアドレスを入力してください"
+        val state = _uiState.value
+        if (state.email.isBlank() || !ValidationUtils.isValidEmailFormat(state.email)) {
+            _uiState.update { it.copy(emailError = R.string.error_invalid_email) }
             valid = false
         }
-        if (password.length < 8) {
-            passwordError = "パスワードは8文字以上で入力してください"
+        if (state.password.length < 8) {
+            _uiState.update { it.copy(passwordError = R.string.error_password_too_short) }
             valid = false
         }
         return valid
     }
-
 }

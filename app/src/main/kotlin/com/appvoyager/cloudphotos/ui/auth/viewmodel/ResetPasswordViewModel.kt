@@ -6,16 +6,16 @@ import androidx.lifecycle.viewModelScope
 import com.appvoyager.cloudphotos.R
 import com.appvoyager.cloudphotos.domain.auth.model.AuthError
 import com.appvoyager.cloudphotos.domain.auth.model.AuthResult
-import com.appvoyager.cloudphotos.domain.auth.request.ConfirmSignUpRequest
-import com.appvoyager.cloudphotos.domain.auth.request.ResendSignUpCodeRequest
-import com.appvoyager.cloudphotos.domain.auth.usecase.ConfirmSignUpUseCase
-import com.appvoyager.cloudphotos.domain.auth.usecase.ResendSignUpCodeUseCase
+import com.appvoyager.cloudphotos.domain.auth.request.ConfirmResetPasswordRequest
+import com.appvoyager.cloudphotos.domain.auth.request.ResetPasswordRequest
+import com.appvoyager.cloudphotos.domain.auth.usecase.ConfirmResetPasswordUseCase
+import com.appvoyager.cloudphotos.domain.auth.usecase.ResetPasswordUseCase
 import com.appvoyager.cloudphotos.domain.auth.valueobject.ConfirmationCode
 import com.appvoyager.cloudphotos.domain.auth.valueobject.Email
-import com.appvoyager.cloudphotos.ui.auth.effect.VerificationEffect
-import com.appvoyager.cloudphotos.ui.auth.uistate.VerificationCodeUiState
+import com.appvoyager.cloudphotos.domain.auth.valueobject.Password
+import com.appvoyager.cloudphotos.ui.auth.effect.ResetPasswordEffect
+import com.appvoyager.cloudphotos.ui.auth.uistate.ResetPasswordUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,32 +28,25 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class VerificationCodeViewModel @Inject constructor(
+class ResetPasswordViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val confirmSignUpUseCase: ConfirmSignUpUseCase,
-    private val resendSignUpCodeUseCase: ResendSignUpCodeUseCase
+    private val confirmResetPasswordUseCase: ConfirmResetPasswordUseCase,
+    private val resetPasswordUseCase: ResetPasswordUseCase
 ) : ViewModel() {
 
-    val email: String = savedStateHandle.get<String>(ARG_EMAIL).orEmpty()
+    val email: String = savedStateHandle.get<String>(ARG_EMAIL)
+        ?: error("Missing required nav argument: $ARG_EMAIL")
 
-    private val _uiState = MutableStateFlow(VerificationCodeUiState())
-    val uiState: StateFlow<VerificationCodeUiState> = _uiState.asStateFlow()
-
-    private val _effect = MutableSharedFlow<VerificationEffect>(extraBufferCapacity = 1)
-    val effect: SharedFlow<VerificationEffect> = _effect.asSharedFlow()
+    private val _uiState = MutableStateFlow(ResetPasswordUiState())
+    val uiState: StateFlow<ResetPasswordUiState> = _uiState.asStateFlow()
 
     private var isTimerStarted = false
-    private var resendTimerJob: Job? = null
 
-    init {
-        if (email.isBlank()) {
-            viewModelScope.launch {
-                _effect.emit(VerificationEffect.ShowSnackbar(R.string.error_unknown))
-            }
-        }
-    }
+    private val _effect = MutableSharedFlow<ResetPasswordEffect>(extraBufferCapacity = 1)
+    val effect: SharedFlow<ResetPasswordEffect> = _effect.asSharedFlow()
 
-    fun startTimer() {
+
+    fun startTimerIfNeeded() {
         if (!isTimerStarted) {
             isTimerStarted = true
             startResendTimer()
@@ -72,37 +65,49 @@ class VerificationCodeViewModel @Inject constructor(
                 currentCodes[index + i] = ch.toString()
             }
             _uiState.update { it.copy(codes = currentCodes) }
-            if (_uiState.value.isCodeComplete) {
-                onVerify()
-            }
             return
         }
 
         val currentCodes = _uiState.value.codes.toMutableList()
         currentCodes[index] = digits.take(1)
         _uiState.update { it.copy(codes = currentCodes) }
-
-        if (_uiState.value.isCodeComplete) {
-            onVerify()
-        }
     }
 
-    fun onVerify() {
-        if (!_uiState.value.isCodeComplete || _uiState.value.isLoading) return
+    fun onNewPasswordChanged(value: String) {
+        _uiState.update { it.copy(newPassword = value, passwordError = null) }
+    }
+
+    fun onToggleNewPasswordVisibility() {
+        _uiState.update { it.copy(isNewPasswordVisible = !it.isNewPasswordVisible) }
+    }
+
+    fun onClearCodes() {
+        _uiState.update { it.copy(codes = List(it.codes.size) { "" }, codeError = null) }
+    }
+
+    fun onConfirm() {
+        if (_uiState.value.isLoading || !validateForm()) return
         _uiState.update { it.copy(isLoading = true) }
         val fullCode = _uiState.value.codes.joinToString("")
 
         viewModelScope.launch {
             try {
-                val emailValue = Email.of(email)
-                val codeValue = ConfirmationCode.of(fullCode)
-                when (val confirmResult =
-                    confirmSignUpUseCase(ConfirmSignUpRequest(emailValue, codeValue))) {
-                    is AuthResult.Success -> _effect.emit(VerificationEffect.NavigateToHome)
-                    is AuthResult.Error -> handleConfirmError(confirmResult.error)
+                val emailVO = Email.of(email)
+                val code = ConfirmationCode.of(fullCode)
+                val password = Password.of(_uiState.value.newPassword)
+                val result = confirmResetPasswordUseCase(
+                    ConfirmResetPasswordRequest(emailVO, code, password)
+                )
+
+                when (result) {
+                    is AuthResult.Success -> {
+                        _effect.emit(ResetPasswordEffect.NavigateBackToLogin(R.string.message_password_reset))
+                    }
+
+                    is AuthResult.Error -> handleConfirmError(result.error)
                 }
             } catch (_: IllegalArgumentException) {
-                _uiState.update { it.copy(codeError = R.string.error_confirm_code) }
+                _uiState.update { it.copy(codeError = R.string.error_check_input) }
             } finally {
                 _uiState.update { it.copy(isLoading = false) }
             }
@@ -110,26 +115,39 @@ class VerificationCodeViewModel @Inject constructor(
     }
 
     fun onResend() {
-        if (!_uiState.value.isResendEnabled || _uiState.value.isLoading) return
+        if (_uiState.value.isLoading || !_uiState.value.isResendEnabled) return
         _uiState.update { it.copy(isLoading = true) }
 
         viewModelScope.launch {
             try {
-                val emailValue = Email.of(email)
-                when (val result = resendSignUpCodeUseCase(ResendSignUpCodeRequest(emailValue))) {
+                val emailVO = Email.of(email)
+                when (val result = resetPasswordUseCase(ResetPasswordRequest(emailVO))) {
                     is AuthResult.Success -> {
-                        _effect.emit(VerificationEffect.ShowSnackbar(R.string.message_code_resent))
+                        _effect.emit(ResetPasswordEffect.ShowSnackbar(R.string.message_code_resent))
                         startResendTimer()
                     }
 
                     is AuthResult.Error -> handleResendError(result.error)
                 }
             } catch (_: IllegalArgumentException) {
-                _effect.emit(VerificationEffect.ShowSnackbar(R.string.error_unknown))
+                _effect.emit(ResetPasswordEffect.ShowSnackbar(R.string.error_unknown))
             } finally {
                 _uiState.update { it.copy(isLoading = false) }
             }
         }
+    }
+
+    private fun validateForm(): Boolean {
+        var valid = true
+        if (!_uiState.value.isCodeComplete) {
+            _uiState.update { it.copy(codeError = R.string.error_enter_code) }
+            valid = false
+        }
+        if (_uiState.value.newPassword.length < 8) {
+            _uiState.update { it.copy(passwordError = R.string.error_password_too_short) }
+            valid = false
+        }
+        return valid
     }
 
     private suspend fun handleConfirmError(error: AuthError) {
@@ -143,11 +161,11 @@ class VerificationCodeViewModel @Inject constructor(
             }
 
             is AuthError.Network -> {
-                _effect.emit(VerificationEffect.ShowSnackbar(R.string.error_network))
+                _effect.emit(ResetPasswordEffect.ShowSnackbar(R.string.error_network))
             }
 
             is AuthError.TooManyRequests -> {
-                _effect.emit(VerificationEffect.ShowSnackbar(R.string.error_too_many_requests))
+                _effect.emit(ResetPasswordEffect.ShowSnackbar(R.string.error_too_many_requests))
             }
 
             is AuthError.InvalidCredentials,
@@ -155,7 +173,7 @@ class VerificationCodeViewModel @Inject constructor(
             is AuthError.Unknown,
             is AuthError.UserNotConfirmed,
             is AuthError.UsernameAlreadyExists -> {
-                _effect.emit(VerificationEffect.ShowSnackbar(R.string.error_unknown))
+                _effect.emit(ResetPasswordEffect.ShowSnackbar(R.string.error_unknown))
             }
         }
     }
@@ -163,11 +181,11 @@ class VerificationCodeViewModel @Inject constructor(
     private suspend fun handleResendError(error: AuthError) {
         when (error) {
             is AuthError.Network -> {
-                _effect.emit(VerificationEffect.ShowSnackbar(R.string.error_network))
+                _effect.emit(ResetPasswordEffect.ShowSnackbar(R.string.error_network))
             }
 
             is AuthError.TooManyRequests -> {
-                _effect.emit(VerificationEffect.ShowSnackbar(R.string.error_too_many_requests))
+                _effect.emit(ResetPasswordEffect.ShowSnackbar(R.string.error_too_many_requests))
             }
 
             is AuthError.CodeExpired,
@@ -177,15 +195,14 @@ class VerificationCodeViewModel @Inject constructor(
             is AuthError.Unknown,
             is AuthError.UserNotConfirmed,
             is AuthError.UsernameAlreadyExists -> {
-                _effect.emit(VerificationEffect.ShowSnackbar(R.string.error_resend_failed))
+                _effect.emit(ResetPasswordEffect.ShowSnackbar(R.string.error_resend_failed))
             }
         }
     }
 
     private fun startResendTimer() {
-        resendTimerJob?.cancel()
-        _uiState.update { it.copy(resendTimerSeconds = VerificationCodeUiState.DEFAULT_RESEND_COOLDOWN_SECONDS) }
-        resendTimerJob = viewModelScope.launch {
+        _uiState.update { it.copy(resendTimerSeconds = ResetPasswordUiState.DEFAULT_RESEND_COOLDOWN_SECONDS) }
+        viewModelScope.launch {
             while (_uiState.value.resendTimerSeconds > 0) {
                 delay(1_000L)
                 _uiState.update { it.copy(resendTimerSeconds = it.resendTimerSeconds - 1) }

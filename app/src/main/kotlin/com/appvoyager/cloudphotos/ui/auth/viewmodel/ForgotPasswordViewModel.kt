@@ -1,21 +1,23 @@
 package com.appvoyager.cloudphotos.ui.auth.viewmodel
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.appvoyager.cloudphotos.R
 import com.appvoyager.cloudphotos.domain.auth.model.AuthError
 import com.appvoyager.cloudphotos.domain.auth.model.AuthResult
 import com.appvoyager.cloudphotos.domain.auth.request.ResetPasswordRequest
 import com.appvoyager.cloudphotos.domain.auth.usecase.ResetPasswordUseCase
 import com.appvoyager.cloudphotos.domain.auth.valueobject.Email
 import com.appvoyager.cloudphotos.ui.auth.effect.ForgotPasswordEffect
-import com.appvoyager.cloudphotos.ui.util.ValidationUtils
+import com.appvoyager.cloudphotos.ui.auth.uistate.ForgotPasswordUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -24,71 +26,82 @@ class ForgotPasswordViewModel @Inject constructor(
     private val resetPasswordUseCase: ResetPasswordUseCase
 ) : ViewModel() {
 
-    var email by mutableStateOf("")
-        private set
+    private val _uiState = MutableStateFlow(ForgotPasswordUiState())
+    val uiState: StateFlow<ForgotPasswordUiState> = _uiState.asStateFlow()
 
-    var isLoading by mutableStateOf(false)
-        private set
-
-    var emailError by mutableStateOf<String?>(null)
-        private set
-
-    private val _effect = MutableSharedFlow<ForgotPasswordEffect>()
+    private val _effect = MutableSharedFlow<ForgotPasswordEffect>(extraBufferCapacity = 1)
     val effect: SharedFlow<ForgotPasswordEffect> = _effect.asSharedFlow()
 
-    val isFormValid: Boolean
-        get() = email.isNotBlank() && ValidationUtils.isValidEmailFormat(email)
-
     fun onEmailChanged(value: String) {
-        email = value
-        emailError = null
+        _uiState.update { it.copy(email = value, emailError = null) }
     }
 
     fun onClearEmail() {
-        email = ""
-        emailError = null
+        _uiState.update { it.copy(email = "", emailError = null) }
     }
 
     fun onSubmit() {
-        if (!isFormValid || isLoading) return
+        if (_uiState.value.isLoading || !validateForm()) return
+        _uiState.update { it.copy(isLoading = true) }
 
         viewModelScope.launch {
-            isLoading = true
-            val email = try {
-                Email.of(email)
-            } catch (_: IllegalArgumentException) {
-                emailError = "有効なメールアドレスを入力してください"
-                isLoading = false
-                return@launch
-            }
             try {
+                val email = Email.of(_uiState.value.email)
                 when (val result = resetPasswordUseCase(ResetPasswordRequest(email))) {
                     is AuthResult.Success -> {
-                        _effect.emit(ForgotPasswordEffect.NavigateToResetCode(email))
+                        _effect.emit(ForgotPasswordEffect.NavigateToResetPassword(email))
                     }
 
-                    is AuthResult.Error -> handleError(result.error)
+                    is AuthResult.Error -> handleError(result.error, email)
                 }
             } finally {
-                isLoading = false
+                _uiState.update { it.copy(isLoading = false) }
             }
         }
     }
 
-    private suspend fun handleError(error: AuthError) {
+    private fun validateForm(): Boolean {
+        if (!_uiState.value.isFormValid) {
+            _uiState.update { it.copy(emailError = R.string.error_invalid_email) }
+            return false
+        }
+        return true
+    }
+
+    private suspend fun handleError(error: AuthError, email: Email) {
         when (error) {
             is AuthError.Network -> {
-                _effect.emit(ForgotPasswordEffect.ShowSnackbar("ネットワークエラーが発生しました"))
+                _effect.emit(ForgotPasswordEffect.ShowSnackbar(R.string.error_network))
             }
 
             is AuthError.TooManyRequests -> {
-                _effect.emit(ForgotPasswordEffect.ShowSnackbar("リクエストが多すぎます。しばらくしてから再試行してください"))
+                _effect.emit(ForgotPasswordEffect.ShowSnackbar(R.string.error_too_many_requests))
             }
 
-            else -> {
-                _effect.emit(ForgotPasswordEffect.ShowSnackbar("エラーが発生しました"))
+            is AuthError.UserNotConfirmed -> {
+                _effect.emit(ForgotPasswordEffect.NavigateToVerification(email))
+            }
+
+            is AuthError.InvalidPassword -> {
+                _effect.emit(ForgotPasswordEffect.ShowSnackbar(R.string.error_invalid_password))
+            }
+
+            is AuthError.InvalidCredentials -> {
+                _effect.emit(ForgotPasswordEffect.ShowSnackbar(R.string.error_invalid_credentials))
+            }
+
+            is AuthError.CodeExpired -> {
+                _effect.emit(ForgotPasswordEffect.ShowSnackbar(R.string.error_code_expired))
+            }
+
+            is AuthError.CodeMismatch -> {
+                _effect.emit(ForgotPasswordEffect.ShowSnackbar(R.string.error_code_mismatch))
+            }
+
+            is AuthError.Unknown,
+            is AuthError.UsernameAlreadyExists -> {
+                _effect.emit(ForgotPasswordEffect.ShowSnackbar(R.string.error_unknown))
             }
         }
     }
-
 }
