@@ -3,6 +3,7 @@ package com.appvoyager.cloudphotos.domain.media.usecase
 import com.appvoyager.cloudphotos.domain.media.model.CloudMedia
 import com.appvoyager.cloudphotos.domain.media.model.MediaType
 import com.appvoyager.cloudphotos.domain.media.repository.MediaRepository
+import com.appvoyager.cloudphotos.domain.media.valueobject.MediaCreatedAt
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaId
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaUrl
 import io.mockk.every
@@ -29,8 +30,8 @@ class GetMediaListUseCaseTest {
     fun `invoke returns flow of media list from repository`() = runTest {
         // Arrange
         val expectedMediaList = listOf(
-            CloudMedia(id = MediaId.of("1"), url = MediaUrl.of("url1"), type = MediaType.IMAGE, createdAt = 1000L),
-            CloudMedia(id = MediaId.of("2"), url = MediaUrl.of("url2"), type = MediaType.VIDEO, createdAt = 2000L)
+            CloudMedia(id = MediaId.of("1"), url = MediaUrl.of("https://example.com/url1"), type = MediaType.IMAGE, createdAt = MediaCreatedAt.of(1000L)),
+            CloudMedia(id = MediaId.of("2"), url = MediaUrl.of("https://example.com/url2"), type = MediaType.VIDEO, createdAt = MediaCreatedAt.of(2000L))
         )
         every { mediaRepository.getMediaList() } returns flowOf(expectedMediaList)
 
