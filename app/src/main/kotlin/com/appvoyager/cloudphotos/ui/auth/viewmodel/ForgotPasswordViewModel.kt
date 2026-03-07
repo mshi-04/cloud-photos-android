@@ -49,7 +49,7 @@ class ForgotPasswordViewModel @Inject constructor(
                 val email = Email.of(_uiState.value.email)
                 when (val result = resetPasswordUseCase(ResetPasswordRequest(email))) {
                     is AuthResult.Success -> {
-                        _effect.emit(ForgotPasswordEffect.NavigateToResetCode(email))
+                        _effect.emit(ForgotPasswordEffect.NavigateToResetPassword(email))
                     }
 
                     is AuthResult.Error -> handleError(result.error, email)

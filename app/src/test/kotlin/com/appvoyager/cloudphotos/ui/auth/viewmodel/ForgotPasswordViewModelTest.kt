@@ -88,10 +88,10 @@ class ForgotPasswordViewModelTest {
         viewModel.onSubmit()
         advanceUntilIdle()
 
-        assertTrue(effect is ForgotPasswordEffect.NavigateToResetCode)
+        assertTrue(effect is ForgotPasswordEffect.NavigateToResetPassword)
         assertEquals(
             Email.of("test@example.com"),
-            (effect as ForgotPasswordEffect.NavigateToResetCode).email
+            (effect as ForgotPasswordEffect.NavigateToResetPassword).email
         )
         assertFalse(viewModel.uiState.value.isLoading)
         job.cancel()

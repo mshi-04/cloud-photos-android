@@ -107,7 +107,7 @@ fun NavGraph(
             popExitTransition = { exitBack() }
         ) {
             ForgotPasswordScreen(
-                onNavigateToResetCode = { email ->
+                onNavigateToResetPassword = { email ->
                     navController.navigate(AuthRoute.resetPassword(email))
                 },
                 onNavigateToVerification = { email ->
