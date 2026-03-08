@@ -71,14 +71,13 @@ class LocalMediaDataSourceTest {
         every { mockCursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID) } returns 0
         every { mockCursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MEDIA_TYPE) } returns 1
         every { mockCursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATE_ADDED) } returns 2
-        every { mockCursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DURATION) } returns 3
+
 
         // Simulate 1 image row
         every { mockCursor.moveToNext() } returnsMany listOf(true, false)
         every { mockCursor.getLong(0) } returns 123L
         every { mockCursor.getInt(1) } returns MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE
         every { mockCursor.getLong(2) } returns 1600000000L
-        every { mockCursor.getLong(3) } returns 0L
 
         // Act
         val result = dataSource.getLocalMediaList()
@@ -108,14 +107,13 @@ class LocalMediaDataSourceTest {
         every { mockCursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID) } returns 0
         every { mockCursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MEDIA_TYPE) } returns 1
         every { mockCursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATE_ADDED) } returns 2
-        every { mockCursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DURATION) } returns 3
+
 
         // Simulate 1 video row
         every { mockCursor.moveToNext() } returnsMany listOf(true, false)
         every { mockCursor.getLong(0) } returns 456L
         every { mockCursor.getInt(1) } returns MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO
         every { mockCursor.getLong(2) } returns 1700000000L
-        every { mockCursor.getLong(3) } returns 10000L
 
         // Act
         val result = dataSource.getLocalMediaList()
@@ -156,11 +154,10 @@ class LocalMediaDataSourceTest {
             mockContentResolver.query(any(), any(), any(), any(), any())
         } throws SecurityException("Permission denied")
 
-        // Act
-        val action: suspend () -> Unit = { dataSource.getLocalMediaList() }
-
-        // Assert
-        assertThrows<SecurityException> { action() }
+        // Act & Assert
+        assertThrows<SecurityException> {
+            runBlocking { dataSource.getLocalMediaList() }
+        }
     }
 
 }
