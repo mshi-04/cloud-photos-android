@@ -53,7 +53,8 @@ class MediaViewModel @Inject constructor(
             try {
                 val gridColumnCount = GridColumnCount.of(count)
                 setGridColumnCountUseCase(gridColumnCount)
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 _effect.send(MediaEffect.ShowSnackbar(R.string.error_unknown))
             }
         }
