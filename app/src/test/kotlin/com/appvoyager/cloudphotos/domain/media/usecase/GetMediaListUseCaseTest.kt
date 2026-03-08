@@ -8,10 +8,12 @@ import com.appvoyager.cloudphotos.domain.media.valueobject.MediaId
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaUrl
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
@@ -32,24 +34,20 @@ class GetMediaListUseCaseTest {
         val expectedMediaList = listOf(
             Media(
                 id = MediaId.of("1"),
-                url = MediaUrl.of("https://example.com/url1"),
+                url = MediaUrl.of("content://media/external/images/media/1"),
                 type = MediaType.IMAGE,
-                createdAt = MediaCreatedAt.of(1000L)
-            ),
-            Media(
-                id = MediaId.of("2"),
-                url = MediaUrl.of("https://example.com/url2"),
-                type = MediaType.VIDEO,
-                createdAt = MediaCreatedAt.of(2000L)
+                thumbnailUrl = null,
+                createdAt = MediaCreatedAt.of(1600000000000L)
             )
         )
-        every { localMediaRepository.getMediaList() } returns flowOf(expectedMediaList)
+        every { localMediaRepository.getMediaList() } returns flowOf(Result.success(expectedMediaList))
 
         // Act
-        val result = getMediaListUseCase().toList()
+        val resultFlow = getMediaListUseCase()
+        val actualResult = resultFlow.first()
 
         // Assert
-        assertEquals(1, result.size)
-        assertEquals(expectedMediaList, result.first())
+        assertTrue(actualResult.isSuccess)
+        assertEquals(expectedMediaList, actualResult.getOrNull())
     }
 }

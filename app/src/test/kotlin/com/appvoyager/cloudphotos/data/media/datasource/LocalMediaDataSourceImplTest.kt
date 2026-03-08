@@ -36,11 +36,15 @@ class LocalMediaDataSourceImplTest {
         mockkStatic(MediaStore.Images.Media::class)
         mockkStatic(MediaStore.Video.Media::class)
 
-        val mockUri = mockk<Uri>(relaxed = true)
-        every { mockUri.toString() } returns "content://media/external/file/123"
-        
-        every { Uri.withAppendedPath(any(), any()) } returns mockUri
-        every { MediaStore.Files.getContentUri("external") } returns mockUri
+        val mockImageUri = mockk<Uri>(relaxed = true)
+        every { mockImageUri.toString() } returns "content://media/external/images/media/123"
+
+        val mockVideoUri = mockk<Uri>(relaxed = true)
+        every { mockVideoUri.toString() } returns "content://media/external/video/media/123"
+
+        every { Uri.withAppendedPath(any(), "123") } returns mockImageUri
+        every { Uri.withAppendedPath(any(), "456") } returns mockVideoUri
+        every { MediaStore.Files.getContentUri("external") } returns mockk(relaxed = true)
 
         dataSource = LocalMediaDataSourceImpl(mockContext)
     }
@@ -83,10 +87,47 @@ class LocalMediaDataSourceImplTest {
         val media = result.first()
         assertEquals("123", media.id.value)
         assertEquals(MediaType.IMAGE, media.type)
-        assertEquals("content://media/external/file/123", media.url.value)
+        assertEquals("content://media/external/images/media/123", media.url.value)
         assertEquals(1600000000000L, media.createdAt.value)
     }
     
+    @Test
+    fun `getLocalMediaList successfully maps cursor data to Media list for video`() = runTest {
+        // Arrange
+        every {
+            mockContentResolver.query(
+                any(),
+                any(),
+                any(),
+                any(),
+                any()
+            )
+        } returns mockCursor
+
+        every { mockCursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID) } returns 0
+        every { mockCursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MEDIA_TYPE) } returns 1
+        every { mockCursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATE_ADDED) } returns 2
+        every { mockCursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DURATION) } returns 3
+
+        // Simulate 1 video row
+        every { mockCursor.moveToNext() } returnsMany listOf(true, false)
+        every { mockCursor.getLong(0) } returns 456L
+        every { mockCursor.getInt(1) } returns MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO
+        every { mockCursor.getLong(2) } returns 1700000000L
+        every { mockCursor.getLong(3) } returns 10000L
+
+        // Act
+        val result = dataSource.getLocalMediaList()
+
+        // Assert
+        assertEquals(1, result.size)
+        val media = result.first()
+        assertEquals("456", media.id.value)
+        assertEquals(MediaType.VIDEO, media.type)
+        assertEquals("content://media/external/video/media/123", media.url.value)
+        assertEquals(1700000000000L, media.createdAt.value)
+    }
+
     @Test
     fun `getLocalMediaList returns empty list when cursor is null`() = runTest {
         // Arrange

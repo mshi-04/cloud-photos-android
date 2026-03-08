@@ -4,7 +4,6 @@ import android.content.ContentResolver
 import android.content.Context
 import android.net.Uri
 import android.provider.MediaStore
-import com.appvoyager.cloudphotos.domain.media.datasource.LocalMediaDataSource
 import com.appvoyager.cloudphotos.domain.media.model.Media
 import com.appvoyager.cloudphotos.domain.media.model.MediaType
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaCreatedAt

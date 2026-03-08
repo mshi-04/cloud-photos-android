@@ -1,4 +1,4 @@
-package com.appvoyager.cloudphotos.domain.media.datasource
+package com.appvoyager.cloudphotos.data.media.datasource
 
 import com.appvoyager.cloudphotos.domain.media.model.Media
 

@@ -1,6 +1,6 @@
 package com.appvoyager.cloudphotos.data.media.repository
 
-import com.appvoyager.cloudphotos.domain.media.datasource.LocalMediaDataSource
+import com.appvoyager.cloudphotos.data.media.datasource.LocalMediaDataSource
 import com.appvoyager.cloudphotos.domain.media.model.Media
 import com.appvoyager.cloudphotos.domain.media.model.MediaType
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaCreatedAt
@@ -11,6 +11,7 @@ import io.mockk.mockk
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
@@ -34,16 +35,17 @@ class LocalMediaRepositoryImplTest {
                 url = MediaUrl.of("http://example.com/1.jpg"),
                 type = MediaType.IMAGE,
                 thumbnailUrl = null,
-                createdAt = MediaCreatedAt.of(1600000000L)
+                createdAt = MediaCreatedAt.of(1600000000000L)
             )
         )
         coEvery { mockDataSource.getLocalMediaList() } returns expectedMediaList
 
         // Act
         val resultFlow = repository.getMediaList()
-        val resultList = resultFlow.first()
+        val actualResult = resultFlow.first()
 
         // Assert
-        assertEquals(expectedMediaList, resultList)
+        assertTrue(actualResult.isSuccess)
+        assertEquals(expectedMediaList, actualResult.getOrNull())
     }
 }
