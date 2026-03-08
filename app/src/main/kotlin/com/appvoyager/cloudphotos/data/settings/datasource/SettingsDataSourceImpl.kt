@@ -19,10 +19,12 @@ class SettingsDataSourceImpl @Inject constructor(
 
     override val gridColumnCount: Flow<Int> =
         context.dataStore.data.map { preferences ->
-            preferences[KEY_GRID_COLUMN_COUNT] ?: DEFAULT_GRID_COLUMN_COUNT
+            val stored = preferences[KEY_GRID_COLUMN_COUNT]
+            if (stored == null || stored <= 0) DEFAULT_GRID_COLUMN_COUNT else stored
         }
 
     override suspend fun setGridColumnCount(count: Int) {
+        if (count <= 0) return
         context.dataStore.edit { preferences ->
             preferences[KEY_GRID_COLUMN_COUNT] = count
         }

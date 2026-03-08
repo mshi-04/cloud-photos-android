@@ -10,12 +10,16 @@ import com.appvoyager.cloudphotos.domain.settings.valueobject.GridColumnCount
 import com.appvoyager.cloudphotos.ui.media.effect.MediaEffect
 import com.appvoyager.cloudphotos.ui.media.uistate.MediaUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -30,8 +34,10 @@ class MediaViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(MediaUiState())
     val uiState: StateFlow<MediaUiState> = _uiState.asStateFlow()
 
-    private val _effect = MutableSharedFlow<MediaEffect>(extraBufferCapacity = 1)
-    val effect: SharedFlow<MediaEffect> = _effect.asSharedFlow()
+    private val _effect = Channel<MediaEffect>(Channel.BUFFERED)
+    val effect: Flow<MediaEffect> = _effect.receiveAsFlow()
+
+    private var mediaListJob: Job? = null
 
     fun onShowSettingsDialog() {
         _uiState.update { it.copy(isSettingsDialogVisible = true) }
@@ -61,25 +67,26 @@ class MediaViewModel @Inject constructor(
     }
 
     fun loadMediaList() {
-        _uiState.update { it.copy(isLoading = true, isError = false) }
-        viewModelScope.launch {
-            getMediaListUseCase().collect { result ->
-                result.fold(
-                    onSuccess = { mediaList ->
-                        _uiState.update {
-                            it.copy(
-                                mediaList = mediaList,
-                                isLoading = false,
-                                isError = false
-                            )
-                        }
-                    },
-                    onFailure = {
-                        _uiState.update { it.copy(isLoading = false, isError = true) }
-                        _effect.emit(MediaEffect.ShowSnackbar(R.string.error_media_load_failed))
+        mediaListJob?.cancel()
+        mediaListJob = viewModelScope.launch {
+            getMediaListUseCase()
+                .map { it.getOrThrow() }
+                .onStart {
+                    _uiState.update { it.copy(isLoading = true, isError = false) }
+                }
+                .catch {
+                    _uiState.update { it.copy(isLoading = false, isError = true) }
+                    _effect.send(MediaEffect.ShowSnackbar(R.string.error_media_load_failed))
+                }
+                .collect { mediaList ->
+                    _uiState.update {
+                        it.copy(
+                            mediaList = mediaList,
+                            isLoading = false,
+                            isError = false
+                        )
                     }
-                )
-            }
+                }
         }
     }
     

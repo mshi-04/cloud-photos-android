@@ -35,23 +35,31 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import coil3.compose.AsyncImage
 import com.appvoyager.cloudphotos.R
 import com.appvoyager.cloudphotos.domain.media.model.Media
@@ -65,6 +73,9 @@ import com.appvoyager.cloudphotos.ui.media.component.GridColumnSettingsDialog
 import com.appvoyager.cloudphotos.ui.media.effect.MediaEffect
 import com.appvoyager.cloudphotos.ui.media.viewmodel.MediaViewModel
 import com.appvoyager.cloudphotos.ui.theme.CloudPhotosTheme
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun MediaScreen(
@@ -74,20 +85,28 @@ fun MediaScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val latestResources = rememberUpdatedState(LocalResources.current)
+    val lifecycleOwner = LocalLifecycleOwner.current
 
     LaunchedEffect(Unit) {
         viewModel.loadGridColumnCount()
         viewModel.loadMediaList()
-        viewModel.effect.collect { effect ->
-            when (effect) {
-                is MediaEffect.ShowSnackbar -> {
-                    snackbarHostState.showSnackbar(latestResources.value.getString(effect.messageResId))
+    }
+
+    LaunchedEffect(Unit) {
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            viewModel.effect.collect { effect ->
+                when (effect) {
+                    is MediaEffect.ShowSnackbar -> {
+                        snackbarHostState.showSnackbar(latestResources.value.getString(effect.messageResId))
+                    }
                 }
             }
         }
     }
 
     BackHandler(enabled = uiState.isLoading) { }
+
+    val layoutDirection = LocalLayoutDirection.current
 
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
@@ -97,8 +116,8 @@ fun MediaScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(
-                    start = innerPadding.calculateLeftPadding(androidx.compose.ui.unit.LayoutDirection.Ltr),
-                    end = innerPadding.calculateRightPadding(androidx.compose.ui.unit.LayoutDirection.Ltr),
+                    start = innerPadding.calculateLeftPadding(layoutDirection),
+                    end = innerPadding.calculateRightPadding(layoutDirection),
                     bottom = 0.dp
                 )
         ) {
@@ -182,15 +201,15 @@ private fun MediaContent(
 }
 
 @Composable
-private fun rememberScrollButtonVisibility(gridState: LazyGridState): androidx.compose.runtime.State<Boolean> {
+private fun rememberScrollButtonVisibility(gridState: LazyGridState): State<Boolean> {
+    val isVisible = remember { mutableStateOf(true) }
     var previousFirstVisibleItemIndex by remember { mutableIntStateOf(0) }
     var previousFirstVisibleItemScrollOffset by remember { mutableIntStateOf(0) }
 
-    return remember {
-        derivedStateOf {
-            val currentIndex = gridState.firstVisibleItemIndex
-            val currentOffset = gridState.firstVisibleItemScrollOffset
-
+    LaunchedEffect(gridState) {
+        snapshotFlow {
+            gridState.firstVisibleItemIndex to gridState.firstVisibleItemScrollOffset
+        }.collect { (currentIndex, currentOffset) ->
             val isScrollingUp = currentIndex < previousFirstVisibleItemIndex ||
                     (currentIndex == previousFirstVisibleItemIndex && currentOffset < previousFirstVisibleItemScrollOffset)
             val isAtTop = currentIndex == 0 && currentOffset == 0
@@ -198,9 +217,11 @@ private fun rememberScrollButtonVisibility(gridState: LazyGridState): androidx.c
             previousFirstVisibleItemIndex = currentIndex
             previousFirstVisibleItemScrollOffset = currentOffset
 
-            isScrollingUp || isAtTop
+            isVisible.value = isScrollingUp || isAtTop
         }
     }
+
+    return isVisible
 }
 
 @Composable
@@ -247,10 +268,28 @@ private fun MediaGrid(
 
 @Composable
 private fun MediaGridItem(media: Media) {
+    val mediaTypeLabel = if (media.type == MediaType.VIDEO) {
+        stringResource(R.string.media_content_description_video)
+    } else {
+        stringResource(R.string.media_content_description_image)
+    }
+    val dateFormat = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
+    val dateLabel = remember(media.createdAt.value) {
+        dateFormat.format(Date(media.createdAt.value))
+    }
+    val accessibilityLabel = stringResource(
+        R.string.media_content_description_format,
+        mediaTypeLabel,
+        dateLabel
+    )
+
     Box(
         modifier = Modifier
             .aspectRatio(1f)
             .clip(MaterialTheme.shapes.extraSmall)
+            .semantics(mergeDescendants = true) {
+                contentDescription = accessibilityLabel
+            }
     ) {
         AsyncImage(
             model = media.url.value,

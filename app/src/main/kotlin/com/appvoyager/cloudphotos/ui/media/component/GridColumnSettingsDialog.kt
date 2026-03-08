@@ -30,7 +30,7 @@ fun GridColumnSettingsDialog(
     onDismiss: () -> Unit
 ) {
 
-    var sliderValue by remember { mutableIntStateOf(currentColumnCount) }
+    var sliderValue by remember(currentColumnCount) { mutableIntStateOf(currentColumnCount) }
 
     AlertDialog(
         onDismissRequest = onDismiss,

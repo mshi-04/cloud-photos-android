@@ -46,6 +46,9 @@
     <string name="media_sign_out">ログアウト</string>
     <string name="media_empty">メディアがありません</string>
     <string name="media_retry">再試行</string>
+    <string name="media_content_description_image">画像</string>
+    <string name="media_content_description_video">動画</string>
+    <string name="media_content_description_format">%1$s、撮影日 %2$s</string>
 
     <!-- 設定ダイアログ -->
     <string name="settings_grid_column_title">グリッド列数</string>

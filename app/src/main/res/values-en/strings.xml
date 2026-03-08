@@ -47,6 +47,9 @@
     <string name="media_sign_out">Sign out</string>
     <string name="media_empty">No media found</string>
     <string name="media_retry">Retry</string>
+    <string name="media_content_description_image">Image</string>
+    <string name="media_content_description_video">Video</string>
+    <string name="media_content_description_format">%1$s, taken on %2$s</string>
 
     <!-- Settings Dialog -->
     <string name="settings_grid_column_title">Grid columns</string>
