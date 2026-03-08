@@ -7,7 +7,6 @@ import com.amplifyframework.auth.result.step.AuthSignInStep
 import com.amplifyframework.core.Amplify
 import com.appvoyager.cloudphotos.data.auth.util.AuthErrorMapper
 import com.appvoyager.cloudphotos.data.auth.util.AuthSignInStepMapper
-import com.appvoyager.cloudphotos.domain.auth.datasource.AuthDataSource
 import com.appvoyager.cloudphotos.domain.auth.model.AuthResult
 import com.appvoyager.cloudphotos.domain.auth.model.AuthSession
 import com.appvoyager.cloudphotos.domain.auth.model.AuthState

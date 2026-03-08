@@ -1,4 +1,4 @@
-package com.appvoyager.cloudphotos.domain.auth.datasource
+package com.appvoyager.cloudphotos.data.auth.datasource
 
 import com.appvoyager.cloudphotos.domain.auth.model.AuthResult
 import com.appvoyager.cloudphotos.domain.auth.model.AuthSession

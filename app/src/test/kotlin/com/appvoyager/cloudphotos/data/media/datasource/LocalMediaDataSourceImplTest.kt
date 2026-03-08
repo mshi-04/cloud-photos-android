@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
-class LocalMediaDataSourceImplTest {
+class LocalMediaDataSourceTest {
 
     private lateinit var mockContext: Context
     private lateinit var mockContentResolver: ContentResolver
