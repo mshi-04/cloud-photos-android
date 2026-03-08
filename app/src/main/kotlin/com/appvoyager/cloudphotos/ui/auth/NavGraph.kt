@@ -16,7 +16,7 @@ import com.appvoyager.cloudphotos.ui.auth.screen.ForgotPasswordScreen
 import com.appvoyager.cloudphotos.ui.auth.screen.LoginScreen
 import com.appvoyager.cloudphotos.ui.auth.screen.ResetPasswordScreen
 import com.appvoyager.cloudphotos.ui.auth.screen.VerificationCodeScreen
-import com.appvoyager.cloudphotos.ui.screen.HomeScreen
+import com.appvoyager.cloudphotos.ui.media.screen.MediaScreen
 
 private const val TRANSITION_DURATION_MS = 300
 
@@ -153,7 +153,7 @@ fun NavGraph(
             popEnterTransition = { enterBack() },
             popExitTransition = { exitBack() }
         ) {
-            HomeScreen(
+            MediaScreen(
                 onSignOut = {
                     onSignOut()
                 }

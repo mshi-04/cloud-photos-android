@@ -99,6 +99,12 @@ dependencies {
     implementation(libs.amplify.core)
     implementation(libs.amplify.auth.cognito)
 
+    // Image Loading
+    implementation(libs.coil.compose)
+
+    // DataStore
+    implementation(libs.androidx.datastore.preferences)
+
     // Desugaring
     coreLibraryDesugaring(libs.desugar.jdk.libs)
 
