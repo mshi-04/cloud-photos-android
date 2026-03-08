@@ -22,7 +22,6 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.io.IOException
 import javax.inject.Inject
 
 @HiltViewModel
@@ -38,6 +37,7 @@ class MediaViewModel @Inject constructor(
     private val _effect = Channel<MediaEffect>(Channel.BUFFERED)
     val effect: Flow<MediaEffect> = _effect.receiveAsFlow()
 
+    private var gridColumnJob: Job? = null
     private var mediaListJob: Job? = null
 
     fun onShowSettingsDialog() {
@@ -53,7 +53,7 @@ class MediaViewModel @Inject constructor(
             try {
                 val gridColumnCount = GridColumnCount.of(count)
                 setGridColumnCountUseCase(gridColumnCount)
-            } catch (_: IOException) {
+            } catch (_: Exception) {
                 _effect.send(MediaEffect.ShowSnackbar(R.string.error_unknown))
             }
         }
@@ -64,7 +64,8 @@ class MediaViewModel @Inject constructor(
     }
 
     fun loadGridColumnCount() {
-        viewModelScope.launch {
+        gridColumnJob?.cancel()
+        gridColumnJob = viewModelScope.launch {
             getGridColumnCountUseCase()
                 .catch { _effect.send(MediaEffect.ShowSnackbar(R.string.error_unknown)) }
                 .collect { gridColumnCount ->
