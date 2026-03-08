@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.io.IOException
 import javax.inject.Inject
 
 @HiltViewModel
@@ -49,8 +50,12 @@ class MediaViewModel @Inject constructor(
 
     fun onGridColumnCountChanged(count: Int) {
         viewModelScope.launch {
-            val gridColumnCount = GridColumnCount.of(count)
-            setGridColumnCountUseCase(gridColumnCount)
+            try {
+                val gridColumnCount = GridColumnCount.of(count)
+                setGridColumnCountUseCase(gridColumnCount)
+            } catch (_: IOException) {
+                _effect.send(MediaEffect.ShowSnackbar(R.string.error_unknown))
+            }
         }
     }
 
@@ -60,9 +65,11 @@ class MediaViewModel @Inject constructor(
 
     fun loadGridColumnCount() {
         viewModelScope.launch {
-            getGridColumnCountUseCase().collect { gridColumnCount ->
-                _uiState.update { it.copy(gridColumnCount = gridColumnCount) }
-            }
+            getGridColumnCountUseCase()
+                .catch { _effect.send(MediaEffect.ShowSnackbar(R.string.error_unknown)) }
+                .collect { gridColumnCount ->
+                    _uiState.update { it.copy(gridColumnCount = gridColumnCount) }
+                }
         }
     }
 

@@ -7,7 +7,7 @@ import org.junit.jupiter.api.assertThrows
 class GridColumnCountTest {
 
     @Test
-    fun `of creates GridColumnCount when value is positive`() {
+    fun `of creates GridColumnCount when value is within range`() {
         // Arrange
         val raw = 3
 
@@ -19,15 +19,49 @@ class GridColumnCountTest {
     }
 
     @Test
-    fun `of creates GridColumnCount when value is 1`() {
+    fun `of creates GridColumnCount when value is MIN`() {
         // Arrange
-        val raw = 1
+        val raw = GridColumnCount.MIN
 
         // Act
         val count = GridColumnCount.of(raw)
 
         // Assert
-        assertEquals(1, count.value)
+        assertEquals(GridColumnCount.MIN, count.value)
+    }
+
+    @Test
+    fun `of creates GridColumnCount when value is MAX`() {
+        // Arrange
+        val raw = GridColumnCount.MAX
+
+        // Act
+        val count = GridColumnCount.of(raw)
+
+        // Assert
+        assertEquals(GridColumnCount.MAX, count.value)
+    }
+
+    @Test
+    fun `of throws when value is below MIN`() {
+        // Arrange
+        val raw = GridColumnCount.MIN - 1
+
+        // Act & Assert
+        assertThrows<IllegalArgumentException> {
+            GridColumnCount.of(raw)
+        }
+    }
+
+    @Test
+    fun `of throws when value is above MAX`() {
+        // Arrange
+        val raw = GridColumnCount.MAX + 1
+
+        // Act & Assert
+        assertThrows<IllegalArgumentException> {
+            GridColumnCount.of(raw)
+        }
     }
 
     @Test
@@ -35,13 +69,10 @@ class GridColumnCountTest {
         // Arrange
         val raw = 0
 
-        // Act
-        val ex = assertThrows<IllegalArgumentException> {
+        // Act & Assert
+        assertThrows<IllegalArgumentException> {
             GridColumnCount.of(raw)
         }
-
-        // Assert
-        assertEquals("GridColumnCount must be greater than 0.", ex.message)
     }
 
     @Test
@@ -49,12 +80,9 @@ class GridColumnCountTest {
         // Arrange
         val raw = -1
 
-        // Act
-        val ex = assertThrows<IllegalArgumentException> {
+        // Act & Assert
+        assertThrows<IllegalArgumentException> {
             GridColumnCount.of(raw)
         }
-
-        // Assert
-        assertEquals("GridColumnCount must be greater than 0.", ex.message)
     }
 }

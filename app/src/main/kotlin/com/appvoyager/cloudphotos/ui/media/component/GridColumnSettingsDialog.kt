@@ -20,6 +20,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.appvoyager.cloudphotos.R
+import com.appvoyager.cloudphotos.domain.settings.valueobject.GridColumnCount
 import com.appvoyager.cloudphotos.ui.theme.CloudPhotosTheme
 import kotlin.math.roundToInt
 
@@ -52,8 +53,8 @@ fun GridColumnSettingsDialog(
                 Slider(
                     value = sliderValue.toFloat(),
                     onValueChange = { sliderValue = it.roundToInt() },
-                    valueRange = MIN_COLUMNS.toFloat()..MAX_COLUMNS.toFloat(),
-                    steps = MAX_COLUMNS - MIN_COLUMNS - 1
+                    valueRange = GridColumnCount.MIN.toFloat()..GridColumnCount.MAX.toFloat(),
+                    steps = GridColumnCount.MAX - GridColumnCount.MIN - 1
                 )
             }
         },
@@ -72,9 +73,6 @@ fun GridColumnSettingsDialog(
         }
     )
 }
-
-private const val MIN_COLUMNS = 2
-private const val MAX_COLUMNS = 6
 
 @Preview(showBackground = true)
 @Composable
