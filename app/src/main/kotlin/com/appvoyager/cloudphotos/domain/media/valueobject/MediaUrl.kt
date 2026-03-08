@@ -23,11 +23,18 @@ value class MediaUrl private constructor(val value: String) {
         @Suppress("SwallowedException")
         private fun isValidUrl(url: String): Boolean {
             return try {
-                URI(url).toURL()
-                true
+                val uri = URI(url)
+                if (uri.scheme == "content") {
+                    true
+                } else {
+                    uri.toURL()
+                    true
+                }
             } catch (_: URISyntaxException) {
                 false
             } catch (_: MalformedURLException) {
+                false
+            } catch (_: IllegalArgumentException) {
                 false
             }
         }

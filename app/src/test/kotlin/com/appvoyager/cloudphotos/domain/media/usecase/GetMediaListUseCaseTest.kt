@@ -1,45 +1,76 @@
 package com.appvoyager.cloudphotos.domain.media.usecase
 
-import com.appvoyager.cloudphotos.domain.media.model.CloudMedia
+import com.appvoyager.cloudphotos.domain.media.model.Media
 import com.appvoyager.cloudphotos.domain.media.model.MediaType
-import com.appvoyager.cloudphotos.domain.media.repository.MediaRepository
+import com.appvoyager.cloudphotos.domain.media.repository.LocalMediaRepository
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaCreatedAt
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaId
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaUrl
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 class GetMediaListUseCaseTest {
 
-    private lateinit var mediaRepository: MediaRepository
+    private lateinit var localMediaRepository: LocalMediaRepository
     private lateinit var getMediaListUseCase: GetMediaListUseCase
 
     @BeforeEach
     fun setUp() {
-        mediaRepository = mockk()
-        getMediaListUseCase = GetMediaListUseCase(mediaRepository)
+        localMediaRepository = mockk()
+        getMediaListUseCase = GetMediaListUseCase(localMediaRepository)
     }
 
     @Test
     fun `invoke returns flow of media list from repository`() = runTest {
         // Arrange
         val expectedMediaList = listOf(
-            CloudMedia(id = MediaId.of("1"), url = MediaUrl.of("https://example.com/url1"), type = MediaType.IMAGE, createdAt = MediaCreatedAt.of(1000L)),
-            CloudMedia(id = MediaId.of("2"), url = MediaUrl.of("https://example.com/url2"), type = MediaType.VIDEO, createdAt = MediaCreatedAt.of(2000L))
+            Media(
+                id = MediaId.of("1"),
+                url = MediaUrl.of("content://media/external/images/media/1"),
+                type = MediaType.IMAGE,
+                thumbnailUrl = null,
+                createdAt = MediaCreatedAt.of(1600000000000L)
+            )
         )
-        every { mediaRepository.getMediaList() } returns flowOf(expectedMediaList)
+        every { localMediaRepository.getMediaList() } returns flowOf(
+            Result.success(
+                expectedMediaList
+            )
+        )
 
         // Act
-        val result = getMediaListUseCase().toList()
+        val resultFlow = getMediaListUseCase()
+        val actualResult = resultFlow.first()
 
         // Assert
-        assertEquals(1, result.size)
-        assertEquals(expectedMediaList, result.first())
+        assertTrue(actualResult.isSuccess)
+        assertEquals(expectedMediaList, actualResult.getOrNull())
     }
+
+    @Test
+    fun `invoke returns flow of failure when repository fails`() = runTest {
+        // Arrange
+        val expectedException = SecurityException("Permission denied")
+        every { localMediaRepository.getMediaList() } returns flowOf(
+            Result.failure(
+                expectedException
+            )
+        )
+
+        // Act
+        val resultFlow = getMediaListUseCase()
+        val actualResult = resultFlow.first()
+
+        // Assert
+        assertTrue(actualResult.isFailure)
+        assertEquals(expectedException, actualResult.exceptionOrNull())
+    }
+
 }

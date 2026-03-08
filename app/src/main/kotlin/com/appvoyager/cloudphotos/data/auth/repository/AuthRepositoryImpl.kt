@@ -1,6 +1,6 @@
 package com.appvoyager.cloudphotos.data.auth.repository
 
-import com.appvoyager.cloudphotos.domain.auth.datasource.AuthDataSource
+import com.appvoyager.cloudphotos.data.auth.datasource.AuthDataSource
 import com.appvoyager.cloudphotos.domain.auth.model.AuthResult
 import com.appvoyager.cloudphotos.domain.auth.model.AuthSession
 import com.appvoyager.cloudphotos.domain.auth.model.AuthUser
