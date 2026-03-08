@@ -39,7 +39,11 @@ class GetMediaListUseCaseTest {
                 createdAt = MediaCreatedAt.of(1600000000000L)
             )
         )
-        every { localMediaRepository.getMediaList() } returns flowOf(Result.success(expectedMediaList))
+        every { localMediaRepository.getMediaList() } returns flowOf(
+            Result.success(
+                expectedMediaList
+            )
+        )
 
         // Act
         val resultFlow = getMediaListUseCase()
@@ -49,4 +53,24 @@ class GetMediaListUseCaseTest {
         assertTrue(actualResult.isSuccess)
         assertEquals(expectedMediaList, actualResult.getOrNull())
     }
+
+    @Test
+    fun `invoke returns flow of failure when repository fails`() = runTest {
+        // Arrange
+        val expectedException = SecurityException("Permission denied")
+        every { localMediaRepository.getMediaList() } returns flowOf(
+            Result.failure(
+                expectedException
+            )
+        )
+
+        // Act
+        val resultFlow = getMediaListUseCase()
+        val actualResult = resultFlow.first()
+
+        // Assert
+        assertTrue(actualResult.isFailure)
+        assertEquals(expectedException, actualResult.exceptionOrNull())
+    }
+
 }

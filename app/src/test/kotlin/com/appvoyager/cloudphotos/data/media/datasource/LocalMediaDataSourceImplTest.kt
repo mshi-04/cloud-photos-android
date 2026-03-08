@@ -15,6 +15,7 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 class LocalMediaDataSourceTest {
 
@@ -90,7 +91,7 @@ class LocalMediaDataSourceTest {
         assertEquals("content://media/external/images/media/123", media.url.value)
         assertEquals(1600000000000L, media.createdAt.value)
     }
-    
+
     @Test
     fun `getLocalMediaList successfully maps cursor data to Media list for video`() = runTest {
         // Arrange
@@ -147,4 +148,19 @@ class LocalMediaDataSourceTest {
         // Assert
         assertEquals(0, result.size)
     }
+
+    @Test
+    fun `getLocalMediaList throws SecurityException when permission denied`() = runTest {
+        // Arrange
+        every {
+            mockContentResolver.query(any(), any(), any(), any(), any())
+        } throws SecurityException("Permission denied")
+
+        // Act
+        val action: suspend () -> Unit = { dataSource.getLocalMediaList() }
+
+        // Assert
+        assertThrows<SecurityException> { action() }
+    }
+
 }
