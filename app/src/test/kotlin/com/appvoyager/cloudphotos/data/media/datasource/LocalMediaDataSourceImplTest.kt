@@ -40,7 +40,7 @@ class LocalMediaDataSourceImplTest {
         every { mockImageUri.toString() } returns "content://media/external/images/media/123"
 
         val mockVideoUri = mockk<Uri>(relaxed = true)
-        every { mockVideoUri.toString() } returns "content://media/external/video/media/123"
+        every { mockVideoUri.toString() } returns "content://media/external/video/media/456"
 
         every { Uri.withAppendedPath(any(), "123") } returns mockImageUri
         every { Uri.withAppendedPath(any(), "456") } returns mockVideoUri
@@ -124,7 +124,7 @@ class LocalMediaDataSourceImplTest {
         val media = result.first()
         assertEquals("456", media.id.value)
         assertEquals(MediaType.VIDEO, media.type)
-        assertEquals("content://media/external/video/media/123", media.url.value)
+        assertEquals("content://media/external/video/media/456", media.url.value)
         assertEquals(1700000000000L, media.createdAt.value)
     }
 

@@ -1,8 +1,8 @@
 package com.appvoyager.cloudphotos.di
 
-import com.appvoyager.cloudphotos.data.media.datasource.LocalMediaDataSource
 import com.appvoyager.cloudphotos.data.media.datasource.LocalMediaDataSourceImpl
 import com.appvoyager.cloudphotos.data.media.repository.LocalMediaRepositoryImpl
+import com.appvoyager.cloudphotos.data.media.datasource.LocalMediaDataSource
 import com.appvoyager.cloudphotos.domain.media.repository.LocalMediaRepository
 import dagger.Binds
 import dagger.Module

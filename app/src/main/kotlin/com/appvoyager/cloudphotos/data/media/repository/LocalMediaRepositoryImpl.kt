@@ -10,7 +10,7 @@ import javax.inject.Inject
 class LocalMediaRepositoryImpl @Inject constructor(
     private val localMediaDataSource: LocalMediaDataSource
 ) : LocalMediaRepository {
-    
+
     override fun getMediaList(): Flow<Result<List<Media>>> = flow {
         val result = runCatching {
             localMediaDataSource.getLocalMediaList()
