@@ -78,9 +78,6 @@ fun MediaScreen(
     LaunchedEffect(Unit) {
         viewModel.loadGridColumnCount()
         viewModel.loadMediaList()
-    }
-
-    LaunchedEffect(Unit) {
         viewModel.effect.collect { effect ->
             when (effect) {
                 is MediaEffect.ShowSnackbar -> {
