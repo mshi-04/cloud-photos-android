@@ -33,11 +33,6 @@ class MediaViewModel @Inject constructor(
     private val _effect = MutableSharedFlow<MediaEffect>(extraBufferCapacity = 1)
     val effect: SharedFlow<MediaEffect> = _effect.asSharedFlow()
 
-    init {
-        loadGridColumnCount()
-        loadMediaList()
-    }
-
     fun onShowSettingsDialog() {
         _uiState.update { it.copy(isSettingsDialogVisible = true) }
     }
@@ -57,7 +52,7 @@ class MediaViewModel @Inject constructor(
         loadMediaList()
     }
 
-    private fun loadGridColumnCount() {
+    fun loadGridColumnCount() {
         viewModelScope.launch {
             getGridColumnCountUseCase().collect { gridColumnCount ->
                 _uiState.update { it.copy(gridColumnCount = gridColumnCount) }
@@ -65,7 +60,7 @@ class MediaViewModel @Inject constructor(
         }
     }
 
-    private fun loadMediaList() {
+    fun loadMediaList() {
         _uiState.update { it.copy(isLoading = true, isError = false) }
         viewModelScope.launch {
             getMediaListUseCase().collect { result ->

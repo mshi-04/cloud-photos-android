@@ -76,6 +76,11 @@ fun MediaScreen(
     val latestResources = rememberUpdatedState(LocalResources.current)
 
     LaunchedEffect(Unit) {
+        viewModel.loadGridColumnCount()
+        viewModel.loadMediaList()
+    }
+
+    LaunchedEffect(Unit) {
         viewModel.effect.collect { effect ->
             when (effect) {
                 is MediaEffect.ShowSnackbar -> {
