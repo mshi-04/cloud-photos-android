@@ -6,6 +6,7 @@ import com.appvoyager.cloudphotos.data.auth.testutil.authUserFixture
 import com.appvoyager.cloudphotos.data.auth.testutil.confirmSignUpRequestFixture
 import com.appvoyager.cloudphotos.data.auth.testutil.signInRequestFixture
 import com.appvoyager.cloudphotos.data.auth.testutil.signUpRequestFixture
+import com.appvoyager.cloudphotos.domain.auth.datasource.AuthDataSource
 import com.appvoyager.cloudphotos.domain.auth.model.AuthError
 import com.appvoyager.cloudphotos.domain.auth.model.AuthResult
 import com.appvoyager.cloudphotos.domain.auth.model.SignInState

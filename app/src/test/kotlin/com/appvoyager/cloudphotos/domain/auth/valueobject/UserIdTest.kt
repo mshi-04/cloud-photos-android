@@ -43,6 +43,10 @@ class UserIdTest {
         }
 
         // Assert
+        val raw = "   "
+        val ex = assertThrows<IllegalArgumentException> {
+            UserId(raw)
+        }
         assertEquals("UserId must not be blank.", ex.message)
     }
 

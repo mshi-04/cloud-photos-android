@@ -15,6 +15,9 @@ import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -179,6 +182,7 @@ class LoginViewModelTest {
             R.string.error_network,
             (effect as LoginEffect.ShowSnackbar).messageResId
         )
+        Assertions.assertEquals(R.string.error_network, (effect as LoginEffect.ShowSnackbar).messageResId)
         job.cancel()
     }
 
@@ -257,6 +261,7 @@ class LoginViewModelTest {
                 viewModel.uiState.value.isLoading,
                 "Expected isLoading to be true immediately after first call"
             )
+            Assertions.assertTrue(viewModel.uiState.value.isLoading, "Expected isLoading to be true immediately after first call")
             viewModel.onSignIn()
             advanceUntilIdle()
 
@@ -282,6 +287,7 @@ class LoginViewModelTest {
                 viewModel.uiState.value.isLoading,
                 "Expected isLoading to be true immediately after first call"
             )
+            Assertions.assertTrue(viewModel.uiState.value.isLoading, "Expected isLoading to be true immediately after first call")
             viewModel.onSignUp()
             advanceUntilIdle()
 
