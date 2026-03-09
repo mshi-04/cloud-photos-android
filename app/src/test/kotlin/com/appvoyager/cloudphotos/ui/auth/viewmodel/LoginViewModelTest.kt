@@ -1,7 +1,6 @@
 package com.appvoyager.cloudphotos.ui.auth.viewmodel
 
 import androidx.lifecycle.SavedStateHandle
-
 import com.appvoyager.cloudphotos.R
 import com.appvoyager.cloudphotos.domain.auth.model.AuthError
 import com.appvoyager.cloudphotos.domain.auth.model.AuthResult
@@ -13,9 +12,9 @@ import com.appvoyager.cloudphotos.ui.auth.effect.LoginEffect
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -176,7 +175,10 @@ class LoginViewModelTest {
 
         // Assert
         Assertions.assertTrue(effect is LoginEffect.ShowSnackbar)
-        Assertions.assertEquals(R.string.error_network, (effect as LoginEffect.ShowSnackbar).messageResId)
+        Assertions.assertEquals(
+            R.string.error_network,
+            (effect as LoginEffect.ShowSnackbar).messageResId
+        )
         job.cancel()
     }
 
@@ -251,7 +253,10 @@ class LoginViewModelTest {
 
             // Act – call twice quickly
             viewModel.onSignIn()
-            Assertions.assertTrue(viewModel.uiState.value.isLoading, "Expected isLoading to be true immediately after first call")
+            Assertions.assertTrue(
+                viewModel.uiState.value.isLoading,
+                "Expected isLoading to be true immediately after first call"
+            )
             viewModel.onSignIn()
             advanceUntilIdle()
 
@@ -273,7 +278,10 @@ class LoginViewModelTest {
 
             // Act – call twice quickly
             viewModel.onSignUp()
-            Assertions.assertTrue(viewModel.uiState.value.isLoading, "Expected isLoading to be true immediately after first call")
+            Assertions.assertTrue(
+                viewModel.uiState.value.isLoading,
+                "Expected isLoading to be true immediately after first call"
+            )
             viewModel.onSignUp()
             advanceUntilIdle()
 

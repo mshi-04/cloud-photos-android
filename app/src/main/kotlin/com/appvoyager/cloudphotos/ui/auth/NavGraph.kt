@@ -4,7 +4,9 @@ import android.net.Uri
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -16,7 +18,7 @@ import com.appvoyager.cloudphotos.ui.auth.screen.ForgotPasswordScreen
 import com.appvoyager.cloudphotos.ui.auth.screen.LoginScreen
 import com.appvoyager.cloudphotos.ui.auth.screen.ResetPasswordScreen
 import com.appvoyager.cloudphotos.ui.auth.screen.VerificationCodeScreen
-import com.appvoyager.cloudphotos.ui.screen.HomeScreen
+import com.appvoyager.cloudphotos.ui.media.screen.MediaScreen
 
 private const val TRANSITION_DURATION_MS = 300
 
@@ -54,7 +56,8 @@ fun NavGraph(
 ) {
     NavHost(
         navController = navController,
-        startDestination = startDestination
+        startDestination = startDestination,
+        modifier = Modifier.fillMaxSize()
     ) {
         composable(
             route = AuthRoute.URI_LOGIN,
@@ -153,7 +156,7 @@ fun NavGraph(
             popEnterTransition = { enterBack() },
             popExitTransition = { exitBack() }
         ) {
-            HomeScreen(
+            MediaScreen(
                 onSignOut = {
                     onSignOut()
                 }

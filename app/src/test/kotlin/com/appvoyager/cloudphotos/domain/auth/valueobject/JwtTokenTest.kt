@@ -23,11 +23,12 @@ class JwtTokenTest {
         // Arrange
         val raw = "\n\t "
 
-        // Act & Assert
+        // Act
         val ex = assertThrows<IllegalArgumentException> {
             JwtToken.of(raw)
         }
 
+        // Assert
         assertEquals("Token must not be blank.", ex.message)
     }
 }
