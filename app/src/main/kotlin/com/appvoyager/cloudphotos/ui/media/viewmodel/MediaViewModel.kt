@@ -69,9 +69,21 @@ class MediaViewModel @Inject constructor(
         gridColumnJob?.cancel()
         gridColumnJob = viewModelScope.launch {
             getGridColumnCountUseCase()
-                .catch { _effect.send(MediaEffect.ShowSnackbar(R.string.error_unknown)) }
+                .onStart {
+                    _uiState.update { it.copy(isLoading = true, isError = false) }
+                }
+                .catch {
+                    _uiState.update { it.copy(isLoading = false, isError = true) }
+                    _effect.send(MediaEffect.ShowSnackbar(R.string.error_unknown))
+                }
                 .collect { gridColumnCount ->
-                    _uiState.update { it.copy(gridColumnCount = gridColumnCount) }
+                    _uiState.update {
+                        it.copy(
+                            gridColumnCount = gridColumnCount,
+                            isLoading = false,
+                            isError = false
+                        )
+                    }
                 }
         }
     }
