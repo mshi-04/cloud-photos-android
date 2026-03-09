@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -38,8 +39,24 @@ class MediaViewModel @Inject constructor(
     private val _effect = Channel<MediaEffect>(Channel.BUFFERED)
     val effect: Flow<MediaEffect> = _effect.receiveAsFlow()
 
-    private var gridColumnJob: Job? = null
     private var mediaListJob: Job? = null
+
+    init {
+        viewModelScope.launch {
+            val gridColumnCountFlow = getGridColumnCountUseCase()
+            val initialCount = gridColumnCountFlow.first()
+            _uiState.update { it.copy(gridColumnCount = initialCount) }
+            loadMediaList()
+
+            gridColumnCountFlow
+                .catch {
+                    _effect.send(MediaEffect.ShowSnackbar(R.string.error_unknown))
+                }
+                .collect { gridColumnCount ->
+                    _uiState.update { it.copy(gridColumnCount = gridColumnCount) }
+                }
+        }
+    }
 
     fun onShowSettingsDialog() {
         _uiState.update { it.copy(isSettingsDialogVisible = true) }
@@ -65,30 +82,7 @@ class MediaViewModel @Inject constructor(
         loadMediaList()
     }
 
-    fun loadGridColumnCount() {
-        gridColumnJob?.cancel()
-        gridColumnJob = viewModelScope.launch {
-            getGridColumnCountUseCase()
-                .onStart {
-                    _uiState.update { it.copy(isLoading = true, isError = false) }
-                }
-                .catch {
-                    _uiState.update { it.copy(isLoading = false, isError = true) }
-                    _effect.send(MediaEffect.ShowSnackbar(R.string.error_unknown))
-                }
-                .collect { gridColumnCount ->
-                    _uiState.update {
-                        it.copy(
-                            gridColumnCount = gridColumnCount,
-                            isLoading = false,
-                            isError = false
-                        )
-                    }
-                }
-        }
-    }
-
-    fun loadMediaList() {
+    private fun loadMediaList() {
         mediaListJob?.cancel()
         mediaListJob = viewModelScope.launch {
             getMediaListUseCase()
@@ -111,5 +105,5 @@ class MediaViewModel @Inject constructor(
                 }
         }
     }
-    
+
 }
