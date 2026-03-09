@@ -8,5 +8,7 @@ import javax.inject.Inject
 class GetGridColumnCountUseCase @Inject constructor(
     private val settingsRepository: SettingsRepository
 ) {
+
     operator fun invoke(): Flow<GridColumnCount> = settingsRepository.gridColumnCount
+
 }

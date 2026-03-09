@@ -39,5 +39,21 @@
     <string name="error_enter_code">確認コードを入力してください</string>
     <string name="error_resend_failed">再送信に失敗しました</string>
     <string name="error_user_not_confirmed">パスワードリセットの前にメールアドレスの認証が必要です</string>
+    <string name="error_media_load_failed">メディアの読み込みに失敗しました</string>
+
+    <!-- メディア画面 -->
+    <string name="media_grid_settings">グリッド設定</string>
+    <string name="media_sign_out">ログアウト</string>
+    <string name="media_empty">写真がありません</string>
+    <string name="media_retry">再試行</string>
+    <string name="media_content_description_image">画像</string>
+    <string name="media_content_description_video">動画</string>
+    <string name="media_content_description_format">%1$s、撮影日 %2$s</string>
+
+    <!-- 設定ダイアログ -->
+    <string name="settings_grid_column_title">グリッド列数</string>
+    <string name="settings_grid_column_value">%1$d 列</string>
+    <string name="settings_confirm">OK</string>
+    <string name="settings_cancel">キャンセル</string>
 
 </resources>

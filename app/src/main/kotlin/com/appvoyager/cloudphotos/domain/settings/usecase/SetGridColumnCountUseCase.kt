@@ -7,7 +7,8 @@ import javax.inject.Inject
 class SetGridColumnCountUseCase @Inject constructor(
     private val settingsRepository: SettingsRepository
 ) {
-    suspend operator fun invoke(count: GridColumnCount) {
+
+    suspend operator fun invoke(count: GridColumnCount) =
         settingsRepository.setGridColumnCount(count)
-    }
+
 }

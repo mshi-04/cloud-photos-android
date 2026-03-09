@@ -9,12 +9,13 @@ import com.appvoyager.cloudphotos.domain.media.valueobject.MediaUrl
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 class GetMediaListUseCaseTest {
 
@@ -39,38 +40,26 @@ class GetMediaListUseCaseTest {
                 createdAt = MediaCreatedAt.of(1600000000000L)
             )
         )
-        every { localMediaRepository.getMediaList() } returns flowOf(
-            Result.success(
-                expectedMediaList
-            )
-        )
+        every { localMediaRepository.getMediaList() } returns flowOf(expectedMediaList)
 
         // Act
-        val resultFlow = getMediaListUseCase()
-        val actualResult = resultFlow.first()
+        val result = getMediaListUseCase().first()
 
         // Assert
-        assertTrue(actualResult.isSuccess)
-        assertEquals(expectedMediaList, actualResult.getOrNull())
+        assertEquals(expectedMediaList, result)
     }
 
     @Test
-    fun `invoke returns flow of failure when repository fails`() = runTest {
+    fun `invoke propagates exception from repository`() = runTest {
         // Arrange
-        val expectedException = SecurityException("Permission denied")
-        every { localMediaRepository.getMediaList() } returns flowOf(
-            Result.failure(
-                expectedException
-            )
-        )
+        val expected = RuntimeException("repository failure")
+        every { localMediaRepository.getMediaList() } returns flow { throw expected }
 
-        // Act
-        val resultFlow = getMediaListUseCase()
-        val actualResult = resultFlow.first()
-
-        // Assert
-        assertTrue(actualResult.isFailure)
-        assertEquals(expectedException, actualResult.exceptionOrNull())
+        // Act & Assert
+        val actual = assertThrows<RuntimeException> {
+            getMediaListUseCase().first()
+        }
+        assertEquals(expected, actual)
     }
 
 }

@@ -5,6 +5,6 @@ import kotlinx.coroutines.flow.Flow
 
 interface LocalMediaRepository {
 
-    fun getMediaList(): Flow<Result<List<Media>>>
+    fun getMediaList(): Flow<List<Media>>
 
 }
