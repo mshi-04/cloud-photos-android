@@ -9,6 +9,6 @@ class GetMediaListUseCase @Inject constructor(
     private val localMediaRepository: LocalMediaRepository
 ) {
 
-    operator fun invoke(): Flow<Result<List<Media>>> = localMediaRepository.getMediaList()
+    operator fun invoke(): Flow<List<Media>> = localMediaRepository.getMediaList()
 
 }

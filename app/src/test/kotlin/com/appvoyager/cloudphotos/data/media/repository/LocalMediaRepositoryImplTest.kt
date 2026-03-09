@@ -11,7 +11,6 @@ import io.mockk.mockk
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
@@ -41,11 +40,9 @@ class LocalMediaRepositoryImplTest {
         coEvery { mockDataSource.getLocalMediaList() } returns expectedMediaList
 
         // Act
-        val resultFlow = repository.getMediaList()
-        val actualResult = resultFlow.first()
+        val result = repository.getMediaList().first()
 
         // Assert
-        assertTrue(actualResult.isSuccess)
-        assertEquals(expectedMediaList, actualResult.getOrNull())
+        assertEquals(expectedMediaList, result)
     }
 }
