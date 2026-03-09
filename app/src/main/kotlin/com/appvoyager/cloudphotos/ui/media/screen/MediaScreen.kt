@@ -1,6 +1,9 @@
 package com.appvoyager.cloudphotos.ui.media.screen
 
-import androidx.activity.compose.BackHandler
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -13,6 +16,8 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -47,7 +52,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -57,6 +61,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
@@ -68,7 +73,6 @@ import com.appvoyager.cloudphotos.domain.media.valueobject.MediaCreatedAt
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaId
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaUrl
 import com.appvoyager.cloudphotos.domain.settings.valueobject.GridColumnCount
-import com.appvoyager.cloudphotos.ui.auth.component.LoadingOverlay
 import com.appvoyager.cloudphotos.ui.media.component.GridColumnSettingsDialog
 import com.appvoyager.cloudphotos.ui.media.effect.MediaEffect
 import com.appvoyager.cloudphotos.ui.media.viewmodel.MediaViewModel
@@ -87,6 +91,13 @@ fun MediaScreen(
     val latestResources = rememberUpdatedState(LocalResources.current)
     val lifecycleOwner = LocalLifecycleOwner.current
 
+    RequestMediaPermissions(onResult = { viewModel.loadMediaList() })
+
+    LifecycleResumeEffect(Unit) {
+        viewModel.loadMediaList()
+        onPauseOrDispose {}
+    }
+
     LaunchedEffect(Unit) {
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
             viewModel.effect.collect { effect ->
@@ -99,10 +110,6 @@ fun MediaScreen(
         }
     }
 
-    BackHandler(enabled = uiState.isLoading) { }
-
-    val layoutDirection = LocalLayoutDirection.current
-
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         contentWindowInsets = WindowInsets(0)
@@ -110,25 +117,17 @@ fun MediaScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(
-                    start = innerPadding.calculateLeftPadding(layoutDirection),
-                    end = innerPadding.calculateRightPadding(layoutDirection),
-                    bottom = 0.dp
-                )
+                .padding(innerPadding)
         ) {
             MediaContent(
                 mediaList = uiState.mediaList,
                 gridColumnCount = uiState.gridColumnCount,
-                isLoading = uiState.isLoading,
+                isLoaded = uiState.isLoaded,
                 isError = uiState.isError,
                 onGridSettingsClick = { viewModel.onShowSettingsDialog() },
                 onSignOut = onSignOut,
-                onRetry = { viewModel.onRetry() }
+                onRetry = { viewModel.loadMediaList() }
             )
-
-            if (uiState.isLoading) {
-                LoadingOverlay()
-            }
         }
     }
 
@@ -145,7 +144,7 @@ fun MediaScreen(
 private fun MediaContent(
     mediaList: List<Media>,
     gridColumnCount: GridColumnCount,
-    isLoading: Boolean,
+    isLoaded: Boolean,
     isError: Boolean,
     onGridSettingsClick: () -> Unit,
     onSignOut: () -> Unit,
@@ -168,11 +167,7 @@ private fun MediaContent(
                 ErrorContent(onRetry = onRetry)
             }
 
-            !isLoading && mediaList.isEmpty() -> {
-                EmptyContent()
-            }
-
-            else -> {
+            mediaList.isNotEmpty() -> {
                 MediaGrid(
                     mediaList = mediaList,
                     gridColumnCount = gridColumnCount,
@@ -181,6 +176,24 @@ private fun MediaContent(
                     bottomPadding = navigationBarPadding
                 )
             }
+
+            isLoaded -> {
+                EmptyContent()
+            }
+        }
+
+        AnimatedVisibility(
+            visible = isButtonVisible,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.align(Alignment.TopStart)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(statusBarPadding)
+                    .background(MaterialTheme.colorScheme.background.copy(alpha = 1f))
+            )
         }
 
         AnimatedVisibility(
@@ -348,6 +361,28 @@ private fun ErrorContent(onRetry: () -> Unit) {
     }
 }
 
+@Composable
+private fun RequestMediaPermissions(onResult: () -> Unit) {
+    val latestOnResult = rememberUpdatedState(onResult)
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) {
+        latestOnResult.value()
+    }
+
+    LaunchedEffect(Unit) {
+        val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            arrayOf(
+                Manifest.permission.READ_MEDIA_IMAGES,
+                Manifest.permission.READ_MEDIA_VIDEO
+            )
+        } else {
+            arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
+        }
+        launcher.launch(permissions)
+    }
+}
+
 @Preview(showBackground = true)
 @Composable
 private fun MediaContentPreview() {
@@ -368,7 +403,7 @@ private fun MediaContentPreview() {
                 )
             ),
             gridColumnCount = GridColumnCount.of(3),
-            isLoading = false,
+            isLoaded = true,
             isError = false,
             onGridSettingsClick = {},
             onSignOut = {},
@@ -384,7 +419,7 @@ private fun MediaContentEmptyPreview() {
         MediaContent(
             mediaList = emptyList(),
             gridColumnCount = GridColumnCount.of(3),
-            isLoading = false,
+            isLoaded = true,
             isError = false,
             onGridSettingsClick = {},
             onSignOut = {},
@@ -400,30 +435,11 @@ private fun MediaContentErrorPreview() {
         MediaContent(
             mediaList = emptyList(),
             gridColumnCount = GridColumnCount.of(3),
-            isLoading = false,
+            isLoaded = true,
             isError = true,
             onGridSettingsClick = {},
             onSignOut = {},
             onRetry = {}
         )
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun MediaContentLoadingPreview() {
-    CloudPhotosTheme {
-        Box(modifier = Modifier.fillMaxSize()) {
-            MediaContent(
-                mediaList = emptyList(),
-                gridColumnCount = GridColumnCount.of(3),
-                isLoading = true,
-                isError = false,
-                onGridSettingsClick = {},
-                onSignOut = {},
-                onRetry = {}
-            )
-            LoadingOverlay()
-        }
     }
 }

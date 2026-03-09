@@ -45,7 +45,7 @@
     <!-- Media Screen -->
     <string name="media_grid_settings">Grid settings</string>
     <string name="media_sign_out">Sign out</string>
-    <string name="media_empty">No media found</string>
+    <string name="media_empty">No photos found</string>
     <string name="media_retry">Retry</string>
     <string name="media_content_description_image">Image</string>
     <string name="media_content_description_video">Video</string>

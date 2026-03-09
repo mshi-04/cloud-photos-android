@@ -1,8 +1,8 @@
 package com.appvoyager.cloudphotos.data.media.datasource
 
 import android.content.ContentResolver
+import android.content.ContentUris
 import android.content.Context
-import android.net.Uri
 import android.provider.MediaStore
 import com.appvoyager.cloudphotos.domain.media.model.Media
 import com.appvoyager.cloudphotos.domain.media.model.MediaType
@@ -30,54 +30,60 @@ class LocalMediaDataSourceImpl @Inject constructor(
         )
 
         val selection =
-            "${MediaStore.Files.FileColumns.MEDIA_TYPE} = ? OR ${MediaStore.Files.FileColumns.MEDIA_TYPE} = ?"
+            "(${MediaStore.Files.FileColumns.MEDIA_TYPE} = ? OR ${MediaStore.Files.FileColumns.MEDIA_TYPE} = ?)" +
+                " AND (${MediaStore.MediaColumns.RELATIVE_PATH} LIKE ? OR ${MediaStore.MediaColumns.RELATIVE_PATH} LIKE ? OR ${MediaStore.MediaColumns.RELATIVE_PATH} LIKE ?)"
         val selectionArgs = arrayOf(
             MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE.toString(),
-            MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO.toString()
+            MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO.toString(),
+            "DCIM/%",
+            "Pictures/%",
+            "Download/%"
         )
 
         val sortOrder = "${MediaStore.Files.FileColumns.DATE_ADDED} DESC"
 
-        contentResolver.query(
-            MediaStore.Files.getContentUri("external"),
-            projection,
-            selection,
-            selectionArgs,
-            sortOrder
-        )?.use { cursor ->
-            val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID)
-            val typeColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MEDIA_TYPE)
-            val dateColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATE_ADDED)
-            //val durationColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DURATION)
+        val volumeNames = MediaStore.getExternalVolumeNames(context)
+        for (volumeName in volumeNames) {
+            contentResolver.query(
+                MediaStore.Files.getContentUri(volumeName),
+                projection,
+                selection,
+                selectionArgs,
+                sortOrder
+            )?.use { cursor ->
+                val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID)
+                val typeColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MEDIA_TYPE)
+                val dateColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATE_ADDED)
 
-            while (cursor.moveToNext()) {
-                val idLong = cursor.getLong(idColumn)
-                val mediaTypeInt = cursor.getInt(typeColumn)
-                val dateAddedSeconds = cursor.getLong(dateColumn)
+                while (cursor.moveToNext()) {
+                    val idLong = cursor.getLong(idColumn)
+                    val mediaTypeInt = cursor.getInt(typeColumn)
+                    val dateAddedSeconds = cursor.getLong(dateColumn)
 
-                val type = if (mediaTypeInt == MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE) {
-                    MediaType.IMAGE
-                } else {
-                    MediaType.VIDEO
-                }
+                    val type = if (mediaTypeInt == MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE) {
+                        MediaType.IMAGE
+                    } else {
+                        MediaType.VIDEO
+                    }
 
-                val contentUri: Uri = if (type == MediaType.IMAGE) {
-                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI
-                } else {
-                    MediaStore.Video.Media.EXTERNAL_CONTENT_URI
-                }.let { Uri.withAppendedPath(it, idLong.toString()) }
-
-                mediaList.add(
-                    Media(
-                        id = MediaId.of(idLong.toString()),
-                        url = MediaUrl.of(contentUri.toString()),
-                        type = type,
-                        thumbnailUrl = null,
-                        createdAt = MediaCreatedAt.of(dateAddedSeconds * 1000L)
+                    val contentUri = ContentUris.withAppendedId(
+                        MediaStore.Files.getContentUri(volumeName),
+                        idLong
                     )
-                )
+
+                    mediaList.add(
+                        Media(
+                            id = MediaId.of("${volumeName}_${idLong}"),
+                            url = MediaUrl.of(contentUri.toString()),
+                            type = type,
+                            thumbnailUrl = null,
+                            createdAt = MediaCreatedAt.of(dateAddedSeconds * 1000L)
+                        )
+                    )
+                }
             }
         }
+        mediaList.sortByDescending { it.createdAt.value }
         mediaList
     }
 

@@ -17,7 +17,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
@@ -41,7 +40,6 @@ class MediaViewModel @Inject constructor(
     private var mediaListJob: Job? = null
 
     init {
-        loadMediaList()
         viewModelScope.launch {
             getGridColumnCountUseCase()
                 .retryWhen { cause, _ ->
@@ -75,26 +73,19 @@ class MediaViewModel @Inject constructor(
         }
     }
 
-    fun onRetry() {
-        loadMediaList()
-    }
-
-    private fun loadMediaList() {
+    fun loadMediaList() {
         mediaListJob?.cancel()
         mediaListJob = viewModelScope.launch {
             getMediaListUseCase()
-                .onStart {
-                    _uiState.update { it.copy(isLoading = true, isError = false) }
-                }
                 .catch {
-                    _uiState.update { it.copy(isLoading = false, isError = true) }
+                    _uiState.update { it.copy(isError = true) }
                     _effect.send(MediaEffect.ShowSnackbar(R.string.error_media_load_failed))
                 }
                 .collect { mediaList ->
                     _uiState.update {
                         it.copy(
                             mediaList = mediaList,
-                            isLoading = false,
+                            isLoaded = true,
                             isError = false
                         )
                     }

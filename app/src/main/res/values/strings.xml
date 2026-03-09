@@ -44,7 +44,7 @@
     <!-- メディア画面 -->
     <string name="media_grid_settings">グリッド設定</string>
     <string name="media_sign_out">ログアウト</string>
-    <string name="media_empty">メディアがありません</string>
+    <string name="media_empty">写真がありません</string>
     <string name="media_retry">再試行</string>
     <string name="media_content_description_image">画像</string>
     <string name="media_content_description_video">動画</string>
