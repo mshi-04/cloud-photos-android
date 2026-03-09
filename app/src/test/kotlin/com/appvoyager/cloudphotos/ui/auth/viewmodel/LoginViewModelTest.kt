@@ -321,4 +321,5 @@ class LoginViewModelTest {
         Assertions.assertNull(state.emailError)
         Assertions.assertEquals(R.string.error_password_too_short, state.passwordError)
     }
+
 }
