@@ -11,7 +11,6 @@ class CloudPhotosApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
-
         try {
             Amplify.addPlugin(AWSCognitoAuthPlugin())
             Amplify.configure(applicationContext)

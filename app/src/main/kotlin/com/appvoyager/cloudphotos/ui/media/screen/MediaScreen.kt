@@ -97,7 +97,10 @@ fun MediaScreen(
     val latestResources = rememberUpdatedState(LocalResources.current)
     val lifecycleOwner = LocalLifecycleOwner.current
 
+    var permissionCheckKey by remember { mutableIntStateOf(0) }
+
     RequestMediaPermissions(
+        key = permissionCheckKey,
         onGranted = { viewModel.loadMediaList() },
         onDenied = { viewModel.onPermissionDenied() }
     )
@@ -128,7 +131,8 @@ fun MediaScreen(
                 gridColumnCount = uiState.gridColumnCount,
                 onGridSettingsClick = { viewModel.onShowSettingsDialog() },
                 onSignOut = onSignOut,
-                onRetry = { viewModel.loadMediaList() }
+                onRetry = { viewModel.loadMediaList() },
+                onRetryPermissions = { permissionCheckKey++ }
             )
         }
     }
@@ -148,7 +152,8 @@ private fun MediaContent(
     gridColumnCount: GridColumnCount,
     onGridSettingsClick: () -> Unit,
     onSignOut: () -> Unit,
-    onRetry: () -> Unit
+    onRetry: () -> Unit,
+    onRetryPermissions: () -> Unit
 ) {
     val gridState = rememberLazyGridState()
     val isButtonVisible by rememberScrollButtonVisibility(gridState)
@@ -166,7 +171,7 @@ private fun MediaContent(
             is MediaUiState.LoadState.Loading -> {}
 
             is MediaUiState.LoadState.PermissionRequired -> {
-                PermissionRequiredContent()
+                PermissionRequiredContent(onRetryPermissions = onRetryPermissions)
             }
 
             is MediaUiState.LoadState.Error -> {
@@ -341,7 +346,7 @@ private fun EmptyContent() {
 }
 
 @Composable
-private fun PermissionRequiredContent() {
+private fun PermissionRequiredContent(onRetryPermissions: () -> Unit) {
     val context = LocalContext.current
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -363,6 +368,12 @@ private fun PermissionRequiredContent() {
             modifier = Modifier.padding(top = 16.dp)
         ) {
             Text(stringResource(R.string.permission_open_settings))
+        }
+        TextButton(
+            onClick = onRetryPermissions,
+            modifier = Modifier.padding(top = 8.dp)
+        ) {
+            Text(stringResource(R.string.media_retry))
         }
     }
 }
@@ -396,6 +407,7 @@ private fun ErrorContent(onRetry: () -> Unit) {
 
 @Composable
 private fun RequestMediaPermissions(
+    key: Int,
     onGranted: () -> Unit,
     onDenied: () -> Unit
 ) {
@@ -412,7 +424,7 @@ private fun RequestMediaPermissions(
         }
     }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(key) {
         val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             arrayOf(
                 Manifest.permission.READ_MEDIA_IMAGES,
@@ -457,21 +469,8 @@ private fun MediaContentPreview() {
             gridColumnCount = GridColumnCount.of(3),
             onGridSettingsClick = {},
             onSignOut = {},
-            onRetry = {}
-        )
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun MediaContentEmptyPreview() {
-    CloudPhotosTheme {
-        MediaContent(
-            loadState = MediaUiState.LoadState.Success(mediaList = emptyList()),
-            gridColumnCount = GridColumnCount.of(3),
-            onGridSettingsClick = {},
-            onSignOut = {},
-            onRetry = {}
+            onRetry = {},
+            onRetryPermissions = {}
         )
     }
 }
@@ -485,7 +484,8 @@ private fun MediaContentErrorPreview() {
             gridColumnCount = GridColumnCount.of(3),
             onGridSettingsClick = {},
             onSignOut = {},
-            onRetry = {}
+            onRetry = {},
+            onRetryPermissions = {}
         )
     }
 }
