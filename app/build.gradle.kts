@@ -130,7 +130,7 @@ enum class BuildFlavor(
 private fun requireEnvProperty(flavor: BuildFlavor, baseName: String): String {
     val propertyName = "${flavor.propertyPrefix}_$baseName"
     val value = findProperty(propertyName)?.toString()?.takeIf { it.isNotBlank() }
-    
+
     if (value != null) return value
 
     val isCodeQlAnalysis = System.getenv("CODEQL_ACTION_VERSION") != null

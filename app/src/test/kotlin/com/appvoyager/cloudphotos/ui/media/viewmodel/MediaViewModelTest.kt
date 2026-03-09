@@ -121,7 +121,10 @@ class MediaViewModelTest {
         // Assert
         assertTrue(viewModel.uiState.value.isError)
         val effect = viewModel.effect.first()
-        assertEquals(R.string.error_media_load_failed, (effect as MediaEffect.ShowSnackbar).messageResId)
+        assertEquals(
+            R.string.error_media_load_failed,
+            (effect as MediaEffect.ShowSnackbar).messageResId
+        )
     }
 
     @Test

@@ -17,8 +17,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -75,6 +75,7 @@ class MediaViewModel @Inject constructor(
 
     fun loadMediaList() {
         mediaListJob?.cancel()
+        _uiState.update { it.copy(isError = false) }
         mediaListJob = viewModelScope.launch {
             getMediaListUseCase()
                 .catch {
