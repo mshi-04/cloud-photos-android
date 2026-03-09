@@ -29,15 +29,16 @@ class LocalMediaDataSourceImpl @Inject constructor(
             MediaStore.Files.FileColumns.DURATION
         )
 
+        val pathFilter = TARGET_PATHS.joinToString(" OR ") {
+            "${MediaStore.MediaColumns.RELATIVE_PATH} LIKE ?"
+        }
         val selection =
             "(${MediaStore.Files.FileColumns.MEDIA_TYPE} = ? OR ${MediaStore.Files.FileColumns.MEDIA_TYPE} = ?)" +
-                    " AND (${MediaStore.MediaColumns.RELATIVE_PATH} LIKE ? OR ${MediaStore.MediaColumns.RELATIVE_PATH} LIKE ? OR ${MediaStore.MediaColumns.RELATIVE_PATH} LIKE ?)"
+                    " AND ($pathFilter)"
         val selectionArgs = arrayOf(
             MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE.toString(),
             MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO.toString(),
-            "DCIM/%",
-            "Pictures/%",
-            "Download/%"
+            *TARGET_PATHS
         )
 
         val sortOrder = "${MediaStore.Files.FileColumns.DATE_ADDED} DESC"
@@ -87,6 +88,10 @@ class LocalMediaDataSourceImpl @Inject constructor(
         }
         mediaList.sortByDescending { it.createdAt.value }
         mediaList
+    }
+
+    companion object {
+        private val TARGET_PATHS = arrayOf("DCIM/%", "Pictures/%", "Download/%")
     }
 
 }
