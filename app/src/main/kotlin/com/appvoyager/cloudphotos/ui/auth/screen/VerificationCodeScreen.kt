@@ -52,6 +52,9 @@ fun VerificationCodeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val latestResources = rememberUpdatedState(LocalResources.current)
+
+    val latestOnNavigateToHome = rememberUpdatedState(onNavigateToHome)
 
     val latestResources = rememberUpdatedState(LocalResources.current)
     val latestOnNavigateToHome = rememberUpdatedState(onNavigateToHome)
