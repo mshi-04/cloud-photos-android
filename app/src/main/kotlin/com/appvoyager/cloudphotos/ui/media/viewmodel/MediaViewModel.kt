@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -43,8 +44,10 @@ class MediaViewModel @Inject constructor(
         loadMediaList()
         viewModelScope.launch {
             getGridColumnCountUseCase()
-                .catch {
+                .retryWhen { cause, _ ->
+                    if (cause is CancellationException) throw cause
                     _effect.send(MediaEffect.ShowSnackbar(R.string.error_unknown))
+                    true
                 }
                 .collect { gridColumnCount ->
                     _uiState.update { it.copy(gridColumnCount = gridColumnCount) }

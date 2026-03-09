@@ -13,6 +13,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 class LocalMediaRepositoryImplTest {
 
@@ -44,5 +45,18 @@ class LocalMediaRepositoryImplTest {
 
         // Assert
         assertEquals(expectedMediaList, result)
+    }
+
+    @Test
+    fun `getMediaList propagates exception from data source`() = runTest {
+        // Arrange
+        val expected = RuntimeException("data source failure")
+        coEvery { mockDataSource.getLocalMediaList() } throws expected
+
+        // Act & Assert
+        val actual = assertThrows<RuntimeException> {
+            repository.getMediaList().first()
+        }
+        assertEquals(expected, actual)
     }
 }

@@ -9,11 +9,13 @@ import com.appvoyager.cloudphotos.domain.media.valueobject.MediaUrl
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 class GetMediaListUseCaseTest {
 
@@ -45,6 +47,19 @@ class GetMediaListUseCaseTest {
 
         // Assert
         assertEquals(expectedMediaList, result)
+    }
+
+    @Test
+    fun `invoke propagates exception from repository`() = runTest {
+        // Arrange
+        val expected = RuntimeException("repository failure")
+        every { localMediaRepository.getMediaList() } returns flow { throw expected }
+
+        // Act & Assert
+        val actual = assertThrows<RuntimeException> {
+            getMediaListUseCase().first()
+        }
+        assertEquals(expected, actual)
     }
 
 }
