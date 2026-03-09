@@ -204,6 +204,20 @@ class MediaViewModelTest {
     }
 
     @Test
+    fun `onPermissionDenied sets loadState to PermissionRequired`() = runTest {
+        // Arrange
+        every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // Act
+        viewModel.onPermissionDenied()
+
+        // Assert
+        assertTrue(viewModel.uiState.value.loadState is MediaUiState.LoadState.PermissionRequired)
+    }
+
+    @Test
     fun `onDismissSettingsDialog sets isSettingsDialogVisible to false`() = runTest {
         // Arrange
         every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))

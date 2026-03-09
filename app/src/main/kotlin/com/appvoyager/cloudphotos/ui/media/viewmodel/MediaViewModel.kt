@@ -71,6 +71,10 @@ class MediaViewModel @Inject constructor(
         }
     }
 
+    fun onPermissionDenied() {
+        _uiState.update { it.copy(loadState = MediaUiState.LoadState.PermissionRequired) }
+    }
+
     fun loadMediaList() {
         mediaListJob?.cancel()
         _uiState.update { it.copy(loadState = MediaUiState.LoadState.Loading) }

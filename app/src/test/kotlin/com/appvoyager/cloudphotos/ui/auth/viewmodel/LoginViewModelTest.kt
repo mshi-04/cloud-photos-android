@@ -179,10 +179,6 @@ class LoginViewModelTest {
             R.string.error_network,
             (effect as LoginEffect.ShowSnackbar).messageResId
         )
-        Assertions.assertEquals(
-            R.string.error_network,
-            (effect as LoginEffect.ShowSnackbar).messageResId
-        )
         job.cancel()
     }
 

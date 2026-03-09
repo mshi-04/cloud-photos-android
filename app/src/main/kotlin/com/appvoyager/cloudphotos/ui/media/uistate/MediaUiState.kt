@@ -10,6 +10,7 @@ data class MediaUiState(
 ) {
     sealed class LoadState {
         data object Loading : LoadState()
+        data object PermissionRequired : LoadState()
         data class Success(val mediaList: List<Media>) : LoadState()
         data class Error(val error: Throwable? = null) : LoadState()
     }

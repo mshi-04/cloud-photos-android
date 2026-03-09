@@ -1,8 +1,11 @@
 package com.appvoyager.cloudphotos.ui.media.screen
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -94,7 +97,10 @@ fun MediaScreen(
     val latestResources = rememberUpdatedState(LocalResources.current)
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    RequestMediaPermissions(onResult = { viewModel.loadMediaList() })
+    RequestMediaPermissions(
+        onGranted = { viewModel.loadMediaList() },
+        onDenied = { viewModel.onPermissionDenied() }
+    )
 
     LaunchedEffect(Unit) {
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -158,6 +164,10 @@ private fun MediaContent(
     ) {
         when (loadState) {
             is MediaUiState.LoadState.Loading -> {}
+
+            is MediaUiState.LoadState.PermissionRequired -> {
+                PermissionRequiredContent()
+            }
 
             is MediaUiState.LoadState.Error -> {
                 ErrorContent(onRetry = onRetry)
@@ -331,6 +341,33 @@ private fun EmptyContent() {
 }
 
 @Composable
+private fun PermissionRequiredContent() {
+    val context = LocalContext.current
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = stringResource(R.string.error_permission_required),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        TextButton(
+            onClick = {
+                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                    data = Uri.fromParts("package", context.packageName, null)
+                }
+                context.startActivity(intent)
+            },
+            modifier = Modifier.padding(top = 16.dp)
+        ) {
+            Text(stringResource(R.string.permission_open_settings))
+        }
+    }
+}
+
+@Composable
 private fun ErrorContent(onRetry: () -> Unit) {
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -358,14 +395,20 @@ private fun ErrorContent(onRetry: () -> Unit) {
 }
 
 @Composable
-private fun RequestMediaPermissions(onResult: () -> Unit) {
+private fun RequestMediaPermissions(
+    onGranted: () -> Unit,
+    onDenied: () -> Unit
+) {
     val context = LocalContext.current
-    val latestOnResult = rememberUpdatedState(onResult)
+    val latestOnGranted = rememberUpdatedState(onGranted)
+    val latestOnDenied = rememberUpdatedState(onDenied)
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { results ->
         if (results.values.all { it }) {
-            latestOnResult.value()
+            latestOnGranted.value()
+        } else {
+            latestOnDenied.value()
         }
     }
 
@@ -383,7 +426,7 @@ private fun RequestMediaPermissions(onResult: () -> Unit) {
             ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
         }
         if (allGranted) {
-            latestOnResult.value()
+            latestOnGranted.value()
         } else {
             launcher.launch(permissions)
         }
