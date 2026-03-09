@@ -4,6 +4,6 @@ import androidx.annotation.StringRes
 
 sealed class MediaEffect {
 
-    data class ShowSnackbar(@param:StringRes val messageResId: Int) : MediaEffect()
+    data class ShowSnackbar(@get:StringRes val messageResId: Int) : MediaEffect()
 
 }

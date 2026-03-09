@@ -79,7 +79,7 @@ class ForgotPasswordViewModelTest {
     }
 
     @Test
-    fun `onSubmit success emits NavigateToResetCode`() = runTest(testDispatcher) {
+    fun `onSubmit success emits NavigateToResetPassword`() = runTest(testDispatcher) {
         viewModel.onEmailChanged("test@example.com")
         coEvery { resetPasswordUseCase(any()) } returns AuthResult.Success(Unit)
 

@@ -8,7 +8,7 @@ import org.junit.jupiter.api.assertThrows
 class MediaUrlTest {
 
     @Test
-    fun `of returns MediaUrl with trimmed value when input is a valid valid`() {
+    fun `of returns MediaUrl with trimmed value when input is a valid URL`() {
         // Arrange
         val rawUrl = " https://example.com/image.jpg "
 

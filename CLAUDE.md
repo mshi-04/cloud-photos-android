@@ -3,7 +3,7 @@
 ## Stack
 Kotlin / Jetpack Compose (Material 3) / Clean Architecture / Hilt+KSP
 AWS Amplify (Cognito) / Firebase (Analytics, FCM)
-Min SDK: 28 / Compile SDK: 36 / Java: 17 / Flavors: dev, prod
+Min SDK: 29 / Compile SDK: 36 / Java: 17 / Flavors: dev, prod
 
 ## Skills
 - `.agent/skills/android-clean-arch/SKILL.md`

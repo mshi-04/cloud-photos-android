@@ -64,7 +64,6 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
@@ -78,6 +77,7 @@ import com.appvoyager.cloudphotos.domain.media.valueobject.MediaUrl
 import com.appvoyager.cloudphotos.domain.settings.valueobject.GridColumnCount
 import com.appvoyager.cloudphotos.ui.media.component.GridColumnSettingsDialog
 import com.appvoyager.cloudphotos.ui.media.effect.MediaEffect
+import com.appvoyager.cloudphotos.ui.media.uistate.MediaUiState
 import com.appvoyager.cloudphotos.ui.media.viewmodel.MediaViewModel
 import com.appvoyager.cloudphotos.ui.theme.CloudPhotosTheme
 import java.text.SimpleDateFormat
@@ -95,11 +95,6 @@ fun MediaScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
 
     RequestMediaPermissions(onResult = { viewModel.loadMediaList() })
-
-    LifecycleResumeEffect(Unit) {
-        viewModel.loadMediaList()
-        onPauseOrDispose {}
-    }
 
     LaunchedEffect(Unit) {
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -123,10 +118,8 @@ fun MediaScreen(
                 .padding(innerPadding)
         ) {
             MediaContent(
-                mediaList = uiState.mediaList,
+                loadState = uiState.loadState,
                 gridColumnCount = uiState.gridColumnCount,
-                isLoaded = uiState.isLoaded,
-                isError = uiState.isError,
                 onGridSettingsClick = { viewModel.onShowSettingsDialog() },
                 onSignOut = onSignOut,
                 onRetry = { viewModel.loadMediaList() }
@@ -145,10 +138,8 @@ fun MediaScreen(
 
 @Composable
 private fun MediaContent(
-    mediaList: List<Media>,
+    loadState: MediaUiState.LoadState,
     gridColumnCount: GridColumnCount,
-    isLoaded: Boolean,
-    isError: Boolean,
     onGridSettingsClick: () -> Unit,
     onSignOut: () -> Unit,
     onRetry: () -> Unit
@@ -165,23 +156,25 @@ private fun MediaContent(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        when {
-            isError && mediaList.isEmpty() -> {
+        when (loadState) {
+            is MediaUiState.LoadState.Loading -> {}
+
+            is MediaUiState.LoadState.Error -> {
                 ErrorContent(onRetry = onRetry)
             }
 
-            mediaList.isNotEmpty() -> {
-                MediaGrid(
-                    mediaList = mediaList,
-                    gridColumnCount = gridColumnCount,
-                    gridState = gridState,
-                    topPadding = statusBarPadding,
-                    bottomPadding = navigationBarPadding
-                )
-            }
-
-            isLoaded -> {
-                EmptyContent()
+            is MediaUiState.LoadState.Success -> {
+                if (loadState.mediaList.isNotEmpty()) {
+                    MediaGrid(
+                        mediaList = loadState.mediaList,
+                        gridColumnCount = gridColumnCount,
+                        gridState = gridState,
+                        topPadding = statusBarPadding,
+                        bottomPadding = navigationBarPadding
+                    )
+                } else {
+                    EmptyContent()
+                }
             }
         }
 
@@ -402,23 +395,23 @@ private fun RequestMediaPermissions(onResult: () -> Unit) {
 private fun MediaContentPreview() {
     CloudPhotosTheme {
         MediaContent(
-            mediaList = listOf(
-                Media(
-                    id = MediaId.of("1"),
-                    url = MediaUrl.of("content://media/external/images/1"),
-                    type = MediaType.IMAGE,
-                    createdAt = MediaCreatedAt.of(1700000000L)
-                ),
-                Media(
-                    id = MediaId.of("2"),
-                    url = MediaUrl.of("content://media/external/video/2"),
-                    type = MediaType.VIDEO,
-                    createdAt = MediaCreatedAt.of(1700000001L)
+            loadState = MediaUiState.LoadState.Success(
+                mediaList = listOf(
+                    Media(
+                        id = MediaId.of("1"),
+                        url = MediaUrl.of("content://media/external/images/1"),
+                        type = MediaType.IMAGE,
+                        createdAt = MediaCreatedAt.of(1700000000L)
+                    ),
+                    Media(
+                        id = MediaId.of("2"),
+                        url = MediaUrl.of("content://media/external/video/2"),
+                        type = MediaType.VIDEO,
+                        createdAt = MediaCreatedAt.of(1700000001L)
+                    )
                 )
             ),
             gridColumnCount = GridColumnCount.of(3),
-            isLoaded = true,
-            isError = false,
             onGridSettingsClick = {},
             onSignOut = {},
             onRetry = {}
@@ -431,10 +424,8 @@ private fun MediaContentPreview() {
 private fun MediaContentEmptyPreview() {
     CloudPhotosTheme {
         MediaContent(
-            mediaList = emptyList(),
+            loadState = MediaUiState.LoadState.Success(mediaList = emptyList()),
             gridColumnCount = GridColumnCount.of(3),
-            isLoaded = true,
-            isError = false,
             onGridSettingsClick = {},
             onSignOut = {},
             onRetry = {}
@@ -447,10 +438,8 @@ private fun MediaContentEmptyPreview() {
 private fun MediaContentErrorPreview() {
     CloudPhotosTheme {
         MediaContent(
-            mediaList = emptyList(),
+            loadState = MediaUiState.LoadState.Error(),
             gridColumnCount = GridColumnCount.of(3),
-            isLoaded = true,
-            isError = true,
             onGridSettingsClick = {},
             onSignOut = {},
             onRetry = {}

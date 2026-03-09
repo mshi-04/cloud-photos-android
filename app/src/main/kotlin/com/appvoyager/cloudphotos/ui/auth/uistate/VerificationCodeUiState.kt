@@ -9,7 +9,7 @@ data class VerificationCodeUiState(
     val resendTimerSeconds: Int = DEFAULT_RESEND_COOLDOWN_SECONDS
 ) {
     val isCodeComplete: Boolean
-        get() = codes.all { it.length == 1 && it[0].isDigit() }
+        get() = codes.size == 6 && codes.all { it.length == 1 && it[0].isDigit() }
 
     val isResendEnabled: Boolean
         get() = resendTimerSeconds <= 0 && !isLoading

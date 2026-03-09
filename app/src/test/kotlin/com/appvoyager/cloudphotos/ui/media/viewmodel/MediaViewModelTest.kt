@@ -11,6 +11,7 @@ import com.appvoyager.cloudphotos.domain.settings.usecase.GetGridColumnCountUseC
 import com.appvoyager.cloudphotos.domain.settings.usecase.SetGridColumnCountUseCase
 import com.appvoyager.cloudphotos.domain.settings.valueobject.GridColumnCount
 import com.appvoyager.cloudphotos.ui.media.effect.MediaEffect
+import com.appvoyager.cloudphotos.ui.media.uistate.MediaUiState
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -72,13 +73,11 @@ class MediaViewModelTest {
 
         // Assert
         val state = viewModel.uiState.value
-        assertTrue(state.mediaList.isEmpty())
-        assertFalse(state.isLoaded)
-        assertFalse(state.isError)
+        assertTrue(state.loadState is MediaUiState.LoadState.Loading)
     }
 
     @Test
-    fun `loadMediaList success updates mediaList and sets isLoaded`() = runTest {
+    fun `loadMediaList success updates loadState to Success`() = runTest {
         // Arrange
         every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
         val expectedList = listOf(
@@ -99,14 +98,13 @@ class MediaViewModelTest {
         advanceUntilIdle()
 
         // Assert
-        val state = viewModel.uiState.value
-        assertEquals(expectedList, state.mediaList)
-        assertTrue(state.isLoaded)
-        assertFalse(state.isError)
+        val loadState = viewModel.uiState.value.loadState
+        assertTrue(loadState is MediaUiState.LoadState.Success)
+        assertEquals(expectedList, (loadState as MediaUiState.LoadState.Success).mediaList)
     }
 
     @Test
-    fun `loadMediaList error sets isError and sends snackbar effect`() = runTest {
+    fun `loadMediaList error sets loadState to Error and sends snackbar effect`() = runTest {
         // Arrange
         every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
         every { getMediaListUseCase() } returns flow { throw RuntimeException("load failed") }
@@ -119,7 +117,7 @@ class MediaViewModelTest {
         advanceUntilIdle()
 
         // Assert
-        assertTrue(viewModel.uiState.value.isError)
+        assertTrue(viewModel.uiState.value.loadState is MediaUiState.LoadState.Error)
         val effect = viewModel.effect.first()
         assertEquals(
             R.string.error_media_load_failed,
@@ -141,12 +139,10 @@ class MediaViewModelTest {
     }
 
     @Test
-    fun `grid column count flow error does not terminate stream`() = runTest {
+    fun `grid column count flow error sends snackbar effect`() = runTest {
         // Arrange
-        var emitCount = 0
         every { getGridColumnCountUseCase() } returns flow {
             emit(GridColumnCount.of(3))
-            emitCount++
             throw RuntimeException("error")
         }
 
@@ -156,7 +152,6 @@ class MediaViewModelTest {
         // Assert
         val effect = viewModel.effect.first()
         assertEquals(R.string.error_unknown, (effect as MediaEffect.ShowSnackbar).messageResId)
-        assertTrue(emitCount >= 2)
     }
 
     @Test
