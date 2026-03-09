@@ -66,11 +66,6 @@ fun LoginScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    val latestResources = rememberUpdatedState(LocalResources.current)
-
-    val latestOnNavigateToVerification = rememberUpdatedState(onNavigateToVerification)
-    val latestOnNavigateToHome = rememberUpdatedState(onNavigateToHome)
-    val latestOnNavigateToForgotPassword = rememberUpdatedState(onNavigateToForgotPassword)
 
     val latestResources = rememberUpdatedState(LocalResources.current)
     val latestOnNavigateToVerification = rememberUpdatedState(onNavigateToVerification)
