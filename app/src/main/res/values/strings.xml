@@ -55,5 +55,7 @@
     <string name="error_resend_failed">再送信に失敗しました</string>
     <string name="error_user_not_confirmed">パスワードリセットの前にメールアドレスの認証が必要です</string>
     <string name="error_media_load_failed">メディアの読み込みに失敗しました</string>
+    <string name="error_permission_required">写真・動画へのアクセス権限が必要です</string>
+    <string name="permission_open_settings">設定を開く</string>
 
 </resources>

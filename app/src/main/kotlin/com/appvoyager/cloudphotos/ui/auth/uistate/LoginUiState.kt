@@ -7,6 +7,6 @@ data class LoginUiState(
     val password: String = "",
     val isPasswordVisible: Boolean = false,
     val isLoading: Boolean = false,
-    @param:StringRes val emailError: Int? = null,
-    @param:StringRes val passwordError: Int? = null
+    @get:StringRes val emailError: Int? = null,
+    @get:StringRes val passwordError: Int? = null
 )

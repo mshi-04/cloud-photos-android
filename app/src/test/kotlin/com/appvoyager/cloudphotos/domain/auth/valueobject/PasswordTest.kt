@@ -41,10 +41,19 @@ class PasswordTest {
         val password = Password.of(raw)
 
         // Assert
-        val raw = "12345678901234567890"
+        assertEquals(raw, password.value)
+    }
+
+    @Test
+    fun `of trims whitespace from input`() {
+        // Arrange
+        val raw = "  12345678  "
+
+        // Act
         val password = Password.of(raw)
 
-        assertEquals(raw, password.value)
+        // Assert
+        assertEquals("12345678", password.value)
     }
 
     @Test
@@ -58,10 +67,6 @@ class PasswordTest {
         }
 
         // Assert
-        val raw = ""
-        val ex = assertThrows<IllegalArgumentException> {
-            Password.of(raw)
-        }
         assertEquals("Password must be at least 8 characters.", ex.message)
     }
 

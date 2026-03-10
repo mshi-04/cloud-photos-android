@@ -40,12 +40,13 @@ class HogeViewModelTest {
     }
 
     @Test
-    fun `initial state is correct`() {
+    fun `state after DoSomething is Success`() = runTest(testDispatcher) {
         // Arrange
         coEvery { hogeUseCase() } returns Result.success(Unit)
 
         // Act
         viewModel.onIntent(HogeIntent.DoSomething)
+        advanceUntilIdle()
 
         // Assert
         assertEquals(HogeUiState.Success, viewModel.uiState.value)

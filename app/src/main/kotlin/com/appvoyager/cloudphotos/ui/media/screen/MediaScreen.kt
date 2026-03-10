@@ -1,8 +1,11 @@
 package com.appvoyager.cloudphotos.ui.media.screen
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -78,11 +81,14 @@ import com.appvoyager.cloudphotos.domain.media.valueobject.MediaUrl
 import com.appvoyager.cloudphotos.domain.settings.valueobject.GridColumnCount
 import com.appvoyager.cloudphotos.ui.media.component.GridColumnSettingsDialog
 import com.appvoyager.cloudphotos.ui.media.effect.MediaEffect
+import com.appvoyager.cloudphotos.ui.media.uistate.MediaUiState
 import com.appvoyager.cloudphotos.ui.media.viewmodel.MediaViewModel
 import com.appvoyager.cloudphotos.ui.theme.CloudPhotosTheme
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+
+private const val URI_SCHEME_PACKAGE = "package"
 
 @Composable
 fun MediaScreen(
@@ -93,13 +99,7 @@ fun MediaScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val latestResources = rememberUpdatedState(LocalResources.current)
     val lifecycleOwner = LocalLifecycleOwner.current
-
-    RequestMediaPermissions(onResult = { viewModel.loadMediaList() })
-
-    LifecycleResumeEffect(Unit) {
-        viewModel.loadMediaList()
-        onPauseOrDispose {}
-    }
+    var permissionCheckKey by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(Unit) {
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -113,6 +113,17 @@ fun MediaScreen(
         }
     }
 
+    LifecycleResumeEffect(Unit) {
+        permissionCheckKey++
+        onPauseOrDispose {}
+    }
+
+    RequestMediaPermissions(
+        key = permissionCheckKey,
+        onGranted = { viewModel.loadMediaList() },
+        onDenied = { viewModel.onPermissionDenied() }
+    )
+
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         contentWindowInsets = WindowInsets(0)
@@ -123,13 +134,12 @@ fun MediaScreen(
                 .padding(innerPadding)
         ) {
             MediaContent(
-                mediaList = uiState.mediaList,
+                loadState = uiState.loadState,
                 gridColumnCount = uiState.gridColumnCount,
-                isLoaded = uiState.isLoaded,
-                isError = uiState.isError,
                 onGridSettingsClick = { viewModel.onShowSettingsDialog() },
                 onSignOut = onSignOut,
-                onRetry = { viewModel.loadMediaList() }
+                onRetry = { viewModel.loadMediaList() },
+                onRetryPermissions = { permissionCheckKey++ }
             )
         }
     }
@@ -145,13 +155,12 @@ fun MediaScreen(
 
 @Composable
 private fun MediaContent(
-    mediaList: List<Media>,
+    loadState: MediaUiState.LoadState,
     gridColumnCount: GridColumnCount,
-    isLoaded: Boolean,
-    isError: Boolean,
     onGridSettingsClick: () -> Unit,
     onSignOut: () -> Unit,
-    onRetry: () -> Unit
+    onRetry: () -> Unit,
+    onRetryPermissions: () -> Unit
 ) {
     val gridState = rememberLazyGridState()
     val isButtonVisible by rememberScrollButtonVisibility(gridState)
@@ -165,49 +174,55 @@ private fun MediaContent(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        when {
-            isError && mediaList.isEmpty() -> {
+        when (loadState) {
+            is MediaUiState.LoadState.Loading -> {}
+
+            is MediaUiState.LoadState.PermissionRequired -> {
+                PermissionRequiredContent(onRetryPermissions = onRetryPermissions)
+            }
+
+            is MediaUiState.LoadState.Error -> {
                 ErrorContent(onRetry = onRetry)
             }
 
-            mediaList.isNotEmpty() -> {
-                MediaGrid(
-                    mediaList = mediaList,
-                    gridColumnCount = gridColumnCount,
-                    gridState = gridState,
-                    topPadding = statusBarPadding,
-                    bottomPadding = navigationBarPadding
-                )
+            is MediaUiState.LoadState.Success -> {
+                if (loadState.mediaList.isNotEmpty()) {
+                    MediaGrid(
+                        mediaList = loadState.mediaList,
+                        gridColumnCount = gridColumnCount,
+                        gridState = gridState,
+                        topPadding = statusBarPadding,
+                        bottomPadding = navigationBarPadding
+                    )
+
+                    AnimatedVisibility(
+                        visible = isButtonVisible,
+                        enter = fadeIn(),
+                        exit = fadeOut(),
+                        modifier = Modifier.align(Alignment.TopStart)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(statusBarPadding)
+                                .background(MaterialTheme.colorScheme.background)
+                        )
+                    }
+
+                    AnimatedVisibility(
+                        visible = isButtonVisible,
+                        enter = fadeIn(),
+                        exit = fadeOut(),
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(top = statusBarPadding + 8.dp, end = 8.dp)
+                    ) {
+                        AppIconButton(onClick = onGridSettingsClick)
+                    }
+                } else {
+                    EmptyContent()
+                }
             }
-
-            isLoaded -> {
-                EmptyContent()
-            }
-        }
-
-        AnimatedVisibility(
-            visible = isButtonVisible,
-            enter = fadeIn(),
-            exit = fadeOut(),
-            modifier = Modifier.align(Alignment.TopStart)
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(statusBarPadding)
-                    .background(MaterialTheme.colorScheme.background)
-            )
-        }
-
-        AnimatedVisibility(
-            visible = isButtonVisible,
-            enter = fadeIn(),
-            exit = fadeOut(),
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = statusBarPadding + 8.dp, end = 8.dp)
-        ) {
-            AppIconButton(onClick = onGridSettingsClick)
         }
     }
 }
@@ -338,6 +353,39 @@ private fun EmptyContent() {
 }
 
 @Composable
+private fun PermissionRequiredContent(onRetryPermissions: () -> Unit) {
+    val context = LocalContext.current
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = stringResource(R.string.error_permission_required),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        TextButton(
+            onClick = { context.startActivity(createAppSettingsIntent(context)) },
+            modifier = Modifier.padding(top = 16.dp)
+        ) {
+            Text(stringResource(R.string.permission_open_settings))
+        }
+        TextButton(
+            onClick = onRetryPermissions,
+            modifier = Modifier.padding(top = 8.dp)
+        ) {
+            Text(stringResource(R.string.media_retry))
+        }
+    }
+}
+
+private fun createAppSettingsIntent(context: android.content.Context): Intent =
+    Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+        data = Uri.fromParts(URI_SCHEME_PACKAGE, context.packageName, null)
+    }
+
+@Composable
 private fun ErrorContent(onRetry: () -> Unit) {
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -365,18 +413,25 @@ private fun ErrorContent(onRetry: () -> Unit) {
 }
 
 @Composable
-private fun RequestMediaPermissions(onResult: () -> Unit) {
+private fun RequestMediaPermissions(
+    key: Int,
+    onGranted: () -> Unit,
+    onDenied: () -> Unit
+) {
     val context = LocalContext.current
-    val latestOnResult = rememberUpdatedState(onResult)
+    val latestOnGranted = rememberUpdatedState(onGranted)
+    val latestOnDenied = rememberUpdatedState(onDenied)
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { results ->
         if (results.values.all { it }) {
-            latestOnResult.value()
+            latestOnGranted.value()
+        } else {
+            latestOnDenied.value()
         }
     }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(key) {
         val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             arrayOf(
                 Manifest.permission.READ_MEDIA_IMAGES,
@@ -390,7 +445,7 @@ private fun RequestMediaPermissions(onResult: () -> Unit) {
             ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
         }
         if (allGranted) {
-            latestOnResult.value()
+            latestOnGranted.value()
         } else {
             launcher.launch(permissions)
         }
@@ -402,42 +457,27 @@ private fun RequestMediaPermissions(onResult: () -> Unit) {
 private fun MediaContentPreview() {
     CloudPhotosTheme {
         MediaContent(
-            mediaList = listOf(
-                Media(
-                    id = MediaId.of("1"),
-                    url = MediaUrl.of("content://media/external/images/1"),
-                    type = MediaType.IMAGE,
-                    createdAt = MediaCreatedAt.of(1700000000L)
-                ),
-                Media(
-                    id = MediaId.of("2"),
-                    url = MediaUrl.of("content://media/external/video/2"),
-                    type = MediaType.VIDEO,
-                    createdAt = MediaCreatedAt.of(1700000001L)
+            loadState = MediaUiState.LoadState.Success(
+                mediaList = listOf(
+                    Media(
+                        id = MediaId.of("1"),
+                        url = MediaUrl.of("content://media/external/images/1"),
+                        type = MediaType.IMAGE,
+                        createdAt = MediaCreatedAt.of(1700000000L)
+                    ),
+                    Media(
+                        id = MediaId.of("2"),
+                        url = MediaUrl.of("content://media/external/video/2"),
+                        type = MediaType.VIDEO,
+                        createdAt = MediaCreatedAt.of(1700000001L)
+                    )
                 )
             ),
             gridColumnCount = GridColumnCount.of(3),
-            isLoaded = true,
-            isError = false,
             onGridSettingsClick = {},
             onSignOut = {},
-            onRetry = {}
-        )
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun MediaContentEmptyPreview() {
-    CloudPhotosTheme {
-        MediaContent(
-            mediaList = emptyList(),
-            gridColumnCount = GridColumnCount.of(3),
-            isLoaded = true,
-            isError = false,
-            onGridSettingsClick = {},
-            onSignOut = {},
-            onRetry = {}
+            onRetry = {},
+            onRetryPermissions = {}
         )
     }
 }
@@ -447,13 +487,12 @@ private fun MediaContentEmptyPreview() {
 private fun MediaContentErrorPreview() {
     CloudPhotosTheme {
         MediaContent(
-            mediaList = emptyList(),
+            loadState = MediaUiState.LoadState.Error(),
             gridColumnCount = GridColumnCount.of(3),
-            isLoaded = true,
-            isError = true,
             onGridSettingsClick = {},
             onSignOut = {},
-            onRetry = {}
+            onRetry = {},
+            onRetryPermissions = {}
         )
     }
 }

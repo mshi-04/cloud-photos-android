@@ -33,7 +33,7 @@ fun confirmSignUpRequest(
 ): ConfirmSignUpRequest = ConfirmSignUpRequest(email = email, code = code)
 
 fun authUser(
-    userId: UserId = UserId("user-1"),
+    userId: UserId = UserId.of("user-1"),
     email: Email? = validEmail()
 ): AuthUser = AuthUser(userId = userId, email = email)
 

@@ -3,7 +3,7 @@
 ## Stack
 Kotlin / Jetpack Compose (Material 3) / Clean Architecture / Hilt+KSP
 AWS Amplify (Cognito) / Firebase (Analytics, FCM)
-Min SDK: 28 / Compile SDK: 36 / Java: 17 / Flavors: dev, prod
+Min SDK: 29 / Compile SDK: 36 / Java: 17 / Flavors: dev, prod
 
 ## Skills
 - `.agent/skills/android-clean-arch/SKILL.md`
@@ -17,6 +17,15 @@ Min SDK: 28 / Compile SDK: 36 / Java: 17 / Flavors: dev, prod
 - Domain layer: pure Kotlin, no Android dependencies
 - Error mapping: done in Data layer via internal mapper objects
 - CancellationException must be re-thrown in runCatching blocks
+
+## Value Objects
+- Use `@JvmInline value class` with `private constructor`
+- Instantiate via `companion object { fun of(raw: String) }` only
+- Validate in `of()` using `require()`
+- Trim input before validation
+- Located in `domain/{feature}/valueobject/`
+- NEVER use raw primitives (String, Int, etc.) for domain concepts
+- ALWAYS use value objects for: Email, Password, UserId, and any domain-specific identifier or validated input
 
 ## UI Conventions
 - Screen = stateful / Content = stateless private Composable

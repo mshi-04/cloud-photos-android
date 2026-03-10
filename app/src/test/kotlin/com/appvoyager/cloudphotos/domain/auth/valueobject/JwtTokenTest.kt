@@ -28,5 +28,5 @@ class JwtTokenTest {
             JwtToken.of(raw)
         }
     }
-    
+
 }
