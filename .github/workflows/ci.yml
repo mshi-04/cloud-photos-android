@@ -37,8 +37,7 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          cache-read-only: ${{ github.ref_name != 'main' && github.ref_name != 'develop' }}
-          cache-cleanup: on-success
+          cache-read-only: ${{ github.event_name == 'pull_request' }}
 
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
