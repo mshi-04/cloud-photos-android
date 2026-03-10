@@ -21,6 +21,8 @@ jobs:
 
     env:
       BUNDLE_PATH: vendor/bundle
+      RUBY_VERSION: '4.0.1'
+      BUNDLER_VERSION: '4.0.3'
 
     steps:
       - name: Checkout code
@@ -41,8 +43,8 @@ jobs:
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: '4.0.1'
-          bundler: 4.0.3
+          ruby-version: ${{ env.RUBY_VERSION }}
+          bundler: ${{ env.BUNDLER_VERSION }}
           bundler-cache: false
 
       - name: Restore bundle cache
@@ -50,9 +52,9 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: vendor/bundle
-          key: ${{ runner.os }}-ruby-4.0.1-bundler-4.0.3-${{ hashFiles('**/Gemfile.lock') }}
+          key: ${{ runner.os }}-ruby-${{ env.RUBY_VERSION }}-bundler-${{ env.BUNDLER_VERSION }}-${{ hashFiles('**/Gemfile.lock') }}
           restore-keys: |
-            ${{ runner.os }}-ruby-4.0.1-bundler-4.0.3-
+            ${{ runner.os }}-ruby-${{ env.RUBY_VERSION }}-bundler-${{ env.BUNDLER_VERSION }}-
 
       - name: Install gems
         run: |
