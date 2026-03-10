@@ -1,10 +1,13 @@
 package com.appvoyager.cloudphotos.domain.auth.valueobject
 
 @JvmInline
-value class UserId(val value: String) {
+value class UserId private constructor(val value: String) {
 
-    init {
-        require(value.isNotBlank()) { "UserId must not be blank." }
+    companion object {
+        fun of(raw: String): UserId =
+            raw.trim().also {
+                require(it.isNotBlank()) { "UserId must not be blank." }
+            }.let(::UserId)
     }
 
 }

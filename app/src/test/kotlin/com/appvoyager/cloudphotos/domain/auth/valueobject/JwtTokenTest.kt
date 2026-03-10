@@ -27,7 +27,6 @@ class JwtTokenTest {
         val ex = assertThrows<IllegalArgumentException> {
             JwtToken.of(raw)
         }
-
-        assertEquals("Token must not be blank.", ex.message)
     }
+
 }

@@ -1,7 +1,7 @@
 package com.appvoyager.cloudphotos.di
 
+import com.appvoyager.cloudphotos.data.auth.datasource.AuthDataSource
 import com.appvoyager.cloudphotos.data.auth.datasource.AuthDataSourceImpl
-import com.appvoyager.cloudphotos.domain.auth.datasource.AuthDataSource
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn

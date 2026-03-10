@@ -50,7 +50,10 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import com.appvoyager.cloudphotos.domain.auth.valueobject.Email
 import com.appvoyager.cloudphotos.ui.auth.component.LoadingOverlay
 import com.appvoyager.cloudphotos.ui.auth.effect.LoginEffect
@@ -66,29 +69,32 @@ fun LoginScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    val latestResources = rememberUpdatedState(LocalResources.current)
 
+    val latestResources = rememberUpdatedState(LocalResources.current)
     val latestOnNavigateToVerification = rememberUpdatedState(onNavigateToVerification)
     val latestOnNavigateToHome = rememberUpdatedState(onNavigateToHome)
     val latestOnNavigateToForgotPassword = rememberUpdatedState(onNavigateToForgotPassword)
+    val lifecycleOwner = LocalLifecycleOwner.current
 
     LaunchedEffect(Unit) {
-        viewModel.effect.collect { effect ->
-            when (effect) {
-                is LoginEffect.NavigateToVerification -> {
-                    latestOnNavigateToVerification.value(effect.email)
-                }
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            viewModel.effect.collect { effect ->
+                when (effect) {
+                    is LoginEffect.NavigateToVerification -> {
+                        latestOnNavigateToVerification.value(effect.email)
+                    }
 
-                is LoginEffect.NavigateToHome -> {
-                    latestOnNavigateToHome.value()
-                }
+                    is LoginEffect.NavigateToHome -> {
+                        latestOnNavigateToHome.value()
+                    }
 
-                is LoginEffect.NavigateToForgotPassword -> {
-                    latestOnNavigateToForgotPassword.value()
-                }
+                    is LoginEffect.NavigateToForgotPassword -> {
+                        latestOnNavigateToForgotPassword.value()
+                    }
 
-                is LoginEffect.ShowSnackbar -> {
-                    snackbarHostState.showSnackbar(latestResources.value.getString(effect.messageResId))
+                    is LoginEffect.ShowSnackbar -> {
+                        snackbarHostState.showSnackbar(latestResources.value.getString(effect.messageResId))
+                    }
                 }
             }
         }

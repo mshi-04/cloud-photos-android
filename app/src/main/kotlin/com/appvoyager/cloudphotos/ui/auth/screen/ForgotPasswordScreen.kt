@@ -60,8 +60,8 @@ fun ForgotPasswordScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    val latestResources = rememberUpdatedState(LocalResources.current)
 
+    val latestResources = rememberUpdatedState(LocalResources.current)
     val latestOnNavigateToResetPassword = rememberUpdatedState(onNavigateToResetPassword)
     val latestOnNavigateToVerification = rememberUpdatedState(onNavigateToVerification)
     val latestOnNavigateBack = rememberUpdatedState(onNavigateBack)
