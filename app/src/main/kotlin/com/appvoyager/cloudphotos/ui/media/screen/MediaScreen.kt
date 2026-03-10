@@ -67,6 +67,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
@@ -98,14 +99,7 @@ fun MediaScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val latestResources = rememberUpdatedState(LocalResources.current)
     val lifecycleOwner = LocalLifecycleOwner.current
-
     var permissionCheckKey by remember { mutableIntStateOf(0) }
-
-    RequestMediaPermissions(
-        key = permissionCheckKey,
-        onGranted = { viewModel.loadMediaList() },
-        onDenied = { viewModel.onPermissionDenied() }
-    )
 
     LaunchedEffect(Unit) {
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -118,6 +112,17 @@ fun MediaScreen(
             }
         }
     }
+
+    LifecycleResumeEffect(Unit) {
+        permissionCheckKey++
+        onPauseOrDispose {}
+    }
+
+    RequestMediaPermissions(
+        key = permissionCheckKey,
+        onGranted = { viewModel.loadMediaList() },
+        onDenied = { viewModel.onPermissionDenied() }
+    )
 
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
@@ -189,35 +194,35 @@ private fun MediaContent(
                         topPadding = statusBarPadding,
                         bottomPadding = navigationBarPadding
                     )
+
+                    AnimatedVisibility(
+                        visible = isButtonVisible,
+                        enter = fadeIn(),
+                        exit = fadeOut(),
+                        modifier = Modifier.align(Alignment.TopStart)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(statusBarPadding)
+                                .background(MaterialTheme.colorScheme.background)
+                        )
+                    }
+
+                    AnimatedVisibility(
+                        visible = isButtonVisible,
+                        enter = fadeIn(),
+                        exit = fadeOut(),
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(top = statusBarPadding + 8.dp, end = 8.dp)
+                    ) {
+                        AppIconButton(onClick = onGridSettingsClick)
+                    }
                 } else {
                     EmptyContent()
                 }
             }
-        }
-
-        AnimatedVisibility(
-            visible = isButtonVisible,
-            enter = fadeIn(),
-            exit = fadeOut(),
-            modifier = Modifier.align(Alignment.TopStart)
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(statusBarPadding)
-                    .background(MaterialTheme.colorScheme.background)
-            )
-        }
-
-        AnimatedVisibility(
-            visible = isButtonVisible,
-            enter = fadeIn(),
-            exit = fadeOut(),
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = statusBarPadding + 8.dp, end = 8.dp)
-        ) {
-            AppIconButton(onClick = onGridSettingsClick)
         }
     }
 }
