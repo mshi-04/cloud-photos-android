@@ -154,7 +154,7 @@ class AuthDataSourceImpl @Inject constructor() : AuthDataSource {
                 ?: throw IllegalStateException("Email attribute not found for current user")
 
             AuthUser(
-                userId = UserId(user.userId),
+                userId = UserId.of(user.userId),
                 email = Email.of(emailAttribute.value)
             )
         }.fold(

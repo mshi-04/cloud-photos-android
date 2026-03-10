@@ -87,6 +87,8 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+private const val URI_SCHEME_PACKAGE = "package"
+
 @Composable
 fun MediaScreen(
     viewModel: MediaViewModel = hiltViewModel(),
@@ -359,12 +361,7 @@ private fun PermissionRequiredContent(onRetryPermissions: () -> Unit) {
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         TextButton(
-            onClick = {
-                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                    data = Uri.fromParts("package", context.packageName, null)
-                }
-                context.startActivity(intent)
-            },
+            onClick = { context.startActivity(createAppSettingsIntent(context)) },
             modifier = Modifier.padding(top = 16.dp)
         ) {
             Text(stringResource(R.string.permission_open_settings))
@@ -377,6 +374,11 @@ private fun PermissionRequiredContent(onRetryPermissions: () -> Unit) {
         }
     }
 }
+
+private fun createAppSettingsIntent(context: android.content.Context): Intent =
+    Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+        data = Uri.fromParts(URI_SCHEME_PACKAGE, context.packageName, null)
+    }
 
 @Composable
 private fun ErrorContent(onRetry: () -> Unit) {

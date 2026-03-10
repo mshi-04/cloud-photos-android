@@ -43,7 +43,7 @@ fun authUserFixture(
     email: String = "fixture@example.com"
 ): AuthUser =
     AuthUser(
-        userId = UserId(userId),
+        userId = UserId.of(userId),
         email = Email.of(email)
     )
 

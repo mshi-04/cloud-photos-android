@@ -45,6 +45,18 @@ class PasswordTest {
     }
 
     @Test
+    fun `of trims whitespace from input`() {
+        // Arrange
+        val raw = "  12345678  "
+
+        // Act
+        val password = Password.of(raw)
+
+        // Assert
+        assertEquals("12345678", password.value)
+    }
+
+    @Test
     fun `of throws when empty`() {
         // Arrange
         val raw = ""
