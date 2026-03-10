@@ -19,6 +19,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    env:
+      BUNDLE_PATH: vendor/bundle
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -26,20 +29,42 @@ jobs:
       - name: Setup JDK
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
+          distribution: temurin
           java-version: '17'
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           cache-read-only: ${{ github.ref_name != 'main' && github.ref_name != 'develop' }}
-          cache-cleanup: 'on-success'
+          cache-cleanup: on-success
 
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: '4.0.1'
-          bundler-cache: ${{ github.event_name != 'pull_request' }}
+          bundler: 4.0.3
+          bundler-cache: false
+
+      - name: Restore bundle cache
+        id: bundle-cache-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: vendor/bundle
+          key: ${{ runner.os }}-ruby-4.0.1-bundler-4.0.3-${{ hashFiles('**/Gemfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-ruby-4.0.1-bundler-4.0.3-
+
+      - name: Install gems
+        run: |
+          bundle config set path "$BUNDLE_PATH"
+          bundle install --jobs 4 --retry 3
+
+      - name: Save bundle cache
+        if: (github.event_name == 'push') && (github.ref_name == 'main' || github.ref_name == 'develop')
+        uses: actions/cache/save@v4
+        with:
+          path: vendor/bundle
+          key: ${{ steps.bundle-cache-restore.outputs.cache-primary-key }}
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
