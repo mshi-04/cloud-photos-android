@@ -81,8 +81,12 @@ class MediaViewModel @Inject constructor(
         mediaListJob = viewModelScope.launch {
             getMediaListUseCase()
                 .catch { cause ->
-                    _uiState.update { it.copy(loadState = MediaUiState.LoadState.Error(cause)) }
-                    _effect.send(MediaEffect.ShowSnackbar(R.string.error_media_load_failed))
+                    if (cause is SecurityException) {
+                        _uiState.update { it.copy(loadState = MediaUiState.LoadState.PermissionRequired) }
+                    } else {
+                        _uiState.update { it.copy(loadState = MediaUiState.LoadState.Error(cause)) }
+                        _effect.send(MediaEffect.ShowSnackbar(R.string.error_media_load_failed))
+                    }
                 }
                 .collect { mediaList ->
                     _uiState.update {
