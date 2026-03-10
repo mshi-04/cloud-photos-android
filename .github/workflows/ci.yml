@@ -39,7 +39,7 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: '4.0.1'
-          bundler-cache: true
+          bundler-cache: ${{ github.event_name != 'pull_request' }}
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
