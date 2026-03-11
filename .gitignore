@@ -53,7 +53,7 @@ firebase-*.json
 .vscode
 
 # Claude Code local settings
-.claude/settings.json
+.claude/settings.local.json
 
 # Environment variables and Secrets
 .env

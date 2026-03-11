@@ -11,24 +11,36 @@ import com.appvoyager.cloudphotos.domain.upload.valueobject.ContentType
 import com.appvoyager.cloudphotos.domain.upload.valueobject.StoragePath
 import io.mockk.coEvery
 import io.mockk.mockk
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 class UploadMediaUseCaseTest {
 
+    private val dispatcher = StandardTestDispatcher()
     private lateinit var uploadRepository: UploadRepository
     private lateinit var uploadMediaUseCase: UploadMediaUseCase
 
     @BeforeEach
     fun setUp() {
+        Dispatchers.setMain(dispatcher)
         uploadRepository = mockk()
         uploadMediaUseCase = UploadMediaUseCase(uploadRepository)
     }
 
+    @AfterEach
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
+
     @Test
-    fun `invoke returns Success when repository succeeds`() = runTest {
+    fun `invoke returns success when repository succeeds`() = runTest {
         // Arrange
         val request = UploadMediaRequest(
             localUri = MediaUrl.of("content://media/external/images/media/1"),
@@ -45,7 +57,7 @@ class UploadMediaUseCaseTest {
     }
 
     @Test
-    fun `invoke returns Error when repository fails`() = runTest {
+    fun `invoke returns error when repository fails`() = runTest {
         // Arrange
         val request = UploadMediaRequest(
             localUri = MediaUrl.of("content://media/external/images/media/1"),

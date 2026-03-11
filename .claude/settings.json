@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./gradlew:*)",
+      "Edit(app/src/**)",
+      "Write(app/src/**)"
+    ]
+  }
+}
