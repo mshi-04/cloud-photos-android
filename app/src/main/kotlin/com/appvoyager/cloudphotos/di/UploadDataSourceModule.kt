@@ -1,7 +1,7 @@
 package com.appvoyager.cloudphotos.di
 
-import com.appvoyager.cloudphotos.data.upload.datasource.UploadDataSource
-import com.appvoyager.cloudphotos.data.upload.datasource.UploadDataSourceImpl
+import com.appvoyager.cloudphotos.data.media.datasource.UploadDataSource
+import com.appvoyager.cloudphotos.data.media.datasource.UploadDataSourceImpl
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn

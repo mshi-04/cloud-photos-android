@@ -1,7 +1,7 @@
 package com.appvoyager.cloudphotos.di
 
-import com.appvoyager.cloudphotos.data.upload.repository.UploadRepositoryImpl
-import com.appvoyager.cloudphotos.domain.upload.repository.UploadRepository
+import com.appvoyager.cloudphotos.data.media.repository.UploadRepositoryImpl
+import com.appvoyager.cloudphotos.domain.media.repository.UploadRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn

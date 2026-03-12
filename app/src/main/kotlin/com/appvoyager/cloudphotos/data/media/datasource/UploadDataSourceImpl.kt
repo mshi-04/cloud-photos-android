@@ -1,14 +1,14 @@
-package com.appvoyager.cloudphotos.data.upload.datasource
+package com.appvoyager.cloudphotos.data.media.datasource
 
 import android.content.Context
 import androidx.core.net.toUri
 import com.amplifyframework.core.Amplify
 import com.amplifyframework.storage.StoragePath
 import com.amplifyframework.storage.options.StorageUploadInputStreamOptions
-import com.appvoyager.cloudphotos.data.upload.util.UploadErrorMapper
-import com.appvoyager.cloudphotos.domain.upload.model.UploadResult
-import com.appvoyager.cloudphotos.domain.upload.request.UploadMediaRequest
-import com.appvoyager.cloudphotos.domain.upload.valueobject.StoragePath as DomainStoragePath
+import com.appvoyager.cloudphotos.data.media.util.UploadErrorMapper
+import com.appvoyager.cloudphotos.domain.media.model.UploadResult
+import com.appvoyager.cloudphotos.domain.media.request.UploadMediaRequest
+import com.appvoyager.cloudphotos.domain.media.valueobject.CloudStoragePath
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.suspendCancellableCoroutine
 import java.io.FileNotFoundException
@@ -21,7 +21,7 @@ class UploadDataSourceImpl @Inject constructor(
     @param:ApplicationContext private val context: Context
 ) : UploadDataSource {
 
-    override suspend fun uploadMedia(request: UploadMediaRequest): UploadResult<DomainStoragePath> =
+    override suspend fun uploadMedia(request: UploadMediaRequest): UploadResult<CloudStoragePath> =
         runCatching {
             val contentUri = request.localUri.value.toUri()
             val extension = resolveExtension(request.contentType.value)
@@ -49,7 +49,7 @@ class UploadDataSourceImpl @Inject constructor(
                 }
             }
 
-            DomainStoragePath.of(result.path)
+            CloudStoragePath.of(result.path)
         }.fold(
             onSuccess = { UploadResult.Success(it) },
             onFailure = { throwable ->

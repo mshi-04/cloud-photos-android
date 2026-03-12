@@ -9,7 +9,7 @@ import com.appvoyager.cloudphotos.domain.media.repository.UploadRepository
 import com.appvoyager.cloudphotos.domain.media.request.UploadMediaRequest
 import com.appvoyager.cloudphotos.domain.media.usecase.UploadMediaUseCase
 import com.appvoyager.cloudphotos.domain.media.valueobject.ContentType
-import com.appvoyager.cloudphotos.domain.media.valueobject.StoragePath
+import com.appvoyager.cloudphotos.domain.media.valueobject.CloudStoragePath
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -47,7 +47,7 @@ class UploadMediaUseCaseTest {
             localUri = MediaUrl.of("content://media/external/images/media/1"),
             contentType = ContentType.of("image/jpeg")
         )
-        val expectedPath = StoragePath.of("photos/user123/image.jpg")
+        val expectedPath = CloudStoragePath.of("photos/user123/image.jpg")
         coEvery { uploadRepository.uploadMedia(request) } returns UploadResult.Success(expectedPath)
 
         // Act

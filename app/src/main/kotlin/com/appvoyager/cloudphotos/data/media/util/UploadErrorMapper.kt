@@ -1,7 +1,7 @@
-package com.appvoyager.cloudphotos.data.upload.util
+package com.appvoyager.cloudphotos.data.media.util
 
 import com.amplifyframework.storage.StorageException
-import com.appvoyager.cloudphotos.domain.upload.model.UploadError
+import com.appvoyager.cloudphotos.domain.media.model.UploadError
 import java.io.FileNotFoundException
 import java.io.IOException
 
