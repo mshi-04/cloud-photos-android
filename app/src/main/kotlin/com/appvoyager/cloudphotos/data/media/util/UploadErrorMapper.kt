@@ -32,14 +32,14 @@ internal object UploadErrorMapper {
     private fun isNotAuthenticated(exception: StorageException): Boolean {
         val message = exception.message.orEmpty()
         return message.contains("signed in", ignoreCase = true)
-            || message.contains("not authenticated", ignoreCase = true)
-            || message.contains("unauthenticated", ignoreCase = true)
+                || message.contains("not authenticated", ignoreCase = true)
+                || message.contains("unauthenticated", ignoreCase = true)
     }
 
     private fun isStorageLimitExceeded(exception: StorageException): Boolean {
         val message = exception.message.orEmpty()
         return message.contains("limit", ignoreCase = true)
-            || message.contains("quota", ignoreCase = true)
+                || message.contains("quota", ignoreCase = true)
     }
 
 }
