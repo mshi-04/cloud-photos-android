@@ -22,7 +22,7 @@ class UploadDataSourceImpl @Inject constructor(
 ) : UploadDataSource {
 
     override suspend fun uploadMedia(request: UploadMediaRequest): UploadResult<CloudStoragePath> =
-        runCatching {
+        try {
             val contentUri = request.localUri.value.toUri()
             val extension = resolveExtension(request.contentType.value)
             val remotePath = StoragePath.fromIdentityId { identityId ->
@@ -49,16 +49,19 @@ class UploadDataSourceImpl @Inject constructor(
                 }
             }
 
-            CloudStoragePath.of(result.path)
-        }.fold(
-            onSuccess = { UploadResult.Success(it) },
-            onFailure = { throwable ->
-                if (throwable is CancellationException) throw throwable
-                UploadResult.Error(UploadErrorMapper.map(throwable))
-            }
-        )
+            UploadResult.Success(CloudStoragePath.of(result.path))
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            UploadResult.Error(UploadErrorMapper.map(e))
+        }
 
-    private fun resolveExtension(contentType: String): String =
-        ".${contentType.substringAfter("/")}"
+    private fun resolveExtension(contentType: String): String {
+        val subtype = contentType.substringAfter("/")
+            .substringBefore(";")
+            .substringBefore("+")
+            .trim()
+        return if (subtype.isBlank()) "" else ".$subtype"
+    }
 
 }
