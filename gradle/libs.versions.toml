@@ -65,6 +65,7 @@ firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging
 # AWS Amplify
 amplify-core = { group = "com.amplifyframework", name = "core", version.ref = "amplify" }
 amplify-auth-cognito = { group = "com.amplifyframework", name = "aws-auth-cognito", version.ref = "amplify" }
+amplify-storage-s3 = { group = "com.amplifyframework", name = "aws-storage-s3", version.ref = "amplify" }
 
 # Test
 junit-jupiter = { group = "org.junit.jupiter", name = "junit-jupiter", version.ref = "junit" }
