@@ -1,5 +1,6 @@
 package com.appvoyager.cloudphotos.domain.upload.valueobject
 
+import com.appvoyager.cloudphotos.domain.media.valueobject.ContentType
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows

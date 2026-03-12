@@ -1,14 +1,15 @@
 package com.appvoyager.cloudphotos.domain.upload.usecase
 
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaUrl
-import com.appvoyager.cloudphotos.domain.upload.model.UploadError
-import com.appvoyager.cloudphotos.domain.upload.model.UploadResult
-import com.appvoyager.cloudphotos.domain.upload.model.errorOrNull
-import com.appvoyager.cloudphotos.domain.upload.model.getOrNull
-import com.appvoyager.cloudphotos.domain.upload.repository.UploadRepository
-import com.appvoyager.cloudphotos.domain.upload.request.UploadMediaRequest
-import com.appvoyager.cloudphotos.domain.upload.valueobject.ContentType
-import com.appvoyager.cloudphotos.domain.upload.valueobject.StoragePath
+import com.appvoyager.cloudphotos.domain.media.model.UploadError
+import com.appvoyager.cloudphotos.domain.media.model.UploadResult
+import com.appvoyager.cloudphotos.domain.media.model.errorOrNull
+import com.appvoyager.cloudphotos.domain.media.model.getOrNull
+import com.appvoyager.cloudphotos.domain.media.repository.UploadRepository
+import com.appvoyager.cloudphotos.domain.media.request.UploadMediaRequest
+import com.appvoyager.cloudphotos.domain.media.usecase.UploadMediaUseCase
+import com.appvoyager.cloudphotos.domain.media.valueobject.ContentType
+import com.appvoyager.cloudphotos.domain.media.valueobject.StoragePath
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers

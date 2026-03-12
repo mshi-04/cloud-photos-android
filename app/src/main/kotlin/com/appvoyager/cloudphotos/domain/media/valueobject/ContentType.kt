@@ -1,4 +1,4 @@
-package com.appvoyager.cloudphotos.domain.upload.valueobject
+package com.appvoyager.cloudphotos.domain.media.valueobject
 
 @JvmInline
 value class ContentType private constructor(val value: String) {

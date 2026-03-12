@@ -1,4 +1,4 @@
-package com.appvoyager.cloudphotos.domain.upload.model
+package com.appvoyager.cloudphotos.domain.media.model
 
 sealed class UploadResult<out T> {
 
