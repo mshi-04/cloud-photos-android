@@ -30,7 +30,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set Environment Variables
         run: |
@@ -48,13 +48,13 @@ jobs:
           fi
 
       - name: Setup JDK
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '17'
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
         with:
           cache-read-only: true
 
@@ -62,7 +62,7 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: '4.0.1'
-          bundler-cache: true
+          bundler-cache: ${{ github.event_name != 'pull_request' }}
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
@@ -84,7 +84,7 @@ jobs:
         run: bundle exec fastlane ${{ env.LANE }}
 
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: app-${{ env.FLAVOR }}-release
           path: |
