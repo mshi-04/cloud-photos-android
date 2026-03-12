@@ -59,18 +59,6 @@ class UploadDataSourceImpl @Inject constructor(
         )
 
     private fun resolveExtension(contentType: String): String =
-        when (contentType) {
-            "image/jpeg" -> ".jpg"
-            "image/png" -> ".png"
-            "image/webp" -> ".webp"
-            "image/gif" -> ".gif"
-            "image/heic" -> ".heic"
-            "image/heif" -> ".heif"
-            "video/mp4" -> ".mp4"
-            "video/quicktime" -> ".mov"
-            "video/x-matroska" -> ".mkv"
-            "video/webm" -> ".webm"
-            else -> ""
-        }
+        ".${contentType.substringAfter("/")}"
 
 }
