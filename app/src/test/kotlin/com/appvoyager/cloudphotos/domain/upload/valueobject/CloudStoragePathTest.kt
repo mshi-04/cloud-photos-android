@@ -1,19 +1,19 @@
 package com.appvoyager.cloudphotos.domain.upload.valueobject
 
-import com.appvoyager.cloudphotos.domain.media.valueobject.StoragePath
+import com.appvoyager.cloudphotos.domain.media.valueobject.CloudStoragePath
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
-class StoragePathTest {
+class CloudStoragePathTest {
 
     @Test
-    fun `of returns StoragePath with trimmed value when input is valid`() {
+    fun `of returns CloudStoragePath with trimmed value when input is valid`() {
         // Arrange
         val raw = " photos/user123/image.jpg "
 
         // Act
-        val storagePath = StoragePath.of(raw)
+        val storagePath = CloudStoragePath.of(raw)
 
         // Assert
         assertEquals("photos/user123/image.jpg", storagePath.value)
@@ -26,11 +26,11 @@ class StoragePathTest {
 
         // Act
         val exception = assertThrows<IllegalArgumentException> {
-            StoragePath.of(raw)
+            CloudStoragePath.of(raw)
         }
 
         // Assert
-        assertEquals("StoragePath must not be blank.", exception.message)
+        assertEquals("CloudStoragePath must not be blank.", exception.message)
     }
 
     @Test
@@ -40,10 +40,10 @@ class StoragePathTest {
 
         // Act
         val exception = assertThrows<IllegalArgumentException> {
-            StoragePath.of(raw)
+            CloudStoragePath.of(raw)
         }
 
         // Assert
-        assertEquals("StoragePath must not be blank.", exception.message)
+        assertEquals("CloudStoragePath must not be blank.", exception.message)
     }
 }

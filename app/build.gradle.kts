@@ -98,6 +98,7 @@ dependencies {
     // AWS Amplify
     implementation(libs.amplify.core)
     implementation(libs.amplify.auth.cognito)
+    implementation(libs.amplify.storage.s3)
 
     // Image Loading
     implementation(libs.coil.compose)
