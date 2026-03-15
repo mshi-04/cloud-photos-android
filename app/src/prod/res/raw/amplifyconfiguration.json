@@ -8,6 +8,35 @@
             "AppClientId": "mr95jbqfkm13eqgjrh505qi56",
             "Region": "ap-northeast-1"
           }
+        },
+        "CredentialsProvider": {
+          "CognitoIdentity": {
+            "Default": {
+              "PoolId": "ap-northeast-1:e4973375-0e3b-4da1-990f-3bf9ed0c9e6f",
+              "Region": "ap-northeast-1"
+            }
+          }
+        }
+      }
+    }
+  },
+  "storage": {
+    "plugins": {
+      "awsS3StoragePlugin": {
+        "bucket": "894261761443-cloud-photos-media-prod",
+        "region": "ap-northeast-1",
+        "defaultAccessLevel": "private"
+      }
+    }
+  },
+  "api": {
+    "plugins": {
+      "awsAPIPlugin": {
+        "CloudPhotosAPI": {
+          "endpointType": "REST",
+          "endpoint": "https://6mph6q2qs7.execute-api.ap-northeast-1.amazonaws.com/prod",
+          "region": "ap-northeast-1",
+          "authorizationType": "AWS_IAM"
         }
       }
     }

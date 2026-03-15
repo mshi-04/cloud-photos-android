@@ -99,6 +99,7 @@ dependencies {
     implementation(libs.amplify.core)
     implementation(libs.amplify.auth.cognito)
     implementation(libs.amplify.storage.s3)
+    implementation(libs.amplify.api)
 
     // Image Loading
     implementation(libs.coil.compose)
