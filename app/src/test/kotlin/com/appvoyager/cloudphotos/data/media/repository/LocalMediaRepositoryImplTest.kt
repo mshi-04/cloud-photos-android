@@ -29,15 +29,6 @@ class LocalMediaRepositoryImplTest {
     @Test
     fun `getMediaListFlow returns flow emitting media list from data source`() = runTest {
         // Arrange
-        val expectedMediaList = listOf(
-            Media(
-                id = MediaId.of("1"),
-                url = MediaUrl.of("http://example.com/1.jpg"),
-                type = MediaType.IMAGE,
-                thumbnailUrl = null,
-                createdAt = MediaCreatedAt.of(1600000000000L)
-            )
-        )
         coEvery { mockDataSource.getLocalMediaList() } returns expectedMediaList
 
         // Act
@@ -50,15 +41,6 @@ class LocalMediaRepositoryImplTest {
     @Test
     fun `getMediaList returns media list from data source`() = runTest {
         // Arrange
-        val expectedMediaList = listOf(
-            Media(
-                id = MediaId.of("1"),
-                url = MediaUrl.of("http://example.com/1.jpg"),
-                type = MediaType.IMAGE,
-                thumbnailUrl = null,
-                createdAt = MediaCreatedAt.of(1600000000000L)
-            )
-        )
         coEvery { mockDataSource.getLocalMediaList() } returns expectedMediaList
 
         // Act
@@ -88,5 +70,16 @@ class LocalMediaRepositoryImplTest {
         assertThrows<RuntimeException> {
             repository.getMediaListFlow().first()
         }
+    }
+
+    companion object {
+        private val sampleMedia = Media(
+            id = MediaId.of("1"),
+            url = MediaUrl.of("http://example.com/1.jpg"),
+            type = MediaType.IMAGE,
+            thumbnailUrl = null,
+            createdAt = MediaCreatedAt.of(1600000000000L)
+        )
+        val expectedMediaList = listOf(sampleMedia)
     }
 }
