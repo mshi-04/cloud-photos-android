@@ -6,13 +6,10 @@ import org.junit.jupiter.api.Test
 
 class UploadRecordDaoSyncStatusTest {
 
-    // Names hard-coded in the SQL inside UploadRecordDao.getPendingMediaIds.
-    private val hardCodedNames = setOf("PENDING_UPLOAD", "PENDING_DELETE")
-
     @Test
     fun `pending upload status exists`() {
         val enumNames = SyncStatus.entries.map { it.name }
-        val name = hardCodedNames.first { it == "PENDING_UPLOAD" }
+        val name = "PENDING_UPLOAD"
         assertTrue(name in enumNames) {
             "'$name' is hard-coded in UploadRecordDao.getPendingMediaIds but does not exist in SyncStatus. " +
                 "Update the SQL query to match the renamed enum entry."
@@ -22,7 +19,7 @@ class UploadRecordDaoSyncStatusTest {
     @Test
     fun `pending delete status exists`() {
         val enumNames = SyncStatus.entries.map { it.name }
-        val name = hardCodedNames.first { it == "PENDING_DELETE" }
+        val name = "PENDING_DELETE"
         assertTrue(name in enumNames) {
             "'$name' is hard-coded in UploadRecordDao.getPendingMediaIds but does not exist in SyncStatus. " +
                 "Update the SQL query to match the renamed enum entry."
