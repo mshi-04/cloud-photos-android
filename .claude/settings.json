@@ -3,6 +3,7 @@
     "allow": [
       "Bash(./gradlew:*)",
       "Edit(app/src/**)",
+      "Read(app/src/**)",
       "Write(app/src/**)"
     ]
   }

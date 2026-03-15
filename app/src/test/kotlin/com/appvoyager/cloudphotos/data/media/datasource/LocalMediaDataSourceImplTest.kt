@@ -133,6 +133,52 @@ class LocalMediaDataSourceImplTest {
     }
 
     @Test
+    fun `getLocalMediaList clamps zero dateAddedSeconds to zero createdAt`() = runTest {
+        // Arrange
+        every {
+            mockContentResolver.query(any(), any(), any(), any(), any())
+        } returns mockCursor
+
+        every { mockCursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID) } returns 0
+        every { mockCursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MEDIA_TYPE) } returns 1
+        every { mockCursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATE_ADDED) } returns 2
+
+        every { mockCursor.moveToNext() } returnsMany listOf(true, false)
+        every { mockCursor.getLong(0) } returns 123L
+        every { mockCursor.getInt(1) } returns MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE
+        every { mockCursor.getLong(2) } returns 0L
+
+        // Act
+        val result = dataSource.getLocalMediaList()
+
+        // Assert
+        assertEquals(0L, result.first().createdAt.value)
+    }
+
+    @Test
+    fun `getLocalMediaList clamps negative dateAddedSeconds to zero createdAt`() = runTest {
+        // Arrange
+        every {
+            mockContentResolver.query(any(), any(), any(), any(), any())
+        } returns mockCursor
+
+        every { mockCursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID) } returns 0
+        every { mockCursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MEDIA_TYPE) } returns 1
+        every { mockCursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATE_ADDED) } returns 2
+
+        every { mockCursor.moveToNext() } returnsMany listOf(true, false)
+        every { mockCursor.getLong(0) } returns 123L
+        every { mockCursor.getInt(1) } returns MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE
+        every { mockCursor.getLong(2) } returns -100L
+
+        // Act
+        val result = dataSource.getLocalMediaList()
+
+        // Assert
+        assertEquals(0L, result.first().createdAt.value)
+    }
+
+    @Test
     fun `getLocalMediaList throws SecurityException when permission denied`() = runTest {
         // Arrange
         every {

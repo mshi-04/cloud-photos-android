@@ -5,6 +5,8 @@ import kotlinx.coroutines.flow.Flow
 
 interface LocalMediaRepository {
 
-    fun getMediaList(): Flow<List<Media>>
+    fun getMediaListFlow(): Flow<List<Media>>
+
+    suspend fun getMediaList(): List<Media>
 
 }

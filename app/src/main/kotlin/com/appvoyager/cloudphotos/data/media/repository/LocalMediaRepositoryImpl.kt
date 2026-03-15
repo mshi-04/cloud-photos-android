@@ -11,8 +11,10 @@ class LocalMediaRepositoryImpl @Inject constructor(
     private val localMediaDataSource: LocalMediaDataSource
 ) : LocalMediaRepository {
 
-    override fun getMediaList(): Flow<List<Media>> = flow {
+    override fun getMediaListFlow(): Flow<List<Media>> = flow {
         emit(localMediaDataSource.getLocalMediaList())
     }
+
+    override suspend fun getMediaList(): List<Media> = localMediaDataSource.getLocalMediaList()
 
 }
