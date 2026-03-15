@@ -27,7 +27,7 @@ class LocalMediaRepositoryImplTest {
     }
 
     @Test
-    fun `getMediaList returns flow emitting media list from data source`() = runTest {
+    fun `getMediaListFlow returns flow emitting media list from data source`() = runTest {
         // Arrange
         val expectedMediaList = listOf(
             Media(
@@ -41,21 +41,21 @@ class LocalMediaRepositoryImplTest {
         coEvery { mockDataSource.getLocalMediaList() } returns expectedMediaList
 
         // Act
-        val result = repository.getMediaList().first()
+        val result = repository.getMediaListFlow().first()
 
         // Assert
         assertEquals(expectedMediaList, result)
     }
 
     @Test
-    fun `getMediaList propagates exception from data source`() = runTest {
+    fun `getMediaListFlow propagates exception from data source`() = runTest {
         // Arrange
         val expected = RuntimeException("data source failure")
         coEvery { mockDataSource.getLocalMediaList() } throws expected
 
         // Act & Assert
         val actual = assertThrows<RuntimeException> {
-            repository.getMediaList().first()
+            repository.getMediaListFlow().first()
         }
         assertEquals(expected, actual)
     }
