@@ -80,6 +80,6 @@ class LocalMediaRepositoryImplTest {
             thumbnailUrl = null,
             createdAt = MediaCreatedAt.of(1600000000000L)
         )
-        val expectedMediaList = listOf(sampleMedia)
+        private val expectedMediaList = listOf(sampleMedia)
     }
 }
