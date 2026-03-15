@@ -2,7 +2,6 @@ package com.appvoyager.cloudphotos.domain.media.usecase
 
 import com.appvoyager.cloudphotos.domain.media.model.SyncStatus
 import com.appvoyager.cloudphotos.domain.media.model.UploadRecord
-import com.appvoyager.cloudphotos.domain.media.repository.DeleteScheduler
 import com.appvoyager.cloudphotos.domain.media.repository.LocalUploadRecordsRepository
 import com.appvoyager.cloudphotos.domain.media.valueobject.CloudStoragePath
 import com.appvoyager.cloudphotos.domain.media.valueobject.IsDeleted
@@ -14,7 +13,6 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.slot
-import io.mockk.verify
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
@@ -23,13 +21,12 @@ import org.junit.jupiter.api.Test
 class DeleteMediaUseCaseTest {
 
     private val localRepository = mockk<LocalUploadRecordsRepository>()
-    private val deleteScheduler = mockk<DeleteScheduler>()
 
     private lateinit var useCase: DeleteMediaUseCase
 
     @BeforeEach
     fun setUp() {
-        useCase = DeleteMediaUseCase(localRepository, deleteScheduler)
+        useCase = DeleteMediaUseCase(localRepository)
     }
 
     @Test
@@ -38,7 +35,6 @@ class DeleteMediaUseCaseTest {
         val record = createUploadRecord()
         val slot = slot<List<UploadRecord>>()
         coEvery { localRepository.saveUploadRecords(capture(slot)) } just runs
-        coEvery { deleteScheduler.scheduleDelete(any()) } just runs
 
         // Act
         useCase(record)
@@ -53,7 +49,6 @@ class DeleteMediaUseCaseTest {
         val record = createUploadRecord()
         val slot = slot<List<UploadRecord>>()
         coEvery { localRepository.saveUploadRecords(capture(slot)) } just runs
-        coEvery { deleteScheduler.scheduleDelete(any()) } just runs
 
         // Act
         useCase(record)
@@ -63,26 +58,10 @@ class DeleteMediaUseCaseTest {
     }
 
     @Test
-    fun `scheduleDelete is called with the record mediaId`() = runTest {
-        // Arrange
-        val mediaId = MediaId.of("media-1")
-        val record = createUploadRecord(mediaId = mediaId)
-        coEvery { localRepository.saveUploadRecords(any()) } just runs
-        coEvery { deleteScheduler.scheduleDelete(any()) } just runs
-
-        // Act
-        useCase(record)
-
-        // Assert
-        verify { deleteScheduler.scheduleDelete(mediaId) }
-    }
-
-    @Test
     fun `saveUploadRecords is called once`() = runTest {
         // Arrange
         val record = createUploadRecord()
         coEvery { localRepository.saveUploadRecords(any()) } just runs
-        coEvery { deleteScheduler.scheduleDelete(any()) } just runs
 
         // Act
         useCase(record)

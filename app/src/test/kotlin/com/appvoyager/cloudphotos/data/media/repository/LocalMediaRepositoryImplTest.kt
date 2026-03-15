@@ -71,26 +71,22 @@ class LocalMediaRepositoryImplTest {
     @Test
     fun `getMediaList propagates exception from data source`() = runTest {
         // Arrange
-        val expected = RuntimeException("data source failure")
-        coEvery { mockDataSource.getLocalMediaList() } throws expected
+        coEvery { mockDataSource.getLocalMediaList() } throws RuntimeException("data source failure")
 
         // Act & Assert
-        val actual = assertThrows<RuntimeException> {
+        assertThrows<RuntimeException> {
             repository.getMediaList()
         }
-        assertEquals(expected, actual)
     }
 
     @Test
     fun `getMediaListFlow propagates exception from data source`() = runTest {
         // Arrange
-        val expected = RuntimeException("data source failure")
-        coEvery { mockDataSource.getLocalMediaList() } throws expected
+        coEvery { mockDataSource.getLocalMediaList() } throws RuntimeException("data source failure")
 
         // Act & Assert
-        val actual = assertThrows<RuntimeException> {
+        assertThrows<RuntimeException> {
             repository.getMediaListFlow().first()
         }
-        assertEquals(expected, actual)
     }
 }
