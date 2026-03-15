@@ -9,7 +9,6 @@ import com.appvoyager.cloudphotos.domain.media.valueobject.IsDeleted
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaId
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaUploadedAt
 import io.mockk.coEvery
-import io.mockk.coVerify
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
@@ -41,7 +40,11 @@ class RecordMediaUploadUseCaseTest {
         coEvery { uploadScheduler.scheduleUpload(any()) } just runs
 
         // Act
-        useCase(mediaId, CloudStoragePath.of("photos/media-1.jpg"), MediaUploadedAt.of(1700000000000L))
+        useCase(
+            mediaId,
+            CloudStoragePath.of("photos/media-1.jpg"),
+            MediaUploadedAt.of(1700000000000L)
+        )
 
         // Assert
         assertEquals(mediaId, slot.captured.first().mediaId)
@@ -55,7 +58,11 @@ class RecordMediaUploadUseCaseTest {
         coEvery { uploadScheduler.scheduleUpload(any()) } just runs
 
         // Act
-        useCase(MediaId.of("media-1"), CloudStoragePath.of("photos/media-1.jpg"), MediaUploadedAt.of(1700000000000L))
+        useCase(
+            MediaId.of("media-1"),
+            CloudStoragePath.of("photos/media-1.jpg"),
+            MediaUploadedAt.of(1700000000000L)
+        )
 
         // Assert
         assertEquals(IsDeleted.of(false), slot.captured.first().isDeleted)
@@ -69,7 +76,11 @@ class RecordMediaUploadUseCaseTest {
         coEvery { uploadScheduler.scheduleUpload(any()) } just runs
 
         // Act
-        useCase(MediaId.of("media-1"), CloudStoragePath.of("photos/media-1.jpg"), MediaUploadedAt.of(1700000000000L))
+        useCase(
+            MediaId.of("media-1"),
+            CloudStoragePath.of("photos/media-1.jpg"),
+            MediaUploadedAt.of(1700000000000L)
+        )
 
         // Assert
         assertEquals(SyncStatus.PENDING_UPLOAD, slot.captured.first().syncStatus)
@@ -98,7 +109,11 @@ class RecordMediaUploadUseCaseTest {
         coEvery { uploadScheduler.scheduleUpload(any()) } just runs
 
         // Act
-        useCase(mediaId, CloudStoragePath.of("photos/media-1.jpg"), MediaUploadedAt.of(1700000000000L))
+        useCase(
+            mediaId,
+            CloudStoragePath.of("photos/media-1.jpg"),
+            MediaUploadedAt.of(1700000000000L)
+        )
 
         // Assert
         verify { uploadScheduler.scheduleUpload(mediaId) }
