@@ -9,10 +9,12 @@ class SyncUploadRecordsUseCase @Inject constructor(
     private val localRepository: LocalUploadRecordsRepository
 ) {
     suspend operator fun invoke() {
-        // APIから最新の履歴を取得
         val remoteRecords = remoteRepository.fetchUploadRecords()
 
-        // Roomのデータを一括で上書き（Room側は @Insert(onConflict = REPLACE) にする）
-        localRepository.saveUploadRecords(remoteRecords)
+        // ローカルで保留中（PENDING_UPLOAD / PENDING_DELETE）のレコードを保護する
+        val pendingMediaIds = localRepository.getPendingRecordMediaIds()
+        val safeRecords = remoteRecords.filter { it.mediaId !in pendingMediaIds }
+
+        localRepository.saveUploadRecords(safeRecords)
     }
 }

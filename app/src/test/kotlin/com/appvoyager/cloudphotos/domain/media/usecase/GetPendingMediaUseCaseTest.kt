@@ -13,6 +13,7 @@ import com.appvoyager.cloudphotos.domain.media.valueobject.MediaId
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaUploadedAt
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaUrl
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -94,6 +95,20 @@ class GetPendingMediaUseCaseTest {
 
         // Assert
         assertEquals(emptyList<Media>(), result)
+    }
+
+    @Test
+    fun `chunks media ids when more than 900 items`() = runTest {
+        // Arrange
+        val mediaList = (1..1000).map { createMedia(it.toString()) }
+        coEvery { localMediaRepository.getMediaList() } returns mediaList
+        coEvery { localUploadRecordsRepository.getUploadRecords(any()) } returns emptyList()
+
+        // Act
+        useCase()
+
+        // Assert
+        coVerify(exactly = 2) { localUploadRecordsRepository.getUploadRecords(any()) }
     }
 
     private fun createMedia(id: String): Media = Media(

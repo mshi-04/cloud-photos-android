@@ -33,13 +33,14 @@ class SyncUploadRecordsUseCaseTest {
     }
 
     @Test
-    fun `saves remote records to local repository`() = runTest {
+    fun `saves remote records to local repository when no pending records`() = runTest {
         // Arrange
         val remoteRecords = listOf(
             createUploadRecord("1"),
             createUploadRecord("2")
         )
         coEvery { remoteRepository.fetchUploadRecords() } returns remoteRecords
+        coEvery { localRepository.getPendingRecordMediaIds() } returns emptySet()
         val slot = slot<List<UploadRecord>>()
         coEvery { localRepository.saveUploadRecords(capture(slot)) } just runs
 
@@ -54,6 +55,7 @@ class SyncUploadRecordsUseCaseTest {
     fun `saves empty list when remote returns no records`() = runTest {
         // Arrange
         coEvery { remoteRepository.fetchUploadRecords() } returns emptyList()
+        coEvery { localRepository.getPendingRecordMediaIds() } returns emptySet()
         val slot = slot<List<UploadRecord>>()
         coEvery { localRepository.saveUploadRecords(capture(slot)) } just runs
 
@@ -62,6 +64,29 @@ class SyncUploadRecordsUseCaseTest {
 
         // Assert
         assertEquals(emptyList<UploadRecord>(), slot.captured)
+    }
+
+    @Test
+    fun `excludes remote records whose mediaId is pending locally`() = runTest {
+        // Arrange
+        val remoteRecords = listOf(
+            createUploadRecord("1"),
+            createUploadRecord("2"),
+            createUploadRecord("3")
+        )
+        coEvery { remoteRepository.fetchUploadRecords() } returns remoteRecords
+        coEvery { localRepository.getPendingRecordMediaIds() } returns setOf(
+            MediaId.of("1"),
+            MediaId.of("3")
+        )
+        val slot = slot<List<UploadRecord>>()
+        coEvery { localRepository.saveUploadRecords(capture(slot)) } just runs
+
+        // Act
+        useCase()
+
+        // Assert
+        assertEquals(listOf(createUploadRecord("2")), slot.captured)
     }
 
     @Test
@@ -83,7 +108,11 @@ class SyncUploadRecordsUseCaseTest {
         coEvery { remoteRepository.fetchUploadRecords() } throws RuntimeException("network error")
 
         // Act
-        runCatching { useCase() }
+        try {
+            useCase()
+        } catch (_: RuntimeException) {
+            // expected
+        }
 
         // Assert
         coVerify(exactly = 0) { localRepository.saveUploadRecords(any()) }

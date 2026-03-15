@@ -13,6 +13,18 @@ class DeleteMediaUseCase @Inject constructor(
 ) {
 
     suspend operator fun invoke(record: UploadRecord) {
+        if (record.syncStatus == SyncStatus.PENDING_UPLOAD) {
+            localRepository.saveUploadRecords(
+                listOf(
+                    record.copy(
+                        isDeleted = IsDeleted.of(true),
+                        syncStatus = SyncStatus.PENDING_DELETE
+                    )
+                )
+            )
+            return
+        }
+
         val deleteRecord = record.copy(
             isDeleted = IsDeleted.of(true),
             syncStatus = SyncStatus.PENDING_DELETE
