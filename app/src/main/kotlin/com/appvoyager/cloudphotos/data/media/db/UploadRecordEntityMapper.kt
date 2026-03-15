@@ -14,7 +14,7 @@ internal object UploadRecordEntityMapper {
         mediaId = MediaId.of(entity.mediaId),
         cloudStoragePath = CloudStoragePath.of(entity.cloudStoragePath),
         isDeleted = IsDeleted.of(entity.isDeleted),
-        syncStatus = SyncStatus.valueOf(entity.syncStatus),
+        syncStatus = enumValues<SyncStatus>().find { it.name == entity.syncStatus } ?: SyncStatus.ERROR,
         mediaUploadedAt = MediaUploadedAt.of(entity.uploadedAt)
     )
 

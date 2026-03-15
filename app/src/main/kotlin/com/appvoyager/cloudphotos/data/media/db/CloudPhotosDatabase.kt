@@ -7,7 +7,8 @@ import com.appvoyager.cloudphotos.data.media.db.entity.UploadRecordEntity
 
 @Database(
     entities = [UploadRecordEntity::class],
-    version = 1
+    version = 1,
+    exportSchema = true
 )
 abstract class CloudPhotosDatabase : RoomDatabase() {
 
