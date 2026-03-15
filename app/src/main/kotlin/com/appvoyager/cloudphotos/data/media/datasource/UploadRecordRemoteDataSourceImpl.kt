@@ -16,8 +16,6 @@ import org.json.JSONObject
 import javax.inject.Inject
 import kotlin.coroutines.resumeWithException
 
-private const val API_NAME = "CloudPhotosAPI"
-
 class UploadRecordRemoteDataSourceImpl @Inject constructor() : UploadRecordRemoteDataSource {
 
     override suspend fun fetchUploadRecords(): List<UploadRecord> {
@@ -29,7 +27,15 @@ class UploadRecordRemoteDataSourceImpl @Inject constructor() : UploadRecordRemot
             val operation = Amplify.API.get(
                 API_NAME,
                 request,
-                { coroutine.resume(it) { _, _, _ -> } },
+                { apiResponse ->
+                    if (apiResponse.code.isSuccessful) {
+                        coroutine.resume(apiResponse) { _, _, _ -> }
+                    } else {
+                        coroutine.resumeWithException(
+                            Exception("Unexpected response code ${apiResponse.code}: ${apiResponse.data.asString()}")
+                        )
+                    }
+                },
                 { coroutine.resumeWithException(it) }
             )
             coroutine.invokeOnCancellation { operation?.cancel() }
@@ -56,7 +62,15 @@ class UploadRecordRemoteDataSourceImpl @Inject constructor() : UploadRecordRemot
             val operation = Amplify.API.post(
                 API_NAME,
                 restOptions,
-                { coroutine.resume(it) { _, _, _ -> } },
+                { apiResponse ->
+                    if (apiResponse.code.isSuccessful) {
+                        coroutine.resume(apiResponse) { _, _, _ -> }
+                    } else {
+                        coroutine.resumeWithException(
+                            Exception("Unexpected response code ${apiResponse.code}: ${apiResponse.data.asString()}")
+                        )
+                    }
+                },
                 { coroutine.resumeWithException(it) }
             )
             coroutine.invokeOnCancellation { operation?.cancel() }
@@ -80,7 +94,15 @@ class UploadRecordRemoteDataSourceImpl @Inject constructor() : UploadRecordRemot
             val operation = Amplify.API.delete(
                 API_NAME,
                 request,
-                { coroutine.resume(it) { _, _, _ -> } },
+                { apiResponse ->
+                    if (apiResponse.code.isSuccessful) {
+                        coroutine.resume(apiResponse) { _, _, _ -> }
+                    } else {
+                        coroutine.resumeWithException(
+                            Exception("Unexpected response code ${apiResponse.code}: ${apiResponse.data.asString()}")
+                        )
+                    }
+                },
                 { coroutine.resumeWithException(it) }
             )
             coroutine.invokeOnCancellation { operation?.cancel() }
@@ -97,6 +119,10 @@ class UploadRecordRemoteDataSourceImpl @Inject constructor() : UploadRecordRemot
                 { coroutine.resumeWithException(it) }
             )
         }
+    }
+
+    companion object {
+        private const val API_NAME = "CloudPhotosAPI"
     }
 
 }
