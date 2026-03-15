@@ -91,12 +91,11 @@ class UploadRecordRemoteDataSourceImpl @Inject constructor() : UploadRecordRemot
         val storagePath = StoragePath.fromString(cloudStoragePath.value)
 
         suspendCancellableCoroutine { coroutine ->
-            val operation = Amplify.Storage.remove(
+            Amplify.Storage.remove(
                 storagePath,
                 { coroutine.resume(it) { _, _, _ -> } },
                 { coroutine.resumeWithException(it) }
             )
-            coroutine.invokeOnCancellation { operation?.cancel() }
         }
     }
 
