@@ -39,7 +39,7 @@ class DeleteMediaUseCaseTest {
         val record = createUploadRecord(syncStatus = SyncStatus.SYNCED)
         val slot = slot<List<UploadRecord>>()
         coEvery { localRepository.saveUploadRecords(capture(slot)) } just runs
-        every { deleteScheduler.scheduleDelete(any()) } just runs
+        every { deleteScheduler.scheduleDelete() } just runs
 
         // Act
         useCase(record)
@@ -54,7 +54,7 @@ class DeleteMediaUseCaseTest {
         val record = createUploadRecord(syncStatus = SyncStatus.SYNCED)
         val slot = slot<List<UploadRecord>>()
         coEvery { localRepository.saveUploadRecords(capture(slot)) } just runs
-        every { deleteScheduler.scheduleDelete(any()) } just runs
+        every { deleteScheduler.scheduleDelete() } just runs
 
         // Act
         useCase(record)
@@ -68,7 +68,7 @@ class DeleteMediaUseCaseTest {
         // Arrange
         val record = createUploadRecord(syncStatus = SyncStatus.SYNCED)
         coEvery { localRepository.saveUploadRecords(any()) } just runs
-        every { deleteScheduler.scheduleDelete(any()) } just runs
+        every { deleteScheduler.scheduleDelete() } just runs
 
         // Act
         useCase(record)
@@ -78,18 +78,17 @@ class DeleteMediaUseCaseTest {
     }
 
     @Test
-    fun `scheduleDelete is called with correct mediaId for synced record`() = runTest {
+    fun `scheduleDelete is called for synced record`() = runTest {
         // Arrange
-        val mediaId = MediaId.of("media-1")
-        val record = createUploadRecord(mediaId = mediaId, syncStatus = SyncStatus.SYNCED)
+        val record = createUploadRecord(syncStatus = SyncStatus.SYNCED)
         coEvery { localRepository.saveUploadRecords(any()) } just runs
-        every { deleteScheduler.scheduleDelete(any()) } just runs
+        every { deleteScheduler.scheduleDelete() } just runs
 
         // Act
         useCase(record)
 
         // Assert
-        verify { deleteScheduler.scheduleDelete(mediaId) }
+        verify { deleteScheduler.scheduleDelete() }
     }
 
     @Test
@@ -129,7 +128,7 @@ class DeleteMediaUseCaseTest {
         useCase(record)
 
         // Assert
-        verify(exactly = 0) { deleteScheduler.scheduleDelete(any()) }
+        verify(exactly = 0) { deleteScheduler.scheduleDelete() }
     }
 
     private fun createUploadRecord(

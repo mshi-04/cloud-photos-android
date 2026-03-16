@@ -23,7 +23,7 @@ class DeleteMediaUseCase @Inject constructor(
             syncStatus = SyncStatus.PENDING_DELETE
         )
         localRepository.saveUploadRecords(listOf(deleteRecord))
-        deleteScheduler.scheduleDelete(record.mediaId)
+        deleteScheduler.scheduleDelete()
     }
 
 }

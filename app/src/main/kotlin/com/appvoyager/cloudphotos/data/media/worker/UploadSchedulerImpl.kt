@@ -7,15 +7,14 @@ import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.appvoyager.cloudphotos.domain.media.repository.UploadScheduler
-import com.appvoyager.cloudphotos.domain.media.valueobject.MediaId
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 
 class UploadSchedulerImpl @Inject constructor(
-    @ApplicationContext private val context: Context
+    @param:ApplicationContext private val context: Context
 ) : UploadScheduler {
 
-    override fun scheduleUpload(mediaId: MediaId) {
+    override fun scheduleUpload() {
         val request = OneTimeWorkRequestBuilder<UploadMediaWorker>()
             .setConstraints(
                 Constraints.Builder()

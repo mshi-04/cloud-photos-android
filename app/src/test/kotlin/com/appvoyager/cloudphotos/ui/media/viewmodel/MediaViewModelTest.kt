@@ -4,6 +4,9 @@ import com.appvoyager.cloudphotos.R
 import com.appvoyager.cloudphotos.domain.media.model.Media
 import com.appvoyager.cloudphotos.domain.media.model.MediaType
 import com.appvoyager.cloudphotos.domain.media.usecase.GetMediaListUseCase
+import com.appvoyager.cloudphotos.domain.media.usecase.ScheduleDeleteUseCase
+import com.appvoyager.cloudphotos.domain.media.usecase.ScheduleUploadUseCase
+import com.appvoyager.cloudphotos.domain.media.usecase.SyncUploadRecordsUseCase
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaCreatedAt
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaId
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaUrl
@@ -15,13 +18,17 @@ import com.appvoyager.cloudphotos.ui.media.uistate.MediaUiState
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
+import io.mockk.runs
+import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -40,6 +47,9 @@ class MediaViewModelTest {
     private lateinit var getMediaListUseCase: GetMediaListUseCase
     private lateinit var getGridColumnCountUseCase: GetGridColumnCountUseCase
     private lateinit var setGridColumnCountUseCase: SetGridColumnCountUseCase
+    private lateinit var syncUploadRecordsUseCase: SyncUploadRecordsUseCase
+    private lateinit var scheduleUploadUseCase: ScheduleUploadUseCase
+    private lateinit var scheduleDeleteUseCase: ScheduleDeleteUseCase
 
     @BeforeEach
     fun setup() {
@@ -47,6 +57,9 @@ class MediaViewModelTest {
         getMediaListUseCase = mockk()
         getGridColumnCountUseCase = mockk()
         setGridColumnCountUseCase = mockk()
+        syncUploadRecordsUseCase = mockk()
+        scheduleUploadUseCase = mockk()
+        scheduleDeleteUseCase = mockk()
     }
 
     @AfterEach
@@ -58,7 +71,10 @@ class MediaViewModelTest {
         return MediaViewModel(
             getMediaListUseCase = getMediaListUseCase,
             getGridColumnCountUseCase = getGridColumnCountUseCase,
-            setGridColumnCountUseCase = setGridColumnCountUseCase
+            setGridColumnCountUseCase = setGridColumnCountUseCase,
+            syncUploadRecordsUseCase = syncUploadRecordsUseCase,
+            scheduleUploadUseCase = scheduleUploadUseCase,
+            scheduleDeleteUseCase = scheduleDeleteUseCase
         )
     }
 
@@ -230,5 +246,115 @@ class MediaViewModelTest {
 
         // Assert
         assertFalse(viewModel.uiState.value.isSettingsDialogVisible)
+    }
+
+    @Test
+    fun `syncRemote calls syncUploadRecordsUseCase`() = runTest {
+        // Arrange
+        every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
+        coEvery { syncUploadRecordsUseCase() } returns Unit
+
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // Act
+        viewModel.syncRemote()
+        advanceUntilIdle()
+
+        // Assert
+        coVerify { syncUploadRecordsUseCase() }
+    }
+
+    @Test
+    fun `syncRemote failure does not throw`() = runTest {
+        // Arrange
+        every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
+        coEvery { syncUploadRecordsUseCase() } throws RuntimeException("sync failed")
+
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // Act & Assert (no exception thrown)
+        viewModel.syncRemote()
+        advanceUntilIdle()
+    }
+
+    @Test
+    fun `syncRemote cancels previous sync job`() = runTest {
+        // Arrange
+        every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
+        coEvery { syncUploadRecordsUseCase() } coAnswers {
+            kotlinx.coroutines.delay(1000L)
+        }
+
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // Act
+        viewModel.syncRemote()
+        advanceTimeBy(500L)
+        viewModel.syncRemote()
+        advanceUntilIdle()
+
+        // Assert: first job is cancelled mid-execution, second completes
+        coVerify(exactly = 2) { syncUploadRecordsUseCase() }
+    }
+
+    @Test
+    fun `scheduleUpload calls scheduleUploadUseCase`() = runTest {
+        // Arrange
+        every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
+        every { scheduleUploadUseCase() } just runs
+
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // Act
+        viewModel.scheduleUpload()
+
+        // Assert
+        verify { scheduleUploadUseCase() }
+    }
+
+    @Test
+    fun `scheduleUpload failure does not throw`() = runTest {
+        // Arrange
+        every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
+        every { scheduleUploadUseCase() } throws RuntimeException("enqueue failed")
+
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // Act & Assert (no exception thrown)
+        viewModel.scheduleUpload()
+    }
+
+    @Test
+    fun `scheduleDelete calls scheduleDeleteUseCase`() = runTest {
+        // Arrange
+        every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
+        every { scheduleDeleteUseCase() } just runs
+
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // Act
+        viewModel.scheduleDelete()
+
+        // Assert
+        verify { scheduleDeleteUseCase() }
+    }
+
+    @Test
+    fun `scheduleDelete failure does not throw`() = runTest {
+        // Arrange
+        every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
+        every { scheduleDeleteUseCase() } throws RuntimeException("enqueue failed")
+
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // Act & Assert (no exception thrown)
+        viewModel.scheduleDelete()
     }
 }

@@ -115,6 +115,9 @@ fun MediaScreen(
 
     LifecycleResumeEffect(Unit) {
         permissionCheckKey++
+        viewModel.syncRemote()
+        viewModel.scheduleUpload()
+        viewModel.scheduleDelete()
         onPauseOrDispose {}
     }
 

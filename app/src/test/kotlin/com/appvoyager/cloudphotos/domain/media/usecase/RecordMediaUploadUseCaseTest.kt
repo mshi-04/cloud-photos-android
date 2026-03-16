@@ -9,6 +9,7 @@ import com.appvoyager.cloudphotos.domain.media.valueobject.IsDeleted
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaId
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaUploadedAt
 import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
@@ -37,7 +38,7 @@ class RecordMediaUploadUseCaseTest {
         val mediaId = MediaId.of("media-1")
         val slot = slot<List<UploadRecord>>()
         coEvery { localRepository.saveUploadRecords(capture(slot)) } just runs
-        coEvery { uploadScheduler.scheduleUpload(any()) } just runs
+        every { uploadScheduler.scheduleUpload() } just runs
 
         // Act
         useCase(
@@ -55,7 +56,7 @@ class RecordMediaUploadUseCaseTest {
         // Arrange
         val slot = slot<List<UploadRecord>>()
         coEvery { localRepository.saveUploadRecords(capture(slot)) } just runs
-        coEvery { uploadScheduler.scheduleUpload(any()) } just runs
+        every { uploadScheduler.scheduleUpload() } just runs
 
         // Act
         useCase(
@@ -73,7 +74,7 @@ class RecordMediaUploadUseCaseTest {
         // Arrange
         val slot = slot<List<UploadRecord>>()
         coEvery { localRepository.saveUploadRecords(capture(slot)) } just runs
-        coEvery { uploadScheduler.scheduleUpload(any()) } just runs
+        every { uploadScheduler.scheduleUpload() } just runs
 
         // Act
         useCase(
@@ -92,7 +93,7 @@ class RecordMediaUploadUseCaseTest {
         val uploadedAt = MediaUploadedAt.of(1700000000000L)
         val slot = slot<List<UploadRecord>>()
         coEvery { localRepository.saveUploadRecords(capture(slot)) } just runs
-        coEvery { uploadScheduler.scheduleUpload(any()) } just runs
+        every { uploadScheduler.scheduleUpload() } just runs
 
         // Act
         useCase(MediaId.of("media-1"), CloudStoragePath.of("photos/media-1.jpg"), uploadedAt)
@@ -102,20 +103,19 @@ class RecordMediaUploadUseCaseTest {
     }
 
     @Test
-    fun `scheduleUpload is called with the correct mediaId`() = runTest {
+    fun `scheduleUpload is called after saving record`() = runTest {
         // Arrange
-        val mediaId = MediaId.of("media-1")
         coEvery { localRepository.saveUploadRecords(any()) } just runs
-        coEvery { uploadScheduler.scheduleUpload(any()) } just runs
+        every { uploadScheduler.scheduleUpload() } just runs
 
         // Act
         useCase(
-            mediaId,
+            MediaId.of("media-1"),
             CloudStoragePath.of("photos/media-1.jpg"),
             MediaUploadedAt.of(1700000000000L)
         )
 
         // Assert
-        verify { uploadScheduler.scheduleUpload(mediaId) }
+        verify { uploadScheduler.scheduleUpload() }
     }
 }

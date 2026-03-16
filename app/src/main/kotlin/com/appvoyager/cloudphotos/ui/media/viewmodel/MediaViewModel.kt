@@ -4,6 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.appvoyager.cloudphotos.R
 import com.appvoyager.cloudphotos.domain.media.usecase.GetMediaListUseCase
+import com.appvoyager.cloudphotos.domain.media.usecase.ScheduleDeleteUseCase
+import com.appvoyager.cloudphotos.domain.media.usecase.ScheduleUploadUseCase
+import com.appvoyager.cloudphotos.domain.media.usecase.SyncUploadRecordsUseCase
 import com.appvoyager.cloudphotos.domain.settings.usecase.GetGridColumnCountUseCase
 import com.appvoyager.cloudphotos.domain.settings.usecase.SetGridColumnCountUseCase
 import com.appvoyager.cloudphotos.domain.settings.valueobject.GridColumnCount
@@ -27,7 +30,10 @@ import kotlin.coroutines.cancellation.CancellationException
 class MediaViewModel @Inject constructor(
     private val getMediaListUseCase: GetMediaListUseCase,
     private val getGridColumnCountUseCase: GetGridColumnCountUseCase,
-    private val setGridColumnCountUseCase: SetGridColumnCountUseCase
+    private val setGridColumnCountUseCase: SetGridColumnCountUseCase,
+    private val syncUploadRecordsUseCase: SyncUploadRecordsUseCase,
+    private val scheduleUploadUseCase: ScheduleUploadUseCase,
+    private val scheduleDeleteUseCase: ScheduleDeleteUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MediaUiState())
@@ -37,6 +43,7 @@ class MediaViewModel @Inject constructor(
     val effect: Flow<MediaEffect> = _effect.receiveAsFlow()
 
     private var mediaListJob: Job? = null
+    private var syncJob: Job? = null
 
     init {
         viewModelScope.launch {
@@ -51,13 +58,11 @@ class MediaViewModel @Inject constructor(
         }
     }
 
-    fun onShowSettingsDialog() {
+    fun onShowSettingsDialog() =
         _uiState.update { it.copy(isSettingsDialogVisible = true) }
-    }
 
-    fun onDismissSettingsDialog() {
+    fun onDismissSettingsDialog() =
         _uiState.update { it.copy(isSettingsDialogVisible = false) }
-    }
 
     fun onGridColumnCountChanged(count: Int) {
         viewModelScope.launch {
@@ -71,9 +76,8 @@ class MediaViewModel @Inject constructor(
         }
     }
 
-    fun onPermissionDenied() {
+    fun onPermissionDenied() =
         _uiState.update { it.copy(loadState = MediaUiState.LoadState.PermissionRequired) }
-    }
 
     fun loadMediaList() {
         mediaListJob?.cancel()
@@ -94,6 +98,22 @@ class MediaViewModel @Inject constructor(
                     }
                 }
         }
+    }
+
+    fun syncRemote() {
+        syncJob?.cancel()
+        syncJob = viewModelScope.launch {
+            runCatching { syncUploadRecordsUseCase() }
+                .onFailure { if (it is CancellationException) throw it }
+        }
+    }
+
+    fun scheduleUpload() {
+        runCatching { scheduleUploadUseCase() }
+    }
+
+    fun scheduleDelete() {
+        runCatching { scheduleDeleteUseCase() }
     }
 
 }

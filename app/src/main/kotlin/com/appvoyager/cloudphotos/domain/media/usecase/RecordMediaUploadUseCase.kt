@@ -29,7 +29,7 @@ class RecordMediaUploadUseCase @Inject constructor(
         )
 
         localRepository.saveUploadRecords(listOf(uploadRecord))
-        uploadScheduler.scheduleUpload(mediaId)
+        uploadScheduler.scheduleUpload()
     }
 
 }
