@@ -21,6 +21,7 @@ import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -273,17 +274,49 @@ class MediaViewModelTest {
         val viewModel = createViewModel()
         advanceUntilIdle()
 
-        // Act & Assert (no exception thrown)
+        // Act
+        var exceptionThrown = false
+        try {
+            viewModel.syncRemote()
+            advanceUntilIdle()
+        } catch (_: Throwable) {
+            exceptionThrown = true
+        }
+
+        // Assert
+        assertFalse(exceptionThrown)
+    }
+
+    @Test
+    fun `syncRemote failure emits snackbar effect`() = runTest {
+        // Arrange
+        every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
+        coEvery { syncUploadRecordsUseCase() } throws RuntimeException("sync failed")
+
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // Act
         viewModel.syncRemote()
         advanceUntilIdle()
+
+        // Assert
+        val effect = viewModel.effect.first()
+        assertEquals(MediaEffect.ShowSnackbar(R.string.error_unknown), effect)
     }
 
     @Test
     fun `syncRemote cancels previous sync job`() = runTest {
         // Arrange
         every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
+        var firstWasCancelled = false
         coEvery { syncUploadRecordsUseCase() } coAnswers {
-            kotlinx.coroutines.delay(1000L)
+            try {
+                kotlinx.coroutines.delay(1000L)
+            } catch (e: CancellationException) {
+                firstWasCancelled = true
+                throw e
+            }
         }
 
         val viewModel = createViewModel()
@@ -296,6 +329,7 @@ class MediaViewModelTest {
         advanceUntilIdle()
 
         // Assert: first job is cancelled mid-execution, second completes
+        assertTrue(firstWasCancelled)
         coVerify(exactly = 2) { syncUploadRecordsUseCase() }
     }
 

@@ -114,26 +114,24 @@ class MediaViewModel @Inject constructor(
         syncJob?.cancel()
         syncJob = viewModelScope.launch {
             runCatching { syncUploadRecordsUseCase() }
-                .onFailure { if (it is CancellationException) throw it }
+                .onFailure {
+                    if (it is CancellationException) throw it
+                    _effect.send(MediaEffect.ShowSnackbar(R.string.error_unknown))
+                }
         }
     }
 
     fun scheduleUpload() = viewModelScope.launch {
         runCatching { scheduleUploadUseCase() }
-            .onFailure { throwable ->
-                if (throwable is CancellationException) throw throwable
-            }
+            .onFailure { if (it is CancellationException) throw it }
     }
 
     fun scheduleDelete() = viewModelScope.launch {
         runCatching { scheduleDeleteUseCase() }
-            .onFailure { throwable ->
-                if (throwable is CancellationException) throw throwable
-            }
+            .onFailure { if (it is CancellationException) throw it }
     }
 
     companion object {
-        private const val TAG = "MediaViewModel"
         private const val MIN_RESUME_INTERVAL_MS = 3_000L
     }
 
