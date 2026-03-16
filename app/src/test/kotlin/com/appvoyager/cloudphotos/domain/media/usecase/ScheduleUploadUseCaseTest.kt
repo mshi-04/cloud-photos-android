@@ -6,6 +6,7 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.verify
+import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
 
 class ScheduleUploadUseCaseTest {
@@ -14,7 +15,7 @@ class ScheduleUploadUseCaseTest {
     private val useCase = ScheduleUploadUseCase(uploadScheduler)
 
     @Test
-    fun `invoke calls uploadScheduler scheduleUpload`() {
+    fun `invoke calls uploadScheduler scheduleUpload`() = runTest {
         // Arrange
         every { uploadScheduler.scheduleUpload() } just runs
 

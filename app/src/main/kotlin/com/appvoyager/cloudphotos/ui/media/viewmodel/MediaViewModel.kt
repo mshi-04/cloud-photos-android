@@ -44,6 +44,7 @@ class MediaViewModel @Inject constructor(
 
     private var mediaListJob: Job? = null
     private var syncJob: Job? = null
+    private var lastResumeTimeMs = 0L
 
     init {
         viewModelScope.launch {
@@ -100,6 +101,15 @@ class MediaViewModel @Inject constructor(
         }
     }
 
+    fun onResume() {
+        val now = System.currentTimeMillis()
+        if (now - lastResumeTimeMs < MIN_RESUME_INTERVAL_MS) return
+        lastResumeTimeMs = now
+        syncRemote()
+        scheduleUpload()
+        scheduleDelete()
+    }
+
     fun syncRemote() {
         syncJob?.cancel()
         syncJob = viewModelScope.launch {
@@ -108,12 +118,23 @@ class MediaViewModel @Inject constructor(
         }
     }
 
-    fun scheduleUpload() {
+    fun scheduleUpload() = viewModelScope.launch {
         runCatching { scheduleUploadUseCase() }
+            .onFailure { throwable ->
+                if (throwable is CancellationException) throw throwable
+            }
     }
 
-    fun scheduleDelete() {
+    fun scheduleDelete() = viewModelScope.launch {
         runCatching { scheduleDeleteUseCase() }
+            .onFailure { throwable ->
+                if (throwable is CancellationException) throw throwable
+            }
+    }
+
+    companion object {
+        private const val TAG = "MediaViewModel"
+        private const val MIN_RESUME_INTERVAL_MS = 3_000L
     }
 
 }

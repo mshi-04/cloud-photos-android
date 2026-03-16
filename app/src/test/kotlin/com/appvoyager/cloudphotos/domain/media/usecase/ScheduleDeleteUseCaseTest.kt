@@ -6,6 +6,7 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.verify
+import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
 
 class ScheduleDeleteUseCaseTest {
@@ -14,7 +15,7 @@ class ScheduleDeleteUseCaseTest {
     private val useCase = ScheduleDeleteUseCase(deleteScheduler)
 
     @Test
-    fun `invoke calls deleteScheduler scheduleDelete`() {
+    fun `invoke calls deleteScheduler scheduleDelete`() = runTest {
         // Arrange
         every { deleteScheduler.scheduleDelete() } just runs
 

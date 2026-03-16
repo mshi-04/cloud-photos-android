@@ -21,7 +21,6 @@ import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
-import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -304,57 +303,83 @@ class MediaViewModelTest {
     fun `scheduleUpload calls scheduleUploadUseCase`() = runTest {
         // Arrange
         every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
-        every { scheduleUploadUseCase() } just runs
+        coEvery { scheduleUploadUseCase() } just runs
 
         val viewModel = createViewModel()
         advanceUntilIdle()
 
         // Act
         viewModel.scheduleUpload()
+        advanceUntilIdle()
 
         // Assert
-        verify { scheduleUploadUseCase() }
+        coVerify { scheduleUploadUseCase() }
     }
 
     @Test
     fun `scheduleUpload failure does not throw`() = runTest {
         // Arrange
         every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
-        every { scheduleUploadUseCase() } throws RuntimeException("enqueue failed")
+        coEvery { scheduleUploadUseCase() } throws RuntimeException("enqueue failed")
 
         val viewModel = createViewModel()
         advanceUntilIdle()
 
         // Act & Assert (no exception thrown)
         viewModel.scheduleUpload()
+        advanceUntilIdle()
     }
 
     @Test
     fun `scheduleDelete calls scheduleDeleteUseCase`() = runTest {
         // Arrange
         every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
-        every { scheduleDeleteUseCase() } just runs
+        coEvery { scheduleDeleteUseCase() } just runs
 
         val viewModel = createViewModel()
         advanceUntilIdle()
 
         // Act
         viewModel.scheduleDelete()
+        advanceUntilIdle()
 
         // Assert
-        verify { scheduleDeleteUseCase() }
+        coVerify { scheduleDeleteUseCase() }
     }
 
     @Test
     fun `scheduleDelete failure does not throw`() = runTest {
         // Arrange
         every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
-        every { scheduleDeleteUseCase() } throws RuntimeException("enqueue failed")
+        coEvery { scheduleDeleteUseCase() } throws RuntimeException("enqueue failed")
 
         val viewModel = createViewModel()
         advanceUntilIdle()
 
         // Act & Assert (no exception thrown)
         viewModel.scheduleDelete()
+        advanceUntilIdle()
     }
+
+    @Test
+    fun `onResume calls syncRemote scheduleUpload and scheduleDelete`() = runTest {
+        // Arrange
+        every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
+        coEvery { syncUploadRecordsUseCase() } returns Unit
+        coEvery { scheduleUploadUseCase() } just runs
+        coEvery { scheduleDeleteUseCase() } just runs
+
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // Act
+        viewModel.onResume()
+        advanceUntilIdle()
+
+        // Assert
+        coVerify { syncUploadRecordsUseCase() }
+        coVerify { scheduleUploadUseCase() }
+        coVerify { scheduleDeleteUseCase() }
+    }
+
 }
