@@ -45,7 +45,10 @@ class DeleteMediaWorker @AssistedInject constructor(
 
     private fun isPermanentFailure(e: Throwable): Boolean {
         val message = e.message ?: return false
-        return message.contains("Unexpected response code 4")
+        val code = Regex("Unexpected response code (\\d+)").find(message)
+            ?.groupValues?.get(1)?.toIntOrNull() ?: return false
+        if (code == 404 || code == 429) return false
+        return code in 400..499
     }
 
     companion object {

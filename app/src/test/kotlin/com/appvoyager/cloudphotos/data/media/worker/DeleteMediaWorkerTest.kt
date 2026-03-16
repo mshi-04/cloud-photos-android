@@ -13,17 +13,26 @@ import com.appvoyager.cloudphotos.domain.media.valueobject.MediaId
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaUploadedAt
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.coVerifySequence
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.slot
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class DeleteMediaWorkerTest {
 
+    private val testDispatcher = StandardTestDispatcher()
     private val context = mockk<Context>(relaxed = true)
     private val workerParams = mockk<WorkerParameters>(relaxed = true)
     private val localRepository = mockk<LocalUploadRecordsRepository>()
@@ -33,7 +42,13 @@ class DeleteMediaWorkerTest {
 
     @BeforeEach
     fun setUp() {
+        Dispatchers.setMain(testDispatcher)
         worker = DeleteMediaWorker(context, workerParams, localRepository, remoteRepository)
+    }
+
+    @AfterEach
+    fun tearDown() {
+        Dispatchers.resetMain()
     }
 
     @Test
@@ -61,9 +76,11 @@ class DeleteMediaWorkerTest {
         worker.doWork()
 
         // Assert
-        coVerify(exactly = 1) { remoteRepository.deleteStorageFile(record.cloudStoragePath) }
-        coVerify(exactly = 1) { remoteRepository.deleteUploadRecord(record.mediaId) }
-        coVerify(exactly = 1) { localRepository.deleteUploadRecord(record.mediaId) }
+        coVerifySequence {
+            remoteRepository.deleteStorageFile(record.cloudStoragePath)
+            remoteRepository.deleteUploadRecord(record.mediaId)
+            localRepository.deleteUploadRecord(record.mediaId)
+        }
     }
 
     @Test

@@ -28,6 +28,9 @@ class UploadMediaWorker @AssistedInject constructor(
         var hasTemporaryFailure = false
 
         for (record in pendingRecords) {
+            val current = localRepository.getUploadRecords(listOf(record.mediaId)).firstOrNull()
+            if (current == null || current.syncStatus != SyncStatus.PENDING_UPLOAD) continue
+
             val rawContentType = contentTypeResolver.resolve(record.mediaId)
             if (rawContentType == null) {
                 localRepository.saveUploadRecords(
@@ -36,11 +39,17 @@ class UploadMediaWorker @AssistedInject constructor(
                 continue
             }
 
-            val contentType = ContentType.of(rawContentType)
+            val contentType = runCatching { ContentType.of(rawContentType) }.getOrNull()
+            if (contentType == null) {
+                localRepository.saveUploadRecords(
+                    listOf(record.copy(syncStatus = SyncStatus.ERROR))
+                )
+                continue
+            }
             val mediaType = MediaType.fromContentType(rawContentType)
 
             runCatching {
-                remoteRepository.createUploadRecord(
+                val created = remoteRepository.createUploadRecord(
                     CreateUploadRecordRequest(
                         mediaId = record.mediaId,
                         cloudStoragePath = record.cloudStoragePath,
@@ -48,7 +57,6 @@ class UploadMediaWorker @AssistedInject constructor(
                         mediaType = mediaType
                     )
                 )
-            }.onSuccess { created ->
                 localRepository.saveUploadRecords(listOf(created))
             }.onFailure { e ->
                 if (e is CancellationException) throw e
@@ -67,7 +75,10 @@ class UploadMediaWorker @AssistedInject constructor(
 
     private fun isPermanentFailure(e: Throwable): Boolean {
         val message = e.message ?: return false
-        return message.contains("Unexpected response code 4")
+        val code = Regex("Unexpected response code (\\d+)").find(message)
+            ?.groupValues?.get(1)?.toIntOrNull() ?: return false
+        if (code == 404 || code == 429) return false
+        return code in 400..499
     }
 
     companion object {

@@ -20,13 +20,21 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.slot
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class UploadMediaWorkerTest {
 
+    private val testDispatcher = StandardTestDispatcher()
     private val context = mockk<Context>(relaxed = true)
     private val workerParams = mockk<WorkerParameters>(relaxed = true)
     private val localRepository = mockk<LocalUploadRecordsRepository>()
@@ -37,6 +45,7 @@ class UploadMediaWorkerTest {
 
     @BeforeEach
     fun setUp() {
+        Dispatchers.setMain(testDispatcher)
         worker = UploadMediaWorker(
             context,
             workerParams,
@@ -44,6 +53,11 @@ class UploadMediaWorkerTest {
             remoteRepository,
             contentTypeResolver
         )
+    }
+
+    @AfterEach
+    fun tearDown() {
+        Dispatchers.resetMain()
     }
 
     @Test
@@ -64,6 +78,7 @@ class UploadMediaWorkerTest {
         val record = createUploadRecord()
         val createdRecord = record.copy(syncStatus = SyncStatus.SYNCED)
         coEvery { localRepository.getPendingUploadRecords() } returns listOf(record)
+        coEvery { localRepository.getUploadRecords(any()) } returns listOf(record)
         every { contentTypeResolver.resolve(any()) } returns "image/jpeg"
         coEvery { remoteRepository.createUploadRecord(any()) } returns createdRecord
         val slot = slot<List<UploadRecord>>()
@@ -81,6 +96,7 @@ class UploadMediaWorkerTest {
         // Arrange
         val record = createUploadRecord()
         coEvery { localRepository.getPendingUploadRecords() } returns listOf(record)
+        coEvery { localRepository.getUploadRecords(any()) } returns listOf(record)
         every { contentTypeResolver.resolve(any()) } returns null
         val slot = slot<List<UploadRecord>>()
         coEvery { localRepository.saveUploadRecords(capture(slot)) } just runs
@@ -97,6 +113,7 @@ class UploadMediaWorkerTest {
         // Arrange
         val record = createUploadRecord()
         coEvery { localRepository.getPendingUploadRecords() } returns listOf(record)
+        coEvery { localRepository.getUploadRecords(any()) } returns listOf(record)
         every { contentTypeResolver.resolve(any()) } returns "image/jpeg"
         coEvery { remoteRepository.createUploadRecord(any()) } throws
             Exception("Unexpected response code 400: Bad Request")
@@ -115,6 +132,7 @@ class UploadMediaWorkerTest {
         // Arrange
         val record = createUploadRecord()
         coEvery { localRepository.getPendingUploadRecords() } returns listOf(record)
+        coEvery { localRepository.getUploadRecords(any()) } returns listOf(record)
         every { contentTypeResolver.resolve(any()) } returns "image/jpeg"
         coEvery { remoteRepository.createUploadRecord(any()) } throws Exception("Network timeout")
 
@@ -131,6 +149,7 @@ class UploadMediaWorkerTest {
         val record = createUploadRecord()
         val createdRecord = record.copy(syncStatus = SyncStatus.SYNCED)
         coEvery { localRepository.getPendingUploadRecords() } returns listOf(record)
+        coEvery { localRepository.getUploadRecords(any()) } returns listOf(record)
         every { contentTypeResolver.resolve(any()) } returns "image/jpeg"
         val slot = slot<CreateUploadRecordRequest>()
         coEvery { remoteRepository.createUploadRecord(capture(slot)) } returns createdRecord
@@ -149,6 +168,7 @@ class UploadMediaWorkerTest {
         val record = createUploadRecord()
         val createdRecord = record.copy(syncStatus = SyncStatus.SYNCED)
         coEvery { localRepository.getPendingUploadRecords() } returns listOf(record)
+        coEvery { localRepository.getUploadRecords(any()) } returns listOf(record)
         every { contentTypeResolver.resolve(any()) } returns "video/mp4"
         val slot = slot<CreateUploadRecordRequest>()
         coEvery { remoteRepository.createUploadRecord(capture(slot)) } returns createdRecord
@@ -167,6 +187,7 @@ class UploadMediaWorkerTest {
         val record1 = createUploadRecord("external_primary_1")
         val record2 = createUploadRecord("external_primary_2")
         coEvery { localRepository.getPendingUploadRecords() } returns listOf(record1, record2)
+        coEvery { localRepository.getUploadRecords(any()) } returns listOf(record1)
         every { contentTypeResolver.resolve(any()) } returns "image/jpeg"
         coEvery { remoteRepository.createUploadRecord(any()) } throws
             Exception("Unexpected response code 400: Bad Request")
@@ -184,6 +205,7 @@ class UploadMediaWorkerTest {
         // Arrange
         val record = createUploadRecord()
         coEvery { localRepository.getPendingUploadRecords() } returns listOf(record)
+        coEvery { localRepository.getUploadRecords(any()) } returns listOf(record)
         every { contentTypeResolver.resolve(any()) } returns "image/jpeg"
         coEvery { remoteRepository.createUploadRecord(any()) } throws
             Exception("Unexpected response code 401: Unauthorized")
