@@ -2,6 +2,7 @@ package com.appvoyager.cloudphotos.data.media.datasource
 
 import com.appvoyager.cloudphotos.data.media.db.UploadRecordEntityMapper
 import com.appvoyager.cloudphotos.data.media.db.dao.UploadRecordDao
+import com.appvoyager.cloudphotos.domain.media.model.SyncStatus
 import com.appvoyager.cloudphotos.domain.media.model.UploadRecord
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaId
 import javax.inject.Inject
@@ -19,7 +20,18 @@ class UploadRecordLocalDataSourceImpl @Inject constructor(
             .map { MediaId.of(it) }
             .toSet()
 
+    override suspend fun getPendingUploadRecords(): List<UploadRecord> =
+        dao.getByStatus(SyncStatus.PENDING_UPLOAD.name)
+            .map(UploadRecordEntityMapper::toDomain)
+
+    override suspend fun getPendingDeleteRecords(): List<UploadRecord> =
+        dao.getByStatus(SyncStatus.PENDING_DELETE.name)
+            .map(UploadRecordEntityMapper::toDomain)
+
     override suspend fun saveUploadRecords(records: List<UploadRecord>) =
         dao.upsertAll(records.map(UploadRecordEntityMapper::toEntity))
+
+    override suspend fun deleteUploadRecord(mediaId: MediaId) =
+        dao.deleteByMediaId(mediaId.value)
 
 }

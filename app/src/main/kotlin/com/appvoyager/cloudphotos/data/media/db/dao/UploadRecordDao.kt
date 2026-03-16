@@ -22,6 +22,12 @@ interface UploadRecordDao {
     @Query("SELECT mediaId FROM upload_records WHERE syncStatus IN ('PENDING_UPLOAD', 'PENDING_DELETE')")
     suspend fun getPendingMediaIds(): List<String>
 
+    @Query("SELECT * FROM upload_records WHERE syncStatus = :status")
+    suspend fun getByStatus(status: String): List<UploadRecordEntity>
+
+    @Query("DELETE FROM upload_records WHERE mediaId = :mediaId")
+    suspend fun deleteByMediaId(mediaId: String)
+
     @Upsert
     suspend fun upsertAll(records: List<UploadRecordEntity>)
 

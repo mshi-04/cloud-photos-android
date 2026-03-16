@@ -9,6 +9,12 @@ interface LocalUploadRecordsRepository {
 
     suspend fun getPendingRecordMediaIds(): Set<MediaId>
 
+    suspend fun getPendingUploadRecords(): List<UploadRecord>
+
+    suspend fun getPendingDeleteRecords(): List<UploadRecord>
+
     suspend fun saveUploadRecords(records: List<UploadRecord>)
+
+    suspend fun deleteUploadRecord(mediaId: MediaId)
 
 }

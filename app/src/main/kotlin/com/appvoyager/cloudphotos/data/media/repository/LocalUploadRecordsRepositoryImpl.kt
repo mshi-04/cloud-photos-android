@@ -16,7 +16,16 @@ class LocalUploadRecordsRepositoryImpl @Inject constructor(
     override suspend fun getPendingRecordMediaIds(): Set<MediaId> =
         localDataSource.getPendingRecordMediaIds()
 
+    override suspend fun getPendingUploadRecords(): List<UploadRecord> =
+        localDataSource.getPendingUploadRecords()
+
+    override suspend fun getPendingDeleteRecords(): List<UploadRecord> =
+        localDataSource.getPendingDeleteRecords()
+
     override suspend fun saveUploadRecords(records: List<UploadRecord>) =
         localDataSource.saveUploadRecords(records)
+
+    override suspend fun deleteUploadRecord(mediaId: MediaId) =
+        localDataSource.deleteUploadRecord(mediaId)
 
 }

@@ -2,6 +2,7 @@ package com.appvoyager.cloudphotos.domain.media.usecase
 
 import com.appvoyager.cloudphotos.domain.media.model.SyncStatus
 import com.appvoyager.cloudphotos.domain.media.model.UploadRecord
+import com.appvoyager.cloudphotos.domain.media.repository.DeleteScheduler
 import com.appvoyager.cloudphotos.domain.media.repository.LocalUploadRecordsRepository
 import com.appvoyager.cloudphotos.domain.media.valueobject.CloudStoragePath
 import com.appvoyager.cloudphotos.domain.media.valueobject.IsDeleted
@@ -13,6 +14,7 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.slot
+import io.mockk.verify
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
@@ -21,20 +23,22 @@ import org.junit.jupiter.api.Test
 class DeleteMediaUseCaseTest {
 
     private val localRepository = mockk<LocalUploadRecordsRepository>()
+    private val deleteScheduler = mockk<DeleteScheduler>()
 
     private lateinit var useCase: DeleteMediaUseCase
 
     @BeforeEach
     fun setUp() {
-        useCase = DeleteMediaUseCase(localRepository)
+        useCase = DeleteMediaUseCase(localRepository, deleteScheduler)
     }
 
     @Test
-    fun `saved record has isDeleted set to true`() = runTest {
+    fun `saved record has isDeleted set to true for SYNCED record`() = runTest {
         // Arrange
-        val record = createUploadRecord()
+        val record = createUploadRecord(syncStatus = SyncStatus.SYNCED)
         val slot = slot<List<UploadRecord>>()
         coEvery { localRepository.saveUploadRecords(capture(slot)) } just runs
+        coEvery { deleteScheduler.scheduleDelete(any()) } just runs
 
         // Act
         useCase(record)
@@ -44,11 +48,12 @@ class DeleteMediaUseCaseTest {
     }
 
     @Test
-    fun `saved record has syncStatus set to PENDING_DELETE`() = runTest {
+    fun `saved record has syncStatus set to PENDING_DELETE for SYNCED record`() = runTest {
         // Arrange
-        val record = createUploadRecord()
+        val record = createUploadRecord(syncStatus = SyncStatus.SYNCED)
         val slot = slot<List<UploadRecord>>()
         coEvery { localRepository.saveUploadRecords(capture(slot)) } just runs
+        coEvery { deleteScheduler.scheduleDelete(any()) } just runs
 
         // Act
         useCase(record)
@@ -58,10 +63,11 @@ class DeleteMediaUseCaseTest {
     }
 
     @Test
-    fun `saveUploadRecords is called once`() = runTest {
+    fun `saveUploadRecords is called once for SYNCED record`() = runTest {
         // Arrange
-        val record = createUploadRecord()
+        val record = createUploadRecord(syncStatus = SyncStatus.SYNCED)
         coEvery { localRepository.saveUploadRecords(any()) } just runs
+        coEvery { deleteScheduler.scheduleDelete(any()) } just runs
 
         // Act
         useCase(record)
@@ -70,13 +76,69 @@ class DeleteMediaUseCaseTest {
         coVerify(exactly = 1) { localRepository.saveUploadRecords(any()) }
     }
 
+    @Test
+    fun `scheduleDelete is called with correct mediaId for SYNCED record`() = runTest {
+        // Arrange
+        val mediaId = MediaId.of("media-1")
+        val record = createUploadRecord(mediaId = mediaId, syncStatus = SyncStatus.SYNCED)
+        coEvery { localRepository.saveUploadRecords(any()) } just runs
+        coEvery { deleteScheduler.scheduleDelete(any()) } just runs
+
+        // Act
+        useCase(record)
+
+        // Assert
+        verify { deleteScheduler.scheduleDelete(mediaId) }
+    }
+
+    @Test
+    fun `PENDING_UPLOAD record is physically deleted from Room`() = runTest {
+        // Arrange
+        val mediaId = MediaId.of("media-1")
+        val record = createUploadRecord(mediaId = mediaId, syncStatus = SyncStatus.PENDING_UPLOAD)
+        coEvery { localRepository.deleteUploadRecord(any()) } just runs
+
+        // Act
+        useCase(record)
+
+        // Assert
+        coVerify(exactly = 1) { localRepository.deleteUploadRecord(mediaId) }
+    }
+
+    @Test
+    fun `saveUploadRecords is not called for PENDING_UPLOAD record`() = runTest {
+        // Arrange
+        val record = createUploadRecord(syncStatus = SyncStatus.PENDING_UPLOAD)
+        coEvery { localRepository.deleteUploadRecord(any()) } just runs
+
+        // Act
+        useCase(record)
+
+        // Assert
+        coVerify(exactly = 0) { localRepository.saveUploadRecords(any()) }
+    }
+
+    @Test
+    fun `scheduleDelete is not called for PENDING_UPLOAD record`() = runTest {
+        // Arrange
+        val record = createUploadRecord(syncStatus = SyncStatus.PENDING_UPLOAD)
+        coEvery { localRepository.deleteUploadRecord(any()) } just runs
+
+        // Act
+        useCase(record)
+
+        // Assert
+        coVerify(exactly = 0) { deleteScheduler.scheduleDelete(any()) }
+    }
+
     private fun createUploadRecord(
-        mediaId: MediaId = MediaId.of("media-1")
+        mediaId: MediaId = MediaId.of("media-1"),
+        syncStatus: SyncStatus = SyncStatus.SYNCED
     ): UploadRecord = UploadRecord(
         mediaId = mediaId,
         cloudStoragePath = CloudStoragePath.of("photos/media-1.jpg"),
         isDeleted = IsDeleted.of(false),
-        syncStatus = SyncStatus.SYNCED,
+        syncStatus = syncStatus,
         mediaUploadedAt = MediaUploadedAt.of(1700000000000L)
     )
 }
