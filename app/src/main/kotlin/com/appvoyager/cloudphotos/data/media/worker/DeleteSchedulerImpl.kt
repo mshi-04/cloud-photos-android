@@ -26,7 +26,7 @@ class DeleteSchedulerImpl @Inject constructor(
         WorkManager.getInstance(context)
             .enqueueUniqueWork(
                 DeleteMediaWorker.WORK_NAME,
-                ExistingWorkPolicy.REPLACE,
+                ExistingWorkPolicy.KEEP,
                 request
             )
     }

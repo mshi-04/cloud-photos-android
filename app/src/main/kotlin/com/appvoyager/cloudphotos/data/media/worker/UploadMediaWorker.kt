@@ -46,7 +46,7 @@ class UploadMediaWorker @AssistedInject constructor(
                 )
                 continue
             }
-            val mediaType = MediaType.fromContentType(rawContentType)
+            val mediaType = MediaType.fromContentType(contentType.value)
 
             runCatching {
                 val created = remoteRepository.createUploadRecord(

@@ -26,7 +26,7 @@ class UploadSchedulerImpl @Inject constructor(
         WorkManager.getInstance(context)
             .enqueueUniqueWork(
                 UploadMediaWorker.WORK_NAME,
-                ExistingWorkPolicy.REPLACE,
+                ExistingWorkPolicy.KEEP,
                 request
             )
     }
