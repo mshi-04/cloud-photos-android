@@ -99,12 +99,24 @@ dependencies {
     implementation(libs.amplify.core)
     implementation(libs.amplify.auth.cognito)
     implementation(libs.amplify.storage.s3)
+    implementation(libs.amplify.api)
 
     // Image Loading
     implementation(libs.coil.compose)
 
     // DataStore
     implementation(libs.androidx.datastore.preferences)
+
+    // Room
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
+    testImplementation(libs.androidx.room.testing)
+
+    // WorkManager
+    implementation(libs.androidx.work.runtime.ktx)
+    implementation(libs.androidx.hilt.work)
+    ksp(libs.androidx.hilt.compiler)
 
     // Desugaring
     coreLibraryDesugaring(libs.desugar.jdk.libs)

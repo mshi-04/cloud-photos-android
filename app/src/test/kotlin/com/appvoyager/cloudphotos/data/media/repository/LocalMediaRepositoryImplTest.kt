@@ -27,21 +27,24 @@ class LocalMediaRepositoryImplTest {
     }
 
     @Test
-    fun `getMediaList returns flow emitting media list from data source`() = runTest {
+    fun `getMediaListFlow returns flow emitting media list from data source`() = runTest {
         // Arrange
-        val expectedMediaList = listOf(
-            Media(
-                id = MediaId.of("1"),
-                url = MediaUrl.of("http://example.com/1.jpg"),
-                type = MediaType.IMAGE,
-                thumbnailUrl = null,
-                createdAt = MediaCreatedAt.of(1600000000000L)
-            )
-        )
         coEvery { mockDataSource.getLocalMediaList() } returns expectedMediaList
 
         // Act
-        val result = repository.getMediaList().first()
+        val result = repository.getMediaListFlow().first()
+
+        // Assert
+        assertEquals(expectedMediaList, result)
+    }
+
+    @Test
+    fun `getMediaList returns media list from data source`() = runTest {
+        // Arrange
+        coEvery { mockDataSource.getLocalMediaList() } returns expectedMediaList
+
+        // Act
+        val result = repository.getMediaList()
 
         // Assert
         assertEquals(expectedMediaList, result)
@@ -50,13 +53,33 @@ class LocalMediaRepositoryImplTest {
     @Test
     fun `getMediaList propagates exception from data source`() = runTest {
         // Arrange
-        val expected = RuntimeException("data source failure")
-        coEvery { mockDataSource.getLocalMediaList() } throws expected
+        coEvery { mockDataSource.getLocalMediaList() } throws RuntimeException("data source failure")
 
         // Act & Assert
-        val actual = assertThrows<RuntimeException> {
-            repository.getMediaList().first()
+        assertThrows<RuntimeException> {
+            repository.getMediaList()
         }
-        assertEquals(expected, actual)
+    }
+
+    @Test
+    fun `getMediaListFlow propagates exception from data source`() = runTest {
+        // Arrange
+        coEvery { mockDataSource.getLocalMediaList() } throws RuntimeException("data source failure")
+
+        // Act & Assert
+        assertThrows<RuntimeException> {
+            repository.getMediaListFlow().first()
+        }
+    }
+
+    companion object {
+        private val sampleMedia = Media(
+            id = MediaId.of("1"),
+            url = MediaUrl.of("http://example.com/1.jpg"),
+            type = MediaType.IMAGE,
+            thumbnailUrl = null,
+            createdAt = MediaCreatedAt.of(1600000000000L)
+        )
+        private val expectedMediaList = listOf(sampleMedia)
     }
 }

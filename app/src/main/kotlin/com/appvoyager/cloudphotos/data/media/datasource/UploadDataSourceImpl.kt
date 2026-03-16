@@ -26,7 +26,7 @@ class UploadDataSourceImpl @Inject constructor(
             val contentUri = request.localUri.value.toUri()
             val extension = resolveExtension(request.contentType.value)
             val remotePath = StoragePath.fromIdentityId { identityId ->
-                "media/$identityId/${UUID.randomUUID()}$extension"
+                "private/$identityId/${UUID.randomUUID()}$extension"
             }
 
             val inputStream = context.contentResolver.openInputStream(contentUri)
