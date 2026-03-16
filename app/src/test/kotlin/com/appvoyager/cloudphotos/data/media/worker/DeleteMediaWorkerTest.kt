@@ -13,7 +13,7 @@ import com.appvoyager.cloudphotos.domain.media.valueobject.MediaId
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaUploadedAt
 import io.mockk.coEvery
 import io.mockk.coVerify
-import io.mockk.coVerifySequence
+import io.mockk.coVerifyOrder
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
@@ -76,7 +76,7 @@ class DeleteMediaWorkerTest {
         worker.doWork()
 
         // Assert
-        coVerifySequence {
+        coVerifyOrder {
             remoteRepository.deleteStorageFile(record.cloudStoragePath)
             remoteRepository.deleteUploadRecord(record.mediaId)
             localRepository.deleteUploadRecord(record.mediaId)
@@ -90,7 +90,7 @@ class DeleteMediaWorkerTest {
         coEvery { localRepository.getPendingDeleteRecords() } returns listOf(record)
         coEvery { remoteRepository.deleteStorageFile(any()) } just runs
         coEvery { remoteRepository.deleteUploadRecord(any()) } throws
-            Exception("Unexpected response code 403: Forbidden")
+                Exception("Unexpected response code 403: Forbidden")
         val slot = slot<List<UploadRecord>>()
         coEvery { localRepository.saveUploadRecords(capture(slot)) } just runs
 

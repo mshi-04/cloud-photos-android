@@ -116,7 +116,7 @@ class UploadMediaWorkerTest {
         coEvery { localRepository.getUploadRecords(any()) } returns listOf(record)
         every { contentTypeResolver.resolve(any()) } returns "image/jpeg"
         coEvery { remoteRepository.createUploadRecord(any()) } throws
-            Exception("Unexpected response code 400: Bad Request")
+                Exception("Unexpected response code 400: Bad Request")
         val slot = slot<List<UploadRecord>>()
         coEvery { localRepository.saveUploadRecords(capture(slot)) } just runs
 
@@ -190,7 +190,7 @@ class UploadMediaWorkerTest {
         coEvery { localRepository.getUploadRecords(any()) } returns listOf(record1)
         every { contentTypeResolver.resolve(any()) } returns "image/jpeg"
         coEvery { remoteRepository.createUploadRecord(any()) } throws
-            Exception("Unexpected response code 400: Bad Request")
+                Exception("Unexpected response code 400: Bad Request")
         coEvery { localRepository.saveUploadRecords(any()) } just runs
 
         // Act
@@ -208,7 +208,7 @@ class UploadMediaWorkerTest {
         coEvery { localRepository.getUploadRecords(any()) } returns listOf(record)
         every { contentTypeResolver.resolve(any()) } returns "image/jpeg"
         coEvery { remoteRepository.createUploadRecord(any()) } throws
-            Exception("Unexpected response code 401: Unauthorized")
+                Exception("Unexpected response code 401: Unauthorized")
         coEvery { localRepository.saveUploadRecords(any()) } just runs
 
         // Act
