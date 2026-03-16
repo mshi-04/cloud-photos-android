@@ -28,6 +28,8 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
+import kotlin.coroutines.cancellation.CancellationException
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class DeleteMediaWorkerTest {
@@ -64,7 +66,7 @@ class DeleteMediaWorkerTest {
     }
 
     @Test
-    fun `deletes from S3, API, and Room on success`() = runTest {
+    fun `deletes from s3 api and room on success`() = runTest {
         // Arrange
         val record = createUploadRecord("media-1")
         coEvery { localRepository.getPendingDeleteRecords() } returns listOf(record)
@@ -84,7 +86,7 @@ class DeleteMediaWorkerTest {
     }
 
     @Test
-    fun `marks record as ERROR on permanent API failure`() = runTest {
+    fun `marks record as error on permanent api failure`() = runTest {
         // Arrange
         val record = createUploadRecord("media-1")
         coEvery { localRepository.getPendingDeleteRecords() } returns listOf(record)
@@ -102,7 +104,7 @@ class DeleteMediaWorkerTest {
     }
 
     @Test
-    fun `returns retry on temporary S3 failure`() = runTest {
+    fun `returns retry on temporary s3 failure`() = runTest {
         // Arrange
         val record = createUploadRecord("media-1")
         coEvery { localRepository.getPendingDeleteRecords() } returns listOf(record)
@@ -116,7 +118,7 @@ class DeleteMediaWorkerTest {
     }
 
     @Test
-    fun `does not delete from Room when S3 fails`() = runTest {
+    fun `does not delete from room when s3 fails`() = runTest {
         // Arrange
         val record = createUploadRecord("media-1")
         coEvery { localRepository.getPendingDeleteRecords() } returns listOf(record)
@@ -180,6 +182,19 @@ class DeleteMediaWorkerTest {
 
         // Assert
         assertEquals(ListenableWorker.Result.success(), result)
+    }
+
+    @Test
+    fun `rethrows CancellationException`() = runTest {
+        // Arrange
+        val record = createUploadRecord("media-1")
+        coEvery { localRepository.getPendingDeleteRecords() } returns listOf(record)
+        coEvery { remoteRepository.deleteStorageFile(any()) } throws CancellationException()
+
+        // Act & Assert
+        assertThrows<CancellationException> {
+            worker.doWork()
+        }
     }
 
     private fun createUploadRecord(mediaId: String): UploadRecord = UploadRecord(

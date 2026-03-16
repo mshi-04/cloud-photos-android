@@ -73,7 +73,7 @@ class UploadMediaWorkerTest {
     }
 
     @Test
-    fun `saves SYNCED record on successful API call`() = runTest {
+    fun `saves synced record on successful api call`() = runTest {
         // Arrange
         val record = createUploadRecord()
         val createdRecord = record.copy(syncStatus = SyncStatus.SYNCED)
@@ -92,7 +92,7 @@ class UploadMediaWorkerTest {
     }
 
     @Test
-    fun `marks record as ERROR when file not found in MediaStore`() = runTest {
+    fun `marks record as error when file not found in mediastore`() = runTest {
         // Arrange
         val record = createUploadRecord()
         coEvery { localRepository.getPendingUploadRecords() } returns listOf(record)
@@ -109,7 +109,7 @@ class UploadMediaWorkerTest {
     }
 
     @Test
-    fun `marks record as ERROR on permanent API failure`() = runTest {
+    fun `marks record as error on permanent api failure`() = runTest {
         // Arrange
         val record = createUploadRecord()
         coEvery { localRepository.getPendingUploadRecords() } returns listOf(record)
@@ -128,7 +128,7 @@ class UploadMediaWorkerTest {
     }
 
     @Test
-    fun `returns retry on temporary API failure`() = runTest {
+    fun `returns retry on temporary api failure`() = runTest {
         // Arrange
         val record = createUploadRecord()
         coEvery { localRepository.getPendingUploadRecords() } returns listOf(record)
@@ -144,7 +144,7 @@ class UploadMediaWorkerTest {
     }
 
     @Test
-    fun `passes IMAGE mediaType for image content type`() = runTest {
+    fun `passes image media type for image content type`() = runTest {
         // Arrange
         val record = createUploadRecord()
         val createdRecord = record.copy(syncStatus = SyncStatus.SYNCED)
@@ -163,7 +163,7 @@ class UploadMediaWorkerTest {
     }
 
     @Test
-    fun `passes VIDEO mediaType for video content type`() = runTest {
+    fun `passes video media type for video content type`() = runTest {
         // Arrange
         val record = createUploadRecord()
         val createdRecord = record.copy(syncStatus = SyncStatus.SYNCED)
