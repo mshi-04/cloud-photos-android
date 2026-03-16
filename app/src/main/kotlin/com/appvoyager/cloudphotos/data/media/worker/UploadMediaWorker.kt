@@ -1,8 +1,6 @@
 package com.appvoyager.cloudphotos.data.media.worker
 
-import android.content.ContentUris
 import android.content.Context
-import android.provider.MediaStore
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
@@ -12,7 +10,6 @@ import com.appvoyager.cloudphotos.domain.media.repository.LocalUploadRecordsRepo
 import com.appvoyager.cloudphotos.domain.media.repository.RemoteUploadRecordsRepository
 import com.appvoyager.cloudphotos.domain.media.request.CreateUploadRecordRequest
 import com.appvoyager.cloudphotos.domain.media.valueobject.ContentType
-import com.appvoyager.cloudphotos.domain.media.valueobject.MediaId
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlin.coroutines.cancellation.CancellationException
@@ -22,7 +19,8 @@ class UploadMediaWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted workerParams: WorkerParameters,
     private val localRepository: LocalUploadRecordsRepository,
-    private val remoteRepository: RemoteUploadRecordsRepository
+    private val remoteRepository: RemoteUploadRecordsRepository,
+    private val contentTypeResolver: ContentTypeResolver
 ) : CoroutineWorker(context, workerParams) {
 
     override suspend fun doWork(): Result {
@@ -30,7 +28,7 @@ class UploadMediaWorker @AssistedInject constructor(
         var hasTemporaryFailure = false
 
         for (record in pendingRecords) {
-            val rawContentType = resolveContentType(record.mediaId)
+            val rawContentType = contentTypeResolver.resolve(record.mediaId)
             if (rawContentType == null) {
                 localRepository.saveUploadRecords(
                     listOf(record.copy(syncStatus = SyncStatus.ERROR))
@@ -65,18 +63,6 @@ class UploadMediaWorker @AssistedInject constructor(
         }
 
         return if (hasTemporaryFailure) Result.retry() else Result.success()
-    }
-
-    private fun resolveContentType(mediaId: MediaId): String? {
-        val lastUnderscore = mediaId.value.lastIndexOf('_')
-        if (lastUnderscore < 0) return null
-        val volumeName = mediaId.value.substring(0, lastUnderscore)
-        val id = mediaId.value.substring(lastUnderscore + 1).toLongOrNull() ?: return null
-        val uri = ContentUris.withAppendedId(
-            MediaStore.Files.getContentUri(volumeName),
-            id
-        )
-        return applicationContext.contentResolver.getType(uri)
     }
 
     private fun isPermanentFailure(e: Throwable): Boolean {

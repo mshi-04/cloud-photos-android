@@ -187,7 +187,7 @@ class LocalMediaDataSourceImplTest {
 
         // Act & Assert
         assertThrows<SecurityException> {
-            runBlocking { dataSource.getLocalMediaList() }
+            dataSource.getLocalMediaList()
         }
     }
 }

@@ -6,6 +6,8 @@ import com.appvoyager.cloudphotos.data.media.datasource.UploadRecordRemoteDataSo
 import com.appvoyager.cloudphotos.data.media.datasource.UploadRecordRemoteDataSourceImpl
 import com.appvoyager.cloudphotos.data.media.repository.LocalUploadRecordsRepositoryImpl
 import com.appvoyager.cloudphotos.data.media.repository.RemoteUploadRecordsRepositoryImpl
+import com.appvoyager.cloudphotos.data.media.worker.ContentTypeResolver
+import com.appvoyager.cloudphotos.data.media.worker.ContentTypeResolverImpl
 import com.appvoyager.cloudphotos.data.media.worker.DeleteSchedulerImpl
 import com.appvoyager.cloudphotos.data.media.worker.UploadSchedulerImpl
 import com.appvoyager.cloudphotos.domain.media.repository.DeleteScheduler
@@ -53,5 +55,11 @@ abstract class UploadRecordModule {
     @Binds
     @Singleton
     abstract fun bindDeleteScheduler(deleteSchedulerImpl: DeleteSchedulerImpl): DeleteScheduler
+
+    @Binds
+    @Singleton
+    abstract fun bindContentTypeResolver(
+        contentTypeResolverImpl: ContentTypeResolverImpl
+    ): ContentTypeResolver
 
 }
