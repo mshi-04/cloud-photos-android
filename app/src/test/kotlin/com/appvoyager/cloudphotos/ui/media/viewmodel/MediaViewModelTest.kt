@@ -407,6 +407,7 @@ class MediaViewModelTest {
         coEvery { scheduleDeleteUseCase() } just runs
 
         val viewModel = createViewModel()
+        viewModel.elapsedRealtimeProvider = { MediaViewModel.MIN_RESUME_INTERVAL_MS }
         advanceUntilIdle()
 
         // Act
@@ -426,6 +427,7 @@ class MediaViewModelTest {
         coEvery { scheduleDeleteUseCase() } just runs
 
         val viewModel = createViewModel()
+        viewModel.elapsedRealtimeProvider = { MediaViewModel.MIN_RESUME_INTERVAL_MS }
         advanceUntilIdle()
 
         // Act
@@ -445,6 +447,7 @@ class MediaViewModelTest {
         coEvery { scheduleDeleteUseCase() } just runs
 
         val viewModel = createViewModel()
+        viewModel.elapsedRealtimeProvider = { MediaViewModel.MIN_RESUME_INTERVAL_MS }
         advanceUntilIdle()
 
         // Act
@@ -464,9 +467,10 @@ class MediaViewModelTest {
         coEvery { scheduleDeleteUseCase() } just runs
 
         val viewModel = createViewModel()
+        viewModel.elapsedRealtimeProvider = { MediaViewModel.MIN_RESUME_INTERVAL_MS }
         advanceUntilIdle()
 
-        // Act
+        // Act: 1回目は通過、2回目は同じ時刻なのでスロットルされる
         viewModel.onScreenResumed()
         advanceUntilIdle()
         viewModel.onScreenResumed()

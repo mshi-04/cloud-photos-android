@@ -46,6 +46,7 @@ class MediaViewModel @Inject constructor(
     private var mediaListJob: Job? = null
     private var syncJob: Job? = null
     private var lastResumeElapsedRealtimeMs = 0L
+    internal var elapsedRealtimeProvider: () -> Long = { SystemClock.elapsedRealtime() }
 
     init {
         viewModelScope.launch {
@@ -101,7 +102,7 @@ class MediaViewModel @Inject constructor(
     }
 
     fun onScreenResumed() {
-        val now = SystemClock.elapsedRealtime()
+        val now = elapsedRealtimeProvider()
         if (now - lastResumeElapsedRealtimeMs < MIN_RESUME_INTERVAL_MS) return
         lastResumeElapsedRealtimeMs = now
         syncRemote()
@@ -131,7 +132,7 @@ class MediaViewModel @Inject constructor(
     }
 
     companion object {
-        private const val MIN_RESUME_INTERVAL_MS = 3_000L
+        internal const val MIN_RESUME_INTERVAL_MS = 3_000L
     }
 
 }

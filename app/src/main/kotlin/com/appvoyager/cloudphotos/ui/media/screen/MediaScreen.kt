@@ -116,7 +116,7 @@ fun MediaScreen(
 
     LifecycleResumeEffect(Unit) {
         permissionCheckKey++
-        viewModel.onResume()
+        viewModel.onScreenResumed()
         onPauseOrDispose {}
     }
 
