@@ -1,5 +1,6 @@
 package com.appvoyager.cloudphotos.ui.media.viewmodel
 
+import android.os.SystemClock
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.appvoyager.cloudphotos.R
@@ -44,7 +45,7 @@ class MediaViewModel @Inject constructor(
 
     private var mediaListJob: Job? = null
     private var syncJob: Job? = null
-    private var lastResumeTimeMs = 0L
+    private var lastResumeElapsedRealtimeMs = 0L
 
     init {
         viewModelScope.launch {
@@ -65,15 +66,13 @@ class MediaViewModel @Inject constructor(
     fun onDismissSettingsDialog() =
         _uiState.update { it.copy(isSettingsDialogVisible = false) }
 
-    fun onGridColumnCountChanged(count: Int) {
-        viewModelScope.launch {
-            try {
-                val gridColumnCount = GridColumnCount.of(count)
-                setGridColumnCountUseCase(gridColumnCount)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                _effect.send(MediaEffect.ShowSnackbar(R.string.error_unknown))
-            }
+    fun onGridColumnCountChanged(count: Int) = viewModelScope.launch {
+        try {
+            val gridColumnCount = GridColumnCount.of(count)
+            setGridColumnCountUseCase(gridColumnCount)
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            _effect.send(MediaEffect.ShowSnackbar(R.string.error_unknown))
         }
     }
 
@@ -101,10 +100,10 @@ class MediaViewModel @Inject constructor(
         }
     }
 
-    fun onResume() {
-        val now = System.currentTimeMillis()
-        if (now - lastResumeTimeMs < MIN_RESUME_INTERVAL_MS) return
-        lastResumeTimeMs = now
+    fun onScreenResumed() {
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastResumeElapsedRealtimeMs < MIN_RESUME_INTERVAL_MS) return
+        lastResumeElapsedRealtimeMs = now
         syncRemote()
         scheduleUpload()
         scheduleDelete()
@@ -114,8 +113,8 @@ class MediaViewModel @Inject constructor(
         syncJob?.cancel()
         syncJob = viewModelScope.launch {
             runCatching { syncUploadRecordsUseCase() }
-                .onFailure {
-                    if (it is CancellationException) throw it
+                .onFailure { cause ->
+                    if (cause is CancellationException) throw cause
                     _effect.send(MediaEffect.ShowSnackbar(R.string.error_unknown))
                 }
         }
