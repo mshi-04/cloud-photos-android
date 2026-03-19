@@ -25,11 +25,16 @@ class UploadMediaWorker @AssistedInject constructor(
     private val localRepository: LocalUploadRecordsRepository,
     private val remoteRepository: RemoteUploadRecordsRepository,
     private val contentTypeResolver: ContentTypeResolver,
-    private val uploadDataSource: UploadDataSource
+    private val uploadDataSource: UploadDataSource,
+    private val notificationHelper: UploadNotificationHelper
 ) : CoroutineWorker(context, workerParams) {
 
     override suspend fun doWork(): Result {
         val pendingRecords = localRepository.getPendingUploadRecords()
+        if (pendingRecords.isEmpty()) return Result.success()
+
+        notificationHelper.show(pendingRecords.size)
+
         var hasTemporaryFailure = false
 
         for (record in pendingRecords) {
@@ -123,6 +128,7 @@ class UploadMediaWorker @AssistedInject constructor(
             }
         }
 
+        notificationHelper.cancel()
         return if (hasTemporaryFailure) Result.retry() else Result.success()
     }
 

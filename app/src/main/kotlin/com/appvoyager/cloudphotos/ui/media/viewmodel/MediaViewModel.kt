@@ -5,8 +5,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.appvoyager.cloudphotos.R
 import com.appvoyager.cloudphotos.domain.media.usecase.GetMediaListUseCase
+import com.appvoyager.cloudphotos.domain.media.usecase.PrepareUploadQueueUseCase
 import com.appvoyager.cloudphotos.domain.media.usecase.ScheduleDeleteUseCase
-import com.appvoyager.cloudphotos.domain.media.usecase.ScheduleUploadUseCase
 import com.appvoyager.cloudphotos.domain.media.usecase.SyncUploadRecordsUseCase
 import com.appvoyager.cloudphotos.domain.settings.usecase.GetGridColumnCountUseCase
 import com.appvoyager.cloudphotos.domain.settings.usecase.SetGridColumnCountUseCase
@@ -33,7 +33,7 @@ class MediaViewModel @Inject constructor(
     private val getGridColumnCountUseCase: GetGridColumnCountUseCase,
     private val setGridColumnCountUseCase: SetGridColumnCountUseCase,
     private val syncUploadRecordsUseCase: SyncUploadRecordsUseCase,
-    private val scheduleUploadUseCase: ScheduleUploadUseCase,
+    private val prepareUploadQueueUseCase: PrepareUploadQueueUseCase,
     private val scheduleDeleteUseCase: ScheduleDeleteUseCase
 ) : ViewModel() {
 
@@ -106,7 +106,7 @@ class MediaViewModel @Inject constructor(
         if (now - lastResumeElapsedRealtimeMs < MIN_RESUME_INTERVAL_MS) return
         lastResumeElapsedRealtimeMs = now
         syncRemote()
-        scheduleUpload()
+        prepareUploadQueue()
         scheduleDelete()
     }
 
@@ -121,8 +121,8 @@ class MediaViewModel @Inject constructor(
         }
     }
 
-    private fun scheduleUpload() = viewModelScope.launch {
-        runCatching { scheduleUploadUseCase() }
+    private fun prepareUploadQueue() = viewModelScope.launch {
+        runCatching { prepareUploadQueueUseCase() }
             .onFailure { if (it is CancellationException) throw it }
     }
 

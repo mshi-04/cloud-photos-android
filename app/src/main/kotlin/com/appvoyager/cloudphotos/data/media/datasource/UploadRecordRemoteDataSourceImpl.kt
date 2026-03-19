@@ -3,6 +3,7 @@ package com.appvoyager.cloudphotos.data.media.datasource
 import com.amplifyframework.api.rest.RestOptions
 import com.amplifyframework.core.Amplify
 import com.appvoyager.cloudphotos.data.media.util.RemoteUploadRecordMapper
+import com.appvoyager.cloudphotos.domain.common.Clock
 import com.appvoyager.cloudphotos.domain.media.model.UploadRecord
 import com.appvoyager.cloudphotos.domain.media.request.CreateUploadRecordRequest
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaId
@@ -11,7 +12,9 @@ import org.json.JSONObject
 import javax.inject.Inject
 import kotlin.coroutines.resumeWithException
 
-class UploadRecordRemoteDataSourceImpl @Inject constructor() : UploadRecordRemoteDataSource {
+class UploadRecordRemoteDataSourceImpl @Inject constructor(
+    private val clock: Clock
+) : UploadRecordRemoteDataSource {
 
     override suspend fun fetchUploadRecords(): List<UploadRecord> {
         val request = RestOptions.builder()
@@ -77,7 +80,7 @@ class UploadRecordRemoteDataSourceImpl @Inject constructor() : UploadRecordRemot
         return RemoteUploadRecordMapper.fromCreateResponse(
             uploadedAt = uploadedAt,
             request = request,
-            fallbackUploadedAt = System.currentTimeMillis()
+            fallbackUploadedAt = clock.getCurrentTimes()
         )
     }
 

@@ -59,4 +59,8 @@
     <string name="error_permission_partial_access">「一部のアクセスのみ許可」を選択した場合も、権限なしと同様に扱われます</string>
     <string name="permission_open_settings">設定を開く</string>
 
+    <!-- 通知 -->
+    <string name="notification_channel_upload">アップロード</string>
+    <string name="notification_uploading">%1$d件アップロード中です</string>
+
 </resources>

@@ -59,4 +59,8 @@
     <string name="error_permission_partial_access">Selecting "Allow access to limited photos only" is treated the same as denying permission</string>
     <string name="permission_open_settings">Open settings</string>
 
+    <!-- Notifications -->
+    <string name="notification_channel_upload">Upload</string>
+    <string name="notification_uploading">Uploading %1$d items</string>
+
 </resources>

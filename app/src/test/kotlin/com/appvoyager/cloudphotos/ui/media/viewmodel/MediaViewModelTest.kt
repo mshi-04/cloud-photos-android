@@ -4,8 +4,8 @@ import com.appvoyager.cloudphotos.R
 import com.appvoyager.cloudphotos.domain.media.model.Media
 import com.appvoyager.cloudphotos.domain.media.model.MediaType
 import com.appvoyager.cloudphotos.domain.media.usecase.GetMediaListUseCase
+import com.appvoyager.cloudphotos.domain.media.usecase.PrepareUploadQueueUseCase
 import com.appvoyager.cloudphotos.domain.media.usecase.ScheduleDeleteUseCase
-import com.appvoyager.cloudphotos.domain.media.usecase.ScheduleUploadUseCase
 import com.appvoyager.cloudphotos.domain.media.usecase.SyncUploadRecordsUseCase
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaCreatedAt
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaId
@@ -50,7 +50,7 @@ class MediaViewModelTest {
     private lateinit var getGridColumnCountUseCase: GetGridColumnCountUseCase
     private lateinit var setGridColumnCountUseCase: SetGridColumnCountUseCase
     private lateinit var syncUploadRecordsUseCase: SyncUploadRecordsUseCase
-    private lateinit var scheduleUploadUseCase: ScheduleUploadUseCase
+    private lateinit var prepareUploadQueueUseCase: PrepareUploadQueueUseCase
     private lateinit var scheduleDeleteUseCase: ScheduleDeleteUseCase
 
     @BeforeEach
@@ -60,7 +60,7 @@ class MediaViewModelTest {
         getGridColumnCountUseCase = mockk()
         setGridColumnCountUseCase = mockk()
         syncUploadRecordsUseCase = mockk()
-        scheduleUploadUseCase = mockk()
+        prepareUploadQueueUseCase = mockk()
         scheduleDeleteUseCase = mockk()
     }
 
@@ -75,7 +75,7 @@ class MediaViewModelTest {
             getGridColumnCountUseCase = getGridColumnCountUseCase,
             setGridColumnCountUseCase = setGridColumnCountUseCase,
             syncUploadRecordsUseCase = syncUploadRecordsUseCase,
-            scheduleUploadUseCase = scheduleUploadUseCase,
+            prepareUploadQueueUseCase = prepareUploadQueueUseCase,
             scheduleDeleteUseCase = scheduleDeleteUseCase
         )
     }
@@ -296,7 +296,7 @@ class MediaViewModelTest {
         // Arrange
         every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
         coEvery { syncUploadRecordsUseCase() } returns Unit
-        coEvery { scheduleUploadUseCase() } just runs
+        coEvery { prepareUploadQueueUseCase() } just runs
         coEvery { scheduleDeleteUseCase() } just runs
 
         val viewModel = createViewModel()
@@ -312,11 +312,11 @@ class MediaViewModelTest {
     }
 
     @Test
-    fun `onScreenResumed calls scheduleUploadUseCase`() = runTest {
+    fun `onScreenResumed calls prepareUploadQueueUseCase`() = runTest {
         // Arrange
         every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
         coEvery { syncUploadRecordsUseCase() } returns Unit
-        coEvery { scheduleUploadUseCase() } just runs
+        coEvery { prepareUploadQueueUseCase() } just runs
         coEvery { scheduleDeleteUseCase() } just runs
 
         val viewModel = createViewModel()
@@ -328,7 +328,7 @@ class MediaViewModelTest {
         advanceUntilIdle()
 
         // Assert
-        coVerify { scheduleUploadUseCase() }
+        coVerify { prepareUploadQueueUseCase() }
     }
 
     @Test
@@ -336,7 +336,7 @@ class MediaViewModelTest {
         // Arrange
         every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
         coEvery { syncUploadRecordsUseCase() } returns Unit
-        coEvery { scheduleUploadUseCase() } just runs
+        coEvery { prepareUploadQueueUseCase() } just runs
         coEvery { scheduleDeleteUseCase() } just runs
 
         val viewModel = createViewModel()
@@ -356,7 +356,7 @@ class MediaViewModelTest {
         // Arrange
         every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
         coEvery { syncUploadRecordsUseCase() } returns Unit
-        coEvery { scheduleUploadUseCase() } just runs
+        coEvery { prepareUploadQueueUseCase() } just runs
         coEvery { scheduleDeleteUseCase() } just runs
 
         val viewModel = createViewModel()
@@ -374,11 +374,11 @@ class MediaViewModelTest {
     }
 
     @Test
-    fun `onScreenResumed throttling limits scheduleUploadUseCase to one call`() = runTest {
+    fun `onScreenResumed throttling limits prepareUploadQueueUseCase to one call`() = runTest {
         // Arrange
         every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
         coEvery { syncUploadRecordsUseCase() } returns Unit
-        coEvery { scheduleUploadUseCase() } just runs
+        coEvery { prepareUploadQueueUseCase() } just runs
         coEvery { scheduleDeleteUseCase() } just runs
 
         val viewModel = createViewModel()
@@ -392,7 +392,7 @@ class MediaViewModelTest {
         advanceUntilIdle()
 
         // Assert
-        coVerify(exactly = 1) { scheduleUploadUseCase() }
+        coVerify(exactly = 1) { prepareUploadQueueUseCase() }
     }
 
     @Test
@@ -400,7 +400,7 @@ class MediaViewModelTest {
         // Arrange
         every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
         coEvery { syncUploadRecordsUseCase() } returns Unit
-        coEvery { scheduleUploadUseCase() } just runs
+        coEvery { prepareUploadQueueUseCase() } just runs
         coEvery { scheduleDeleteUseCase() } just runs
 
         val viewModel = createViewModel()
@@ -422,7 +422,7 @@ class MediaViewModelTest {
         // Arrange
         every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
         coEvery { syncUploadRecordsUseCase() } throws RuntimeException("sync failed")
-        coEvery { scheduleUploadUseCase() } just runs
+        coEvery { prepareUploadQueueUseCase() } just runs
         coEvery { scheduleDeleteUseCase() } just runs
 
         val viewModel = createViewModel()

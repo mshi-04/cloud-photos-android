@@ -45,6 +45,7 @@ class UploadMediaWorkerTest {
     private val remoteRepository = mockk<RemoteUploadRecordsRepository>()
     private val contentTypeResolver = mockk<ContentTypeResolver>()
     private val uploadDataSource = mockk<UploadDataSource>()
+    private val notificationHelper = mockk<UploadNotificationHelper>(relaxed = true)
 
     private lateinit var worker: UploadMediaWorker
 
@@ -57,7 +58,8 @@ class UploadMediaWorkerTest {
             localRepository,
             remoteRepository,
             contentTypeResolver,
-            uploadDataSource
+            uploadDataSource,
+            notificationHelper
         )
     }
 
