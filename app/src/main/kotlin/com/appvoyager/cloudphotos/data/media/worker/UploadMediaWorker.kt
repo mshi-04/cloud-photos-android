@@ -106,11 +106,17 @@ class UploadMediaWorker @AssistedInject constructor(
             }.onFailure { e ->
                 if (e is CancellationException) throw e
                 if (isPermanentFailure(e)) {
-                    runCatching { uploadDataSource.deleteUploadedObject(cloudStoragePath) }
+                    val cleanupResult = runCatching { uploadDataSource.deleteUploadedObject(cloudStoragePath) }
                         .onFailure { if (it is CancellationException) throw it }
-                    localRepository.saveUploadRecords(
-                        listOf(uploadedRecord.copy(syncStatus = SyncStatus.ERROR))
-                    )
+                    if (cleanupResult.isSuccess) {
+                        localRepository.saveUploadRecords(
+                            listOf(uploadedRecord.copy(cloudStoragePath = null, syncStatus = SyncStatus.ERROR))
+                        )
+                    } else {
+                        localRepository.saveUploadRecords(
+                            listOf(uploadedRecord.copy(syncStatus = SyncStatus.PENDING_DELETE))
+                        )
+                    }
                 } else {
                     hasTemporaryFailure = true
                 }

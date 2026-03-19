@@ -28,15 +28,16 @@ internal object RemoteUploadRecordMapper {
         }
     }
 
-    fun fromCreateResponse(json: String, request: CreateUploadRecordRequest): UploadRecord {
-        val root = JSONObject(json)
-        return UploadRecord(
-            mediaId = request.mediaId,
-            cloudStoragePath = request.cloudStoragePath,
-            isDeleted = IsDeleted.of(false),
-            syncStatus = SyncStatus.SYNCED,
-            mediaUploadedAt = MediaUploadedAt.of(root.getLong("uploadedAt"))
-        )
-    }
+    fun fromCreateResponse(
+        uploadedAt: Long?,
+        request: CreateUploadRecordRequest,
+        fallbackUploadedAt: Long
+    ): UploadRecord = UploadRecord(
+        mediaId = request.mediaId,
+        cloudStoragePath = request.cloudStoragePath,
+        isDeleted = IsDeleted.of(false),
+        syncStatus = SyncStatus.SYNCED,
+        mediaUploadedAt = MediaUploadedAt.of(uploadedAt ?: fallbackUploadedAt)
+    )
 
 }

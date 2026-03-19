@@ -105,16 +105,14 @@ class UploadMediaWorkerTest {
         // Arrange
         val record = createUploadRecord()
         val createdRecord = record.copy(syncStatus = SyncStatus.SYNCED)
-        val slot = slot<List<UploadRecord>>()
         arrangePendingUploads(record)
         coEvery { remoteRepository.createUploadRecord(any()) } returns createdRecord
-        coEvery { localRepository.saveUploadRecords(capture(slot)) } just runs
 
         // Act
         worker.doWork()
 
         // Assert
-        assertEquals(SyncStatus.SYNCED, slot.captured.first().syncStatus)
+        coVerify(exactly = 0) { uploadDataSource.uploadMedia(any()) }
     }
 
     @Test
@@ -122,10 +120,8 @@ class UploadMediaWorkerTest {
         // Arrange
         val record = createUploadRecord()
         val createdRecord = record.copy(syncStatus = SyncStatus.SYNCED)
-        val slot = slot<List<UploadRecord>>()
         arrangePendingUploads(record)
         coEvery { remoteRepository.createUploadRecord(any()) } returns createdRecord
-        coEvery { localRepository.saveUploadRecords(capture(slot)) } just runs
 
         // Act
         worker.doWork()
@@ -226,6 +222,36 @@ class UploadMediaWorkerTest {
 
         // Assert
         assertEquals(ListenableWorker.Result.retry(), result)
+    }
+
+    @Test
+    fun `invokes cleanup on permanent api failure`() = runTest {
+        // Arrange
+        val record = createUploadRecord()
+        arrangePendingUploads(record)
+        coEvery { remoteRepository.createUploadRecord(any()) } throws
+                Exception("Unexpected response code 400: Bad Request")
+        coEvery { uploadDataSource.deleteUploadedObject(any()) } just runs
+
+        // Act
+        worker.doWork()
+
+        // Assert
+        coVerify { uploadDataSource.deleteUploadedObject(any()) }
+    }
+
+    @Test
+    fun `does not invoke cleanup on temporary api failure`() = runTest {
+        // Arrange
+        val record = createUploadRecord()
+        arrangePendingUploads(record)
+        coEvery { remoteRepository.createUploadRecord(any()) } throws Exception("Network timeout")
+
+        // Act
+        worker.doWork()
+
+        // Assert
+        coVerify(exactly = 0) { uploadDataSource.deleteUploadedObject(any()) }
     }
 
     @Test

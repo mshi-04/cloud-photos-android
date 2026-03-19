@@ -417,4 +417,25 @@ class MediaViewModelTest {
         coVerify(exactly = 1) { scheduleDeleteUseCase() }
     }
 
+    @Test
+    fun `onScreenResumed syncRemote failure sends snackbar effect`() = runTest {
+        // Arrange
+        every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
+        coEvery { syncUploadRecordsUseCase() } throws RuntimeException("sync failed")
+        coEvery { scheduleUploadUseCase() } just runs
+        coEvery { scheduleDeleteUseCase() } just runs
+
+        val viewModel = createViewModel()
+        viewModel.elapsedRealtimeProvider = { MediaViewModel.MIN_RESUME_INTERVAL_MS }
+        advanceUntilIdle()
+
+        // Act
+        viewModel.onScreenResumed()
+        advanceUntilIdle()
+
+        // Assert
+        val effect = viewModel.effect.first()
+        assertEquals(R.string.error_unknown, (effect as MediaEffect.ShowSnackbar).messageResId)
+    }
+
 }
