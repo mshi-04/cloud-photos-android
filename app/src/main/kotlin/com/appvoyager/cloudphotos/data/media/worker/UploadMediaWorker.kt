@@ -14,7 +14,6 @@ import com.appvoyager.cloudphotos.domain.media.repository.RemoteUploadRecordsRep
 import com.appvoyager.cloudphotos.domain.media.request.CreateUploadRecordRequest
 import com.appvoyager.cloudphotos.domain.media.request.UploadMediaRequest
 import com.appvoyager.cloudphotos.domain.media.valueobject.ContentType
-import com.appvoyager.cloudphotos.domain.media.valueobject.MediaUrl
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlin.coroutines.cancellation.CancellationException
@@ -40,7 +39,7 @@ class UploadMediaWorker @AssistedInject constructor(
             val rawContentType = contentTypeResolver.resolve(record.mediaId)
             if (rawContentType == null) {
                 localRepository.saveUploadRecords(
-                    listOf(record.copy(syncStatus = SyncStatus.ERROR))
+                    listOf(current.copy(syncStatus = SyncStatus.ERROR))
                 )
                 continue
             }
@@ -48,30 +47,30 @@ class UploadMediaWorker @AssistedInject constructor(
             val contentType = runCatching { ContentType.of(rawContentType) }.getOrNull()
             if (contentType == null) {
                 localRepository.saveUploadRecords(
-                    listOf(record.copy(syncStatus = SyncStatus.ERROR))
+                    listOf(current.copy(syncStatus = SyncStatus.ERROR))
                 )
                 continue
             }
 
-            val uploadedRecord = if (record.cloudStoragePath != null) {
-                record
+            val uploadedRecord = if (current.cloudStoragePath != null) {
+                current
             } else {
                 val localUri = contentTypeResolver.resolveUri(record.mediaId)
                 if (localUri == null) {
                     localRepository.saveUploadRecords(
-                        listOf(record.copy(syncStatus = SyncStatus.ERROR))
+                        listOf(current.copy(syncStatus = SyncStatus.ERROR))
                     )
                     continue
                 }
 
                 when (val uploadResult = uploadDataSource.uploadMedia(
                     UploadMediaRequest(
-                        localUri = MediaUrl.of(localUri),
+                        localUri = localUri,
                         contentType = contentType
                     )
                 )) {
                     is UploadResult.Success -> {
-                        val uploaded = record.copy(cloudStoragePath = uploadResult.value)
+                        val uploaded = current.copy(cloudStoragePath = uploadResult.value)
                         localRepository.saveUploadRecords(listOf(uploaded))
                         uploaded
                     }
@@ -79,7 +78,7 @@ class UploadMediaWorker @AssistedInject constructor(
                     is UploadResult.Error -> {
                         if (isS3PermanentFailure(uploadResult.error)) {
                             localRepository.saveUploadRecords(
-                                listOf(record.copy(syncStatus = SyncStatus.ERROR))
+                                listOf(current.copy(syncStatus = SyncStatus.ERROR))
                             )
                         } else {
                             hasTemporaryFailure = true
@@ -105,6 +104,8 @@ class UploadMediaWorker @AssistedInject constructor(
             }.onFailure { e ->
                 if (e is CancellationException) throw e
                 if (isPermanentFailure(e)) {
+                    runCatching { uploadDataSource.deleteUploadedObject(cloudStoragePath) }
+                        .onFailure { if (it is CancellationException) throw it }
                     localRepository.saveUploadRecords(
                         listOf(uploadedRecord.copy(syncStatus = SyncStatus.ERROR))
                     )

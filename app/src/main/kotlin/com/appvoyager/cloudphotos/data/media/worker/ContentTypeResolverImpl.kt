@@ -5,6 +5,7 @@ import android.content.Context
 import android.net.Uri
 import android.provider.MediaStore
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaId
+import com.appvoyager.cloudphotos.domain.media.valueobject.MediaUrl
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 
@@ -17,8 +18,10 @@ class ContentTypeResolverImpl @Inject constructor(
         return context.contentResolver.getType(uri)
     }
 
-    override fun resolveUri(mediaId: MediaId): String? =
-        buildUri(mediaId)?.toString()
+    override fun resolveUri(mediaId: MediaId): MediaUrl? {
+        val uri = buildUri(mediaId) ?: return null
+        return MediaUrl.of(uri.toString())
+    }
 
     private fun buildUri(mediaId: MediaId): Uri? {
         val lastUnderscore = mediaId.value.lastIndexOf('_')

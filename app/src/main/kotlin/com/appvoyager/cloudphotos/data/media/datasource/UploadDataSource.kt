@@ -7,5 +7,6 @@ import com.appvoyager.cloudphotos.domain.media.valueobject.CloudStoragePath
 interface UploadDataSource {
 
     suspend fun uploadMedia(request: UploadMediaRequest): UploadResult<CloudStoragePath>
+    suspend fun deleteUploadedObject(cloudStoragePath: CloudStoragePath)
 
 }

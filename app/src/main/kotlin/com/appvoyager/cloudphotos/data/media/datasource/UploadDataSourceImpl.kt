@@ -56,6 +56,15 @@ class UploadDataSourceImpl @Inject constructor(
             UploadResult.Error(UploadErrorMapper.map(e))
         }
 
+    override suspend fun deleteUploadedObject(cloudStoragePath: CloudStoragePath) =
+        suspendCancellableCoroutine { coroutine ->
+            Amplify.Storage.remove(
+                StoragePath.fromString(cloudStoragePath.value),
+                { coroutine.resume(Unit) { _, _, _ -> } },
+                { coroutine.resumeWithException(it) }
+            )
+        }
+
     private fun resolveExtension(contentType: String): String {
         val subtype = contentType.substringAfter("/")
             .substringBefore(";")

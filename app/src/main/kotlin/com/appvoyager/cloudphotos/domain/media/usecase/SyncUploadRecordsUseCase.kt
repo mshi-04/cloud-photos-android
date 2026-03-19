@@ -8,6 +8,7 @@ class SyncUploadRecordsUseCase @Inject constructor(
     private val remoteRepository: RemoteUploadRecordsRepository,
     private val localRepository: LocalUploadRecordsRepository
 ) {
+
     suspend operator fun invoke() {
         val remoteRecords = remoteRepository.fetchUploadRecords()
 
@@ -17,4 +18,5 @@ class SyncUploadRecordsUseCase @Inject constructor(
 
         localRepository.saveUploadRecords(safeRecords)
     }
+
 }

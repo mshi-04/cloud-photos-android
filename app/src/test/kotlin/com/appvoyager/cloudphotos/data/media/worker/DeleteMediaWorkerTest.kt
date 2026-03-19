@@ -190,7 +190,67 @@ class DeleteMediaWorkerTest {
     }
 
     @Test
-    fun `deletes only local record when cloudStoragePath is null`() = runTest {
+    fun `deletes local record when cloudStoragePath is null`() = runTest {
+        // Arrange
+        val record = UploadRecord(
+            mediaId = MediaId.of("media-1"),
+            cloudStoragePath = null,
+            isDeleted = IsDeleted.of(true),
+            syncStatus = SyncStatus.PENDING_DELETE,
+            mediaUploadedAt = MediaUploadedAt.of(1700000000000L)
+        )
+        coEvery { localRepository.getPendingDeleteRecords() } returns listOf(record)
+        coEvery { localRepository.deleteUploadRecord(any()) } just runs
+
+        // Act
+        worker.doWork()
+
+        // Assert
+        coVerify { localRepository.deleteUploadRecord(record.mediaId) }
+    }
+
+    @Test
+    fun `does not delete storage file when cloudStoragePath is null`() = runTest {
+        // Arrange
+        val record = UploadRecord(
+            mediaId = MediaId.of("media-1"),
+            cloudStoragePath = null,
+            isDeleted = IsDeleted.of(true),
+            syncStatus = SyncStatus.PENDING_DELETE,
+            mediaUploadedAt = MediaUploadedAt.of(1700000000000L)
+        )
+        coEvery { localRepository.getPendingDeleteRecords() } returns listOf(record)
+        coEvery { localRepository.deleteUploadRecord(any()) } just runs
+
+        // Act
+        worker.doWork()
+
+        // Assert
+        coVerify(exactly = 0) { remoteRepository.deleteStorageFile(any()) }
+    }
+
+    @Test
+    fun `does not delete remote record when cloudStoragePath is null`() = runTest {
+        // Arrange
+        val record = UploadRecord(
+            mediaId = MediaId.of("media-1"),
+            cloudStoragePath = null,
+            isDeleted = IsDeleted.of(true),
+            syncStatus = SyncStatus.PENDING_DELETE,
+            mediaUploadedAt = MediaUploadedAt.of(1700000000000L)
+        )
+        coEvery { localRepository.getPendingDeleteRecords() } returns listOf(record)
+        coEvery { localRepository.deleteUploadRecord(any()) } just runs
+
+        // Act
+        worker.doWork()
+
+        // Assert
+        coVerify(exactly = 0) { remoteRepository.deleteUploadRecord(any()) }
+    }
+
+    @Test
+    fun `returns success when cloudStoragePath is null`() = runTest {
         // Arrange
         val record = UploadRecord(
             mediaId = MediaId.of("media-1"),
@@ -206,9 +266,6 @@ class DeleteMediaWorkerTest {
         val result = worker.doWork()
 
         // Assert
-        coVerify { localRepository.deleteUploadRecord(record.mediaId) }
-        coVerify(exactly = 0) { remoteRepository.deleteStorageFile(any()) }
-        coVerify(exactly = 0) { remoteRepository.deleteUploadRecord(any()) }
         assertEquals(ListenableWorker.Result.success(), result)
     }
 
