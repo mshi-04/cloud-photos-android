@@ -103,7 +103,7 @@ fun MediaScreen(
     val latestResources = rememberUpdatedState(LocalResources.current)
     val lifecycleOwner = LocalLifecycleOwner.current
     var permissionCheckKey by remember { mutableIntStateOf(0) }
-    val notificationPermissionRequested = remember { mutableStateOf(false) }
+    var notificationPermissionRequested by remember { mutableStateOf(false) }
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { /* result ignored — notification is optional */ }
@@ -123,10 +123,10 @@ fun MediaScreen(
     LifecycleResumeEffect(Unit) {
         permissionCheckKey++
         viewModel.onScreenResumed()
-        if (!notificationPermissionRequested.value
+        if (!notificationPermissionRequested
             && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
         ) {
-            notificationPermissionRequested.value = true
+            notificationPermissionRequested = true
             notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
         onPauseOrDispose {}

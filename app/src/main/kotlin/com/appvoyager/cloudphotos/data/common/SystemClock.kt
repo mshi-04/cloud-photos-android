@@ -5,6 +5,6 @@ import javax.inject.Inject
 
 class SystemClock @Inject constructor() : Clock {
 
-    override fun getCurrentTimes(): Long = System.currentTimeMillis()
+    override fun getCurrentTime(): Long = System.currentTimeMillis()
 
 }

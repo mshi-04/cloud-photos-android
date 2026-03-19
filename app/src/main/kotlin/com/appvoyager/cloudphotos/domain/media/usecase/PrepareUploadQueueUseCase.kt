@@ -33,7 +33,7 @@ class PrepareUploadQueueUseCase @Inject constructor(
                     mediaId = media.id,
                     cloudStoragePath = null,
                     isDeleted = IsDeleted.of(false),
-                    mediaUploadedAt = MediaUploadedAt.of(clock.getCurrentTimes()),
+                    mediaUploadedAt = MediaUploadedAt.of(clock.getCurrentTime()),
                     syncStatus = SyncStatus.PENDING_UPLOAD
                 )
             }

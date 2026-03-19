@@ -15,6 +15,7 @@ import com.appvoyager.cloudphotos.ui.media.effect.MediaEffect
 import com.appvoyager.cloudphotos.ui.media.uistate.MediaUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -45,7 +46,7 @@ class MediaViewModel @Inject constructor(
 
     private var mediaListJob: Job? = null
     private var syncJob: Job? = null
-    private var lastResumeElapsedRealtimeMs = 0L
+    private var lastResumeElapsedRealtimeMs: Long? = null
     internal var elapsedRealtimeProvider: () -> Long = { SystemClock.elapsedRealtime() }
 
     init {
@@ -103,7 +104,8 @@ class MediaViewModel @Inject constructor(
 
     fun onScreenResumed() {
         val now = elapsedRealtimeProvider()
-        if (now - lastResumeElapsedRealtimeMs < MIN_RESUME_INTERVAL_MS) return
+        val last = lastResumeElapsedRealtimeMs
+        if (last != null && now - last < MIN_RESUME_INTERVAL_MS) return
         lastResumeElapsedRealtimeMs = now
         syncRemote()
         prepareUploadQueue()
@@ -111,8 +113,9 @@ class MediaViewModel @Inject constructor(
     }
 
     private fun syncRemote() {
-        syncJob?.cancel()
+        val previousJob = syncJob
         syncJob = viewModelScope.launch {
+            previousJob?.cancelAndJoin()
             runCatching { syncUploadRecordsUseCase() }
                 .onFailure { cause ->
                     if (cause is CancellationException) throw cause

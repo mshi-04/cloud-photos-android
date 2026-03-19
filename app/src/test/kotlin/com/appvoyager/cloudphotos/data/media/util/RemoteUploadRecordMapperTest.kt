@@ -5,6 +5,7 @@ import com.appvoyager.cloudphotos.domain.media.model.SyncStatus
 import com.appvoyager.cloudphotos.domain.media.request.CreateUploadRecordRequest
 import com.appvoyager.cloudphotos.domain.media.valueobject.CloudStoragePath
 import com.appvoyager.cloudphotos.domain.media.valueobject.ContentType
+import com.appvoyager.cloudphotos.domain.media.valueobject.IsDeleted
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaId
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaUploadedAt
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -21,7 +22,7 @@ class RemoteUploadRecordMapperTest {
 
     @Test
     fun `fromCreateResponse uses uploadedAt when provided`() {
-        // Act
+        // Arrange & Act
         val result = RemoteUploadRecordMapper.fromCreateResponse(
             uploadedAt = 1_700_000_000_000L,
             request = request,
@@ -34,7 +35,7 @@ class RemoteUploadRecordMapperTest {
 
     @Test
     fun `fromCreateResponse uses fallback when uploadedAt is null`() {
-        // Act
+        // Arrange & Act
         val result = RemoteUploadRecordMapper.fromCreateResponse(
             uploadedAt = null,
             request = request,
@@ -47,7 +48,7 @@ class RemoteUploadRecordMapperTest {
 
     @Test
     fun `fromCreateResponse sets mediaId from request`() {
-        // Act
+        // Arrange & Act
         val result = RemoteUploadRecordMapper.fromCreateResponse(
             uploadedAt = 1_700_000_000_000L,
             request = request,
@@ -60,7 +61,7 @@ class RemoteUploadRecordMapperTest {
 
     @Test
     fun `fromCreateResponse sets cloudStoragePath from request`() {
-        // Act
+        // Arrange & Act
         val result = RemoteUploadRecordMapper.fromCreateResponse(
             uploadedAt = 1_700_000_000_000L,
             request = request,
@@ -73,7 +74,7 @@ class RemoteUploadRecordMapperTest {
 
     @Test
     fun `fromCreateResponse sets syncStatus to SYNCED`() {
-        // Act
+        // Arrange & Act
         val result = RemoteUploadRecordMapper.fromCreateResponse(
             uploadedAt = 1_700_000_000_000L,
             request = request,
@@ -82,6 +83,19 @@ class RemoteUploadRecordMapperTest {
 
         // Assert
         assertEquals(SyncStatus.SYNCED, result.syncStatus)
+    }
+
+    @Test
+    fun `fromCreateResponse sets isDeleted to false`() {
+        // Arrange & Act
+        val result = RemoteUploadRecordMapper.fromCreateResponse(
+            uploadedAt = 1_700_000_000_000L,
+            request = request,
+            fallbackUploadedAt = 0L
+        )
+
+        // Assert
+        assertEquals(IsDeleted.of(false), result.isDeleted)
     }
 
 }

@@ -74,13 +74,12 @@ class UploadRecordRemoteDataSourceImpl @Inject constructor(
             coroutine.invokeOnCancellation { operation?.cancel() }
         }
 
-        val uploadedAt = runCatching {
-            JSONObject(response.data.asString()).getLong("uploadedAt")
-        }.getOrNull()
+        val json = JSONObject(response.data.asString())
+        val uploadedAt: Long? = if (json.has("uploadedAt")) json.getLong("uploadedAt") else null
         return RemoteUploadRecordMapper.fromCreateResponse(
             uploadedAt = uploadedAt,
             request = request,
-            fallbackUploadedAt = clock.getCurrentTimes()
+            fallbackUploadedAt = clock.getCurrentTime()
         )
     }
 
