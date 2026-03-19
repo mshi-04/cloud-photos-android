@@ -7,6 +7,6 @@ class ScheduleUploadUseCase @Inject constructor(
     private val uploadScheduler: UploadScheduler
 ) {
 
-    operator fun invoke() = uploadScheduler.scheduleUpload()
+    suspend operator fun invoke() = uploadScheduler.scheduleUpload()
 
 }

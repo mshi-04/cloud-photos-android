@@ -36,7 +36,7 @@ class UploadMediaWorker @AssistedInject constructor(
             val current = localRepository.getUploadRecords(listOf(record.mediaId)).firstOrNull()
             if (current == null || current.syncStatus != SyncStatus.PENDING_UPLOAD) continue
 
-            val rawContentType = contentTypeResolver.resolve(record.mediaId)
+            val rawContentType = contentTypeResolver.resolve(current.mediaId)
             if (rawContentType == null) {
                 localRepository.saveUploadRecords(
                     listOf(current.copy(syncStatus = SyncStatus.ERROR))
@@ -55,7 +55,7 @@ class UploadMediaWorker @AssistedInject constructor(
             val uploadedRecord = if (current.cloudStoragePath != null) {
                 current
             } else {
-                val localUri = contentTypeResolver.resolveUri(record.mediaId)
+                val localUri = contentTypeResolver.resolveUri(current.mediaId)
                 if (localUri == null) {
                     localRepository.saveUploadRecords(
                         listOf(current.copy(syncStatus = SyncStatus.ERROR))
@@ -88,7 +88,9 @@ class UploadMediaWorker @AssistedInject constructor(
                 }
             }
 
-            val cloudStoragePath = uploadedRecord.cloudStoragePath!!
+            val cloudStoragePath = requireNotNull(uploadedRecord.cloudStoragePath) {
+                "cloudStoragePath must not be null after upload"
+            }
             val mediaType = MediaType.fromContentType(contentType.value)
 
             runCatching {
