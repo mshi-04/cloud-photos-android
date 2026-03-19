@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
@@ -32,6 +33,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.BrokenImage
 import androidx.compose.material.icons.filled.PlayCircleOutline
 import androidx.compose.material3.Icon
@@ -177,7 +179,7 @@ private fun MediaContent(
             .background(MaterialTheme.colorScheme.background)
     ) {
         when (loadState) {
-            is MediaUiState.LoadState.Loading -> {}
+            is MediaUiState.LoadState.None -> {}
 
             is MediaUiState.LoadState.PermissionRequired -> {
                 PermissionRequiredContent(onRetryPermissions = onRetryPermissions)
@@ -219,7 +221,10 @@ private fun MediaContent(
                             .align(Alignment.TopEnd)
                             .padding(top = statusBarPadding + 8.dp, end = 8.dp)
                     ) {
-                        AppIconButton(onClick = onGridSettingsClick)
+                        Row {
+                            SignOutButton(onClick = onSignOut)
+                            AppIconButton(onClick = onGridSettingsClick)
+                        }
                     }
                 } else {
                     EmptyContent()
@@ -251,6 +256,18 @@ private fun rememberScrollButtonVisibility(gridState: LazyGridState): State<Bool
     }
 
     return isVisible
+}
+
+@Composable
+private fun SignOutButton(onClick: () -> Unit) {
+    IconButton(onClick = onClick) {
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.Logout,
+            contentDescription = stringResource(R.string.media_sign_out),
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(24.dp)
+        )
+    }
 }
 
 @Composable

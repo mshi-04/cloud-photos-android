@@ -3,6 +3,7 @@ package com.appvoyager.cloudphotos.data.media.worker
 import android.content.Context
 import androidx.work.ListenableWorker
 import androidx.work.WorkerParameters
+import com.appvoyager.cloudphotos.data.media.datasource.UploadDataSource
 import com.appvoyager.cloudphotos.domain.media.model.SyncStatus
 import com.appvoyager.cloudphotos.domain.media.model.UploadRecord
 import com.appvoyager.cloudphotos.domain.media.repository.LocalUploadRecordsRepository
@@ -39,13 +40,14 @@ class DeleteMediaWorkerTest {
     private val workerParams = mockk<WorkerParameters>(relaxed = true)
     private val localRepository = mockk<LocalUploadRecordsRepository>()
     private val remoteRepository = mockk<RemoteUploadRecordsRepository>()
+    private val uploadDataSource = mockk<UploadDataSource>()
 
     private lateinit var worker: DeleteMediaWorker
 
     @BeforeEach
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        worker = DeleteMediaWorker(context, workerParams, localRepository, remoteRepository)
+        worker = DeleteMediaWorker(context, workerParams, localRepository, remoteRepository, uploadDataSource)
     }
 
     @AfterEach
@@ -66,13 +68,13 @@ class DeleteMediaWorkerTest {
     }
 
     @Test
-    fun `deletes from s3 api and room on success`() = runTest {
+    fun `deletes from api s3 and room in order on success`() = runTest {
         // Arrange
         val record = createUploadRecord("media-1")
         val cloudStoragePath = record.cloudStoragePath!!
         coEvery { localRepository.getPendingDeleteRecords() } returns listOf(record)
-        coEvery { remoteRepository.deleteStorageFile(any()) } just runs
         coEvery { remoteRepository.deleteUploadRecord(any()) } just runs
+        coEvery { uploadDataSource.deleteUploadedObject(any()) } just runs
         coEvery { localRepository.deleteUploadRecord(any()) } just runs
 
         // Act
@@ -80,8 +82,8 @@ class DeleteMediaWorkerTest {
 
         // Assert
         coVerifyOrder {
-            remoteRepository.deleteStorageFile(cloudStoragePath)
             remoteRepository.deleteUploadRecord(record.mediaId)
+            uploadDataSource.deleteUploadedObject(cloudStoragePath)
             localRepository.deleteUploadRecord(record.mediaId)
         }
     }
@@ -91,7 +93,6 @@ class DeleteMediaWorkerTest {
         // Arrange
         val record = createUploadRecord("media-1")
         coEvery { localRepository.getPendingDeleteRecords() } returns listOf(record)
-        coEvery { remoteRepository.deleteStorageFile(any()) } just runs
         coEvery { remoteRepository.deleteUploadRecord(any()) } throws
                 Exception("Unexpected response code 403: Forbidden")
         val slot = slot<List<UploadRecord>>()
@@ -105,11 +106,11 @@ class DeleteMediaWorkerTest {
     }
 
     @Test
-    fun `returns retry on temporary s3 failure`() = runTest {
+    fun `returns retry on temporary api failure`() = runTest {
         // Arrange
         val record = createUploadRecord("media-1")
         coEvery { localRepository.getPendingDeleteRecords() } returns listOf(record)
-        coEvery { remoteRepository.deleteStorageFile(any()) } throws Exception("Network timeout")
+        coEvery { remoteRepository.deleteUploadRecord(any()) } throws Exception("Network timeout")
 
         // Act
         val result = worker.doWork()
@@ -119,17 +120,33 @@ class DeleteMediaWorkerTest {
     }
 
     @Test
-    fun `does not delete from room when s3 fails`() = runTest {
+    fun `does not delete from s3 or room when api fails`() = runTest {
         // Arrange
         val record = createUploadRecord("media-1")
         coEvery { localRepository.getPendingDeleteRecords() } returns listOf(record)
-        coEvery { remoteRepository.deleteStorageFile(any()) } throws Exception("Network timeout")
+        coEvery { remoteRepository.deleteUploadRecord(any()) } throws Exception("Network timeout")
 
         // Act
         worker.doWork()
 
         // Assert
-        coVerify(exactly = 0) { localRepository.deleteUploadRecord(any()) }
+        coVerify(exactly = 0) { uploadDataSource.deleteUploadedObject(any()) }
+    }
+
+    @Test
+    fun `still deletes local record when s3 fails`() = runTest {
+        // Arrange
+        val record = createUploadRecord("media-1")
+        coEvery { localRepository.getPendingDeleteRecords() } returns listOf(record)
+        coEvery { remoteRepository.deleteUploadRecord(any()) } just runs
+        coEvery { uploadDataSource.deleteUploadedObject(any()) } throws Exception("Network timeout")
+        coEvery { localRepository.deleteUploadRecord(any()) } just runs
+
+        // Act
+        worker.doWork()
+
+        // Assert
+        coVerify { localRepository.deleteUploadRecord(record.mediaId) }
     }
 
     @Test
@@ -137,12 +154,10 @@ class DeleteMediaWorkerTest {
         // Arrange
         val record1 = createUploadRecord("media-1")
         val record2 = createUploadRecord("media-2")
-        val path1 = record1.cloudStoragePath!!
-        val path2 = record2.cloudStoragePath!!
         coEvery { localRepository.getPendingDeleteRecords() } returns listOf(record1, record2)
-        coEvery { remoteRepository.deleteStorageFile(path1) } throws Exception("Network timeout")
-        coEvery { remoteRepository.deleteStorageFile(path2) } just runs
-        coEvery { remoteRepository.deleteUploadRecord(any()) } just runs
+        coEvery { remoteRepository.deleteUploadRecord(record1.mediaId) } throws Exception("Network timeout")
+        coEvery { remoteRepository.deleteUploadRecord(record2.mediaId) } just runs
+        coEvery { uploadDataSource.deleteUploadedObject(any()) } just runs
         coEvery { localRepository.deleteUploadRecord(any()) } just runs
 
         // Act
@@ -157,12 +172,10 @@ class DeleteMediaWorkerTest {
         // Arrange
         val record1 = createUploadRecord("media-1")
         val record2 = createUploadRecord("media-2")
-        val path1 = record1.cloudStoragePath!!
-        val path2 = record2.cloudStoragePath!!
         coEvery { localRepository.getPendingDeleteRecords() } returns listOf(record1, record2)
-        coEvery { remoteRepository.deleteStorageFile(path1) } throws Exception("Network timeout")
-        coEvery { remoteRepository.deleteStorageFile(path2) } just runs
-        coEvery { remoteRepository.deleteUploadRecord(any()) } just runs
+        coEvery { remoteRepository.deleteUploadRecord(record1.mediaId) } throws Exception("Network timeout")
+        coEvery { remoteRepository.deleteUploadRecord(record2.mediaId) } just runs
+        coEvery { uploadDataSource.deleteUploadedObject(any()) } just runs
         coEvery { localRepository.deleteUploadRecord(any()) } just runs
 
         // Act
@@ -179,7 +192,7 @@ class DeleteMediaWorkerTest {
         val record2 = createUploadRecord("media-2")
         coEvery { localRepository.getPendingDeleteRecords() } returns listOf(record1, record2)
         coEvery { remoteRepository.deleteUploadRecord(any()) } just runs
-        coEvery { remoteRepository.deleteStorageFile(any()) } just runs
+        coEvery { uploadDataSource.deleteUploadedObject(any()) } just runs
         coEvery { localRepository.deleteUploadRecord(any()) } just runs
 
         // Act
@@ -226,7 +239,7 @@ class DeleteMediaWorkerTest {
         worker.doWork()
 
         // Assert
-        coVerify(exactly = 0) { remoteRepository.deleteStorageFile(any()) }
+        coVerify(exactly = 0) { uploadDataSource.deleteUploadedObject(any()) }
     }
 
     @Test
@@ -274,7 +287,7 @@ class DeleteMediaWorkerTest {
         // Arrange
         val record = createUploadRecord("media-1")
         coEvery { localRepository.getPendingDeleteRecords() } returns listOf(record)
-        coEvery { remoteRepository.deleteStorageFile(any()) } throws CancellationException()
+        coEvery { remoteRepository.deleteUploadRecord(any()) } throws CancellationException()
 
         // Act & Assert
         assertThrows<CancellationException> {

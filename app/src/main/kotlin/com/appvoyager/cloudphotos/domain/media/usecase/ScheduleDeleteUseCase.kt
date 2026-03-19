@@ -7,6 +7,6 @@ class ScheduleDeleteUseCase @Inject constructor(
     private val deleteScheduler: DeleteScheduler
 ) {
 
-    operator fun invoke() = deleteScheduler.scheduleDelete()
+    suspend operator fun invoke() = deleteScheduler.scheduleDelete()
 
 }

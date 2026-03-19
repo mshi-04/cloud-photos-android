@@ -47,6 +47,18 @@ class MediaUrlTest {
     }
 
     @Test
+    fun `of returns MediaUrl when input is a content URI`() {
+        // Arrange
+        val rawUrl = "content://media/external/images/media/123"
+
+        // Act
+        val mediaUrl = MediaUrl.of(rawUrl)
+
+        // Assert
+        assertEquals("content://media/external/images/media/123", mediaUrl.value)
+    }
+
+    @Test
     fun `of throws IllegalArgumentException when input is not a valid URL`() {
         // Arrange
         val rawUrl = "hppt://example.com"

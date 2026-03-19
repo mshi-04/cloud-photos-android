@@ -2,15 +2,10 @@ package com.appvoyager.cloudphotos.data.media.datasource
 
 import com.amplifyframework.api.rest.RestOptions
 import com.amplifyframework.core.Amplify
-import com.amplifyframework.storage.StoragePath
 import com.appvoyager.cloudphotos.data.media.util.RemoteUploadRecordMapper
-import com.appvoyager.cloudphotos.domain.media.model.SyncStatus
 import com.appvoyager.cloudphotos.domain.media.model.UploadRecord
 import com.appvoyager.cloudphotos.domain.media.request.CreateUploadRecordRequest
-import com.appvoyager.cloudphotos.domain.media.valueobject.CloudStoragePath
-import com.appvoyager.cloudphotos.domain.media.valueobject.IsDeleted
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaId
-import com.appvoyager.cloudphotos.domain.media.valueobject.MediaUploadedAt
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.json.JSONObject
 import javax.inject.Inject
@@ -58,7 +53,7 @@ class UploadRecordRemoteDataSourceImpl @Inject constructor() : UploadRecordRemot
             .addBody(body.toByteArray())
             .build()
 
-        suspendCancellableCoroutine { coroutine ->
+        val response = suspendCancellableCoroutine { coroutine ->
             val operation = Amplify.API.post(
                 API_NAME,
                 restOptions,
@@ -76,12 +71,9 @@ class UploadRecordRemoteDataSourceImpl @Inject constructor() : UploadRecordRemot
             coroutine.invokeOnCancellation { operation?.cancel() }
         }
 
-        return UploadRecord(
-            mediaId = request.mediaId,
-            cloudStoragePath = request.cloudStoragePath,
-            isDeleted = IsDeleted.of(false),
-            syncStatus = SyncStatus.SYNCED,
-            mediaUploadedAt = MediaUploadedAt.of(System.currentTimeMillis())
+        return RemoteUploadRecordMapper.fromCreateResponse(
+            response.data.asString(),
+            request
         )
     }
 
@@ -106,18 +98,6 @@ class UploadRecordRemoteDataSourceImpl @Inject constructor() : UploadRecordRemot
                 { coroutine.resumeWithException(it) }
             )
             coroutine.invokeOnCancellation { operation?.cancel() }
-        }
-    }
-
-    override suspend fun deleteStorageFile(cloudStoragePath: CloudStoragePath) {
-        val storagePath = StoragePath.fromString(cloudStoragePath.value)
-
-        suspendCancellableCoroutine { coroutine ->
-            Amplify.Storage.remove(
-                storagePath,
-                { coroutine.resume(it) { _, _, _ -> } },
-                { coroutine.resumeWithException(it) }
-            )
         }
     }
 

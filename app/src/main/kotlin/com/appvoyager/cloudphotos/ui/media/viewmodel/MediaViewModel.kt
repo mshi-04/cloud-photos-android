@@ -82,7 +82,7 @@ class MediaViewModel @Inject constructor(
 
     fun loadMediaList() {
         mediaListJob?.cancel()
-        _uiState.update { it.copy(loadState = MediaUiState.LoadState.Loading) }
+        _uiState.update { it.copy(loadState = MediaUiState.LoadState.None) }
         mediaListJob = viewModelScope.launch {
             getMediaListUseCase()
                 .catch { cause ->
