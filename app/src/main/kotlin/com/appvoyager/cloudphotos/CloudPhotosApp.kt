@@ -1,8 +1,8 @@
 package com.appvoyager.cloudphotos
 
 import android.app.Application
-import androidx.work.Configuration
 import androidx.hilt.work.HiltWorkerFactory
+import androidx.work.Configuration
 import com.amplifyframework.AmplifyException
 import com.amplifyframework.api.aws.AWSApiPlugin
 import com.amplifyframework.auth.cognito.AWSCognitoAuthPlugin

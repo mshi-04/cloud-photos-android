@@ -4,7 +4,6 @@ import com.appvoyager.cloudphotos.domain.media.model.SyncStatus
 import com.appvoyager.cloudphotos.domain.media.model.UploadRecord
 import com.appvoyager.cloudphotos.domain.media.repository.LocalUploadRecordsRepository
 import com.appvoyager.cloudphotos.domain.media.repository.UploadScheduler
-import com.appvoyager.cloudphotos.domain.media.valueobject.CloudStoragePath
 import com.appvoyager.cloudphotos.domain.media.valueobject.IsDeleted
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaId
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaUploadedAt
@@ -17,6 +16,7 @@ import io.mockk.slot
 import io.mockk.verify
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
@@ -41,14 +41,24 @@ class RecordMediaUploadUseCaseTest {
         every { uploadScheduler.scheduleUpload() } just runs
 
         // Act
-        useCase(
-            mediaId,
-            CloudStoragePath.of("photos/media-1.jpg"),
-            MediaUploadedAt.of(1700000000000L)
-        )
+        useCase(mediaId, MediaUploadedAt.of(1700000000000L))
 
         // Assert
         assertEquals(mediaId, slot.captured.first().mediaId)
+    }
+
+    @Test
+    fun `saved record has null cloudStoragePath`() = runTest {
+        // Arrange
+        val slot = slot<List<UploadRecord>>()
+        coEvery { localRepository.saveUploadRecords(capture(slot)) } just runs
+        every { uploadScheduler.scheduleUpload() } just runs
+
+        // Act
+        useCase(MediaId.of("media-1"), MediaUploadedAt.of(1700000000000L))
+
+        // Assert
+        assertNull(slot.captured.first().cloudStoragePath)
     }
 
     @Test
@@ -59,11 +69,7 @@ class RecordMediaUploadUseCaseTest {
         every { uploadScheduler.scheduleUpload() } just runs
 
         // Act
-        useCase(
-            MediaId.of("media-1"),
-            CloudStoragePath.of("photos/media-1.jpg"),
-            MediaUploadedAt.of(1700000000000L)
-        )
+        useCase(MediaId.of("media-1"), MediaUploadedAt.of(1700000000000L))
 
         // Assert
         assertEquals(IsDeleted.of(false), slot.captured.first().isDeleted)
@@ -77,11 +83,7 @@ class RecordMediaUploadUseCaseTest {
         every { uploadScheduler.scheduleUpload() } just runs
 
         // Act
-        useCase(
-            MediaId.of("media-1"),
-            CloudStoragePath.of("photos/media-1.jpg"),
-            MediaUploadedAt.of(1700000000000L)
-        )
+        useCase(MediaId.of("media-1"), MediaUploadedAt.of(1700000000000L))
 
         // Assert
         assertEquals(SyncStatus.PENDING_UPLOAD, slot.captured.first().syncStatus)
@@ -96,7 +98,7 @@ class RecordMediaUploadUseCaseTest {
         every { uploadScheduler.scheduleUpload() } just runs
 
         // Act
-        useCase(MediaId.of("media-1"), CloudStoragePath.of("photos/media-1.jpg"), uploadedAt)
+        useCase(MediaId.of("media-1"), uploadedAt)
 
         // Assert
         assertEquals(uploadedAt, slot.captured.first().mediaUploadedAt)
@@ -109,11 +111,7 @@ class RecordMediaUploadUseCaseTest {
         every { uploadScheduler.scheduleUpload() } just runs
 
         // Act
-        useCase(
-            MediaId.of("media-1"),
-            CloudStoragePath.of("photos/media-1.jpg"),
-            MediaUploadedAt.of(1700000000000L)
-        )
+        useCase(MediaId.of("media-1"), MediaUploadedAt.of(1700000000000L))
 
         // Assert
         verify { uploadScheduler.scheduleUpload() }

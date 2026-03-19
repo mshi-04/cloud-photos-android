@@ -6,7 +6,7 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "upload_records")
 data class UploadRecordEntity(
     @PrimaryKey val mediaId: String,
-    val cloudStoragePath: String,
+    val cloudStoragePath: String?,
     val isDeleted: Boolean,
     val syncStatus: String,
     val uploadedAt: Long

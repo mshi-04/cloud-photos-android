@@ -110,7 +110,7 @@ class MediaViewModel @Inject constructor(
         scheduleDelete()
     }
 
-    fun syncRemote() {
+    private fun syncRemote() {
         syncJob?.cancel()
         syncJob = viewModelScope.launch {
             runCatching { syncUploadRecordsUseCase() }
@@ -121,12 +121,12 @@ class MediaViewModel @Inject constructor(
         }
     }
 
-    fun scheduleUpload() = viewModelScope.launch {
+    private fun scheduleUpload() = viewModelScope.launch {
         runCatching { scheduleUploadUseCase() }
             .onFailure { if (it is CancellationException) throw it }
     }
 
-    fun scheduleDelete() = viewModelScope.launch {
+    private fun scheduleDelete() = viewModelScope.launch {
         runCatching { scheduleDeleteUseCase() }
             .onFailure { if (it is CancellationException) throw it }
     }

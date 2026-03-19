@@ -2,8 +2,6 @@ package com.appvoyager.cloudphotos.domain.upload.usecase
 
 import com.appvoyager.cloudphotos.domain.media.model.UploadError
 import com.appvoyager.cloudphotos.domain.media.model.UploadResult
-import com.appvoyager.cloudphotos.domain.media.model.errorOrNull
-import com.appvoyager.cloudphotos.domain.media.model.getOrNull
 import com.appvoyager.cloudphotos.domain.media.repository.UploadRepository
 import com.appvoyager.cloudphotos.domain.media.request.UploadMediaRequest
 import com.appvoyager.cloudphotos.domain.media.usecase.UploadMediaUseCase
@@ -54,7 +52,7 @@ class UploadMediaUseCaseTest {
         val result = uploadMediaUseCase(request)
 
         // Assert
-        assertEquals(expectedPath, result.getOrNull())
+        assertEquals(UploadResult.Success(expectedPath), result)
     }
 
     @Test
@@ -71,6 +69,6 @@ class UploadMediaUseCaseTest {
         val result = uploadMediaUseCase(request)
 
         // Assert
-        assertEquals(expectedError, result.errorOrNull())
+        assertEquals(UploadResult.Error(expectedError), result)
     }
 }

@@ -12,7 +12,7 @@ internal object UploadRecordEntityMapper {
 
     fun toDomain(entity: UploadRecordEntity): UploadRecord = UploadRecord(
         mediaId = MediaId.of(entity.mediaId),
-        cloudStoragePath = CloudStoragePath.of(entity.cloudStoragePath),
+        cloudStoragePath = entity.cloudStoragePath?.let { CloudStoragePath.of(it) },
         isDeleted = IsDeleted.of(entity.isDeleted),
         syncStatus = enumValues<SyncStatus>().find { it.name == entity.syncStatus }
             ?: SyncStatus.ERROR,
@@ -21,7 +21,7 @@ internal object UploadRecordEntityMapper {
 
     fun toEntity(record: UploadRecord): UploadRecordEntity = UploadRecordEntity(
         mediaId = record.mediaId.value,
-        cloudStoragePath = record.cloudStoragePath.value,
+        cloudStoragePath = record.cloudStoragePath?.value,
         isDeleted = record.isDeleted.value,
         syncStatus = record.syncStatus.name,
         uploadedAt = record.mediaUploadedAt.value

@@ -21,6 +21,7 @@ import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
+import io.mockk.verify
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -250,161 +251,12 @@ class MediaViewModelTest {
     }
 
     @Test
-    fun `syncRemote calls syncUploadRecordsUseCase`() = runTest {
-        // Arrange
-        every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
-        coEvery { syncUploadRecordsUseCase() } returns Unit
-
-        val viewModel = createViewModel()
-        advanceUntilIdle()
-
-        // Act
-        viewModel.syncRemote()
-        advanceUntilIdle()
-
-        // Assert
-        coVerify { syncUploadRecordsUseCase() }
-    }
-
-    @Test
-    fun `syncRemote failure emits snackbar effect`() = runTest {
-        // Arrange
-        every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
-        coEvery { syncUploadRecordsUseCase() } throws RuntimeException("sync failed")
-
-        val viewModel = createViewModel()
-        advanceUntilIdle()
-
-        // Act
-        viewModel.syncRemote()
-        advanceUntilIdle()
-
-        // Assert
-        val effect = viewModel.effect.first()
-        assertEquals(MediaEffect.ShowSnackbar(R.string.error_unknown), effect)
-    }
-
-    @Test
-    fun `syncRemote cancels previous sync job`() = runTest {
-        // Arrange
-        every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
-        var firstWasCancelled = false
-        coEvery { syncUploadRecordsUseCase() } coAnswers {
-            try {
-                kotlinx.coroutines.delay(1000L)
-            } catch (e: CancellationException) {
-                firstWasCancelled = true
-                throw e
-            }
-        }
-
-        val viewModel = createViewModel()
-        advanceUntilIdle()
-
-        // Act
-        viewModel.syncRemote()
-        advanceTimeBy(500L)
-        viewModel.syncRemote()
-        advanceUntilIdle()
-
-        // Assert
-        assertTrue(firstWasCancelled)
-    }
-
-    @Test
-    fun `syncRemote invokes syncUploadRecordsUseCase for each call`() = runTest {
-        // Arrange
-        every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
-        coEvery { syncUploadRecordsUseCase() } coAnswers {
-            try {
-                kotlinx.coroutines.delay(1000L)
-            } catch (e: CancellationException) {
-                throw e
-            }
-        }
-
-        val viewModel = createViewModel()
-        advanceUntilIdle()
-
-        // Act
-        viewModel.syncRemote()
-        advanceTimeBy(500L)
-        viewModel.syncRemote()
-        advanceUntilIdle()
-
-        // Assert
-        coVerify(exactly = 2) { syncUploadRecordsUseCase() }
-    }
-
-    @Test
-    fun `scheduleUpload calls scheduleUploadUseCase`() = runTest {
-        // Arrange
-        every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
-        coEvery { scheduleUploadUseCase() } just runs
-
-        val viewModel = createViewModel()
-        advanceUntilIdle()
-
-        // Act
-        viewModel.scheduleUpload()
-        advanceUntilIdle()
-
-        // Assert
-        coVerify { scheduleUploadUseCase() }
-    }
-
-    @Test
-    fun `scheduleUpload failure does not throw`() = runTest {
-        // Arrange
-        every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
-        coEvery { scheduleUploadUseCase() } throws RuntimeException("enqueue failed")
-
-        val viewModel = createViewModel()
-        advanceUntilIdle()
-
-        // Assert
-        assertDoesNotThrow { viewModel.scheduleUpload() }
-        advanceUntilIdle()
-    }
-
-    @Test
-    fun `scheduleDelete calls scheduleDeleteUseCase`() = runTest {
-        // Arrange
-        every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
-        coEvery { scheduleDeleteUseCase() } just runs
-
-        val viewModel = createViewModel()
-        advanceUntilIdle()
-
-        // Act
-        viewModel.scheduleDelete()
-        advanceUntilIdle()
-
-        // Assert
-        coVerify { scheduleDeleteUseCase() }
-    }
-
-    @Test
-    fun `scheduleDelete failure does not throw`() = runTest {
-        // Arrange
-        every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
-        coEvery { scheduleDeleteUseCase() } throws RuntimeException("enqueue failed")
-
-        val viewModel = createViewModel()
-        advanceUntilIdle()
-
-        // Assert
-        assertDoesNotThrow { viewModel.scheduleDelete() }
-        advanceUntilIdle()
-    }
-
-    @Test
     fun `onScreenResumed calls syncUploadRecordsUseCase`() = runTest {
         // Arrange
         every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
         coEvery { syncUploadRecordsUseCase() } returns Unit
-        coEvery { scheduleUploadUseCase() } just runs
-        coEvery { scheduleDeleteUseCase() } just runs
+        every { scheduleUploadUseCase() } just runs
+        every { scheduleDeleteUseCase() } just runs
 
         val viewModel = createViewModel()
         viewModel.elapsedRealtimeProvider = { MediaViewModel.MIN_RESUME_INTERVAL_MS }
@@ -423,8 +275,8 @@ class MediaViewModelTest {
         // Arrange
         every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
         coEvery { syncUploadRecordsUseCase() } returns Unit
-        coEvery { scheduleUploadUseCase() } just runs
-        coEvery { scheduleDeleteUseCase() } just runs
+        every { scheduleUploadUseCase() } just runs
+        every { scheduleDeleteUseCase() } just runs
 
         val viewModel = createViewModel()
         viewModel.elapsedRealtimeProvider = { MediaViewModel.MIN_RESUME_INTERVAL_MS }
@@ -435,7 +287,7 @@ class MediaViewModelTest {
         advanceUntilIdle()
 
         // Assert
-        coVerify { scheduleUploadUseCase() }
+        verify { scheduleUploadUseCase() }
     }
 
     @Test
@@ -443,8 +295,8 @@ class MediaViewModelTest {
         // Arrange
         every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
         coEvery { syncUploadRecordsUseCase() } returns Unit
-        coEvery { scheduleUploadUseCase() } just runs
-        coEvery { scheduleDeleteUseCase() } just runs
+        every { scheduleUploadUseCase() } just runs
+        every { scheduleDeleteUseCase() } just runs
 
         val viewModel = createViewModel()
         viewModel.elapsedRealtimeProvider = { MediaViewModel.MIN_RESUME_INTERVAL_MS }
@@ -455,16 +307,16 @@ class MediaViewModelTest {
         advanceUntilIdle()
 
         // Assert
-        coVerify { scheduleDeleteUseCase() }
+        verify { scheduleDeleteUseCase() }
     }
 
     @Test
-    fun `onScreenResumed is throttled within MIN_RESUME_INTERVAL_MS`() = runTest {
+    fun `onScreenResumed throttling limits syncUploadRecordsUseCase to one call`() = runTest {
         // Arrange
         every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
         coEvery { syncUploadRecordsUseCase() } returns Unit
-        coEvery { scheduleUploadUseCase() } just runs
-        coEvery { scheduleDeleteUseCase() } just runs
+        every { scheduleUploadUseCase() } just runs
+        every { scheduleDeleteUseCase() } just runs
 
         val viewModel = createViewModel()
         viewModel.elapsedRealtimeProvider = { MediaViewModel.MIN_RESUME_INTERVAL_MS }
@@ -478,8 +330,50 @@ class MediaViewModelTest {
 
         // Assert
         coVerify(exactly = 1) { syncUploadRecordsUseCase() }
-        coVerify(exactly = 1) { scheduleUploadUseCase() }
-        coVerify(exactly = 1) { scheduleDeleteUseCase() }
+    }
+
+    @Test
+    fun `onScreenResumed throttling limits scheduleUploadUseCase to one call`() = runTest {
+        // Arrange
+        every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
+        coEvery { syncUploadRecordsUseCase() } returns Unit
+        every { scheduleUploadUseCase() } just runs
+        every { scheduleDeleteUseCase() } just runs
+
+        val viewModel = createViewModel()
+        viewModel.elapsedRealtimeProvider = { MediaViewModel.MIN_RESUME_INTERVAL_MS }
+        advanceUntilIdle()
+
+        // Act: 1回目は通過、2回目は同じ時刻なのでスロットルされる
+        viewModel.onScreenResumed()
+        advanceUntilIdle()
+        viewModel.onScreenResumed()
+        advanceUntilIdle()
+
+        // Assert
+        verify(exactly = 1) { scheduleUploadUseCase() }
+    }
+
+    @Test
+    fun `onScreenResumed throttling limits scheduleDeleteUseCase to one call`() = runTest {
+        // Arrange
+        every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
+        coEvery { syncUploadRecordsUseCase() } returns Unit
+        every { scheduleUploadUseCase() } just runs
+        every { scheduleDeleteUseCase() } just runs
+
+        val viewModel = createViewModel()
+        viewModel.elapsedRealtimeProvider = { MediaViewModel.MIN_RESUME_INTERVAL_MS }
+        advanceUntilIdle()
+
+        // Act: 1回目は通過、2回目は同じ時刻なのでスロットルされる
+        viewModel.onScreenResumed()
+        advanceUntilIdle()
+        viewModel.onScreenResumed()
+        advanceUntilIdle()
+
+        // Assert
+        verify(exactly = 1) { scheduleDeleteUseCase() }
     }
 
 }

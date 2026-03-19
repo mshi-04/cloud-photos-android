@@ -24,8 +24,13 @@ class DeleteMediaWorker @AssistedInject constructor(
         var hasTemporaryFailure = false
 
         for (record in pendingRecords) {
+            val cloudStoragePath = record.cloudStoragePath
+            if (cloudStoragePath == null) {
+                localRepository.deleteUploadRecord(record.mediaId)
+                continue
+            }
             runCatching {
-                remoteRepository.deleteStorageFile(record.cloudStoragePath)
+                remoteRepository.deleteStorageFile(cloudStoragePath)
                 remoteRepository.deleteUploadRecord(record.mediaId)
                 localRepository.deleteUploadRecord(record.mediaId)
             }.onFailure { e ->
