@@ -107,29 +107,29 @@ class MediaViewModel @Inject constructor(
         val last = lastResumeElapsedRealtimeMs
         if (last != null && now - last < MIN_RESUME_INTERVAL_MS) return
         lastResumeElapsedRealtimeMs = now
-        syncRemote()
-        prepareUploadQueue()
-        scheduleDelete()
-    }
-
-    private fun syncRemote() {
         val previousJob = syncJob
         syncJob = viewModelScope.launch {
             previousJob?.cancelAndJoin()
-            runCatching { syncUploadRecordsUseCase() }
-                .onFailure { cause ->
-                    if (cause is CancellationException) throw cause
-                    _effect.send(MediaEffect.ShowSnackbar(R.string.error_unknown))
-                }
+            syncRemote()
+            prepareUploadQueue()
+            scheduleDelete()
         }
     }
 
-    private fun prepareUploadQueue() = viewModelScope.launch {
+    private suspend fun syncRemote() {
+        runCatching { syncUploadRecordsUseCase() }
+            .onFailure { cause ->
+                if (cause is CancellationException) throw cause
+                _effect.send(MediaEffect.ShowSnackbar(R.string.error_unknown))
+            }
+    }
+
+    private suspend fun prepareUploadQueue() {
         runCatching { prepareUploadQueueUseCase() }
             .onFailure { if (it is CancellationException) throw it }
     }
 
-    private fun scheduleDelete() = viewModelScope.launch {
+    private suspend fun scheduleDelete() {
         runCatching { scheduleDeleteUseCase() }
             .onFailure { if (it is CancellationException) throw it }
     }
