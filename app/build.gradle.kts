@@ -71,6 +71,21 @@ kotlin {
 
 dependencies {
 
+    // Feature modules
+    implementation(project(":feature:auth:domain"))
+    implementation(project(":feature:auth:data"))
+    implementation(project(":feature:auth:ui"))
+    implementation(project(":feature:media:domain"))
+    implementation(project(":feature:media:data"))
+    implementation(project(":feature:media:ui"))
+    implementation(project(":feature:settings:domain"))
+    implementation(project(":feature:settings:data"))
+
+    // Core modules
+    implementation(project(":core:common"))
+    implementation(project(":core:data"))
+    implementation(project(":core:ui"))
+
     // AndroidX
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
@@ -80,8 +95,6 @@ dependencies {
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.material3)
-    implementation(libs.androidx.material.icons.extended)
-    implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.navigation.compose)
     debugImplementation(libs.androidx.ui.tooling)
 
@@ -89,6 +102,7 @@ dependencies {
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
     implementation(libs.androidx.hilt.navigation.compose)
+    ksp(libs.androidx.hilt.compiler)
 
     // Firebase
     implementation(platform(libs.firebase.bom))
@@ -101,22 +115,12 @@ dependencies {
     implementation(libs.amplify.storage.s3)
     implementation(libs.amplify.api)
 
-    // Image Loading
-    implementation(libs.coil.compose)
-
-    // DataStore
-    implementation(libs.androidx.datastore.preferences)
-
-    // Room
+    // Room (required by DI modules)
     implementation(libs.androidx.room.runtime)
-    implementation(libs.androidx.room.ktx)
-    ksp(libs.androidx.room.compiler)
-    testImplementation(libs.androidx.room.testing)
 
     // WorkManager
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.androidx.hilt.work)
-    ksp(libs.androidx.hilt.compiler)
 
     // Desugaring
     coreLibraryDesugaring(libs.desugar.jdk.libs)
