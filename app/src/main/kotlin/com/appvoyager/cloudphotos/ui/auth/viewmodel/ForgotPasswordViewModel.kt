@@ -32,13 +32,11 @@ class ForgotPasswordViewModel @Inject constructor(
     private val _effect = MutableSharedFlow<ForgotPasswordEffect>(extraBufferCapacity = 1)
     val effect: SharedFlow<ForgotPasswordEffect> = _effect.asSharedFlow()
 
-    fun onEmailChanged(value: String) {
+    fun onEmailChanged(value: String) =
         _uiState.update { it.copy(email = value, emailError = null) }
-    }
 
-    fun onClearEmail() {
+    fun onClearEmail() =
         _uiState.update { it.copy(email = "", emailError = null) }
-    }
 
     fun onSubmit() {
         if (_uiState.value.isLoading || !validateForm()) return
@@ -54,6 +52,8 @@ class ForgotPasswordViewModel @Inject constructor(
 
                     is AuthResult.Error -> handleError(result.error, email)
                 }
+            } catch (_: IllegalArgumentException) {
+                _uiState.update { it.copy(emailError = R.string.error_invalid_email) }
             } finally {
                 _uiState.update { it.copy(isLoading = false) }
             }
@@ -68,40 +68,39 @@ class ForgotPasswordViewModel @Inject constructor(
         return true
     }
 
-    private suspend fun handleError(error: AuthError, email: Email) {
-        when (error) {
-            is AuthError.Network -> {
-                _effect.emit(ForgotPasswordEffect.ShowSnackbar(R.string.error_network))
-            }
+    private suspend fun handleError(error: AuthError, email: Email) = when (error) {
+        is AuthError.Network -> {
+            _effect.emit(ForgotPasswordEffect.ShowSnackbar(R.string.error_network))
+        }
 
-            is AuthError.TooManyRequests -> {
-                _effect.emit(ForgotPasswordEffect.ShowSnackbar(R.string.error_too_many_requests))
-            }
+        is AuthError.TooManyRequests -> {
+            _effect.emit(ForgotPasswordEffect.ShowSnackbar(R.string.error_too_many_requests))
+        }
 
-            is AuthError.UserNotConfirmed -> {
-                _effect.emit(ForgotPasswordEffect.NavigateToVerification(email))
-            }
+        is AuthError.UserNotConfirmed -> {
+            _effect.emit(ForgotPasswordEffect.NavigateToVerification(email))
+        }
 
-            is AuthError.InvalidPassword -> {
-                _effect.emit(ForgotPasswordEffect.ShowSnackbar(R.string.error_invalid_password))
-            }
+        is AuthError.InvalidPassword -> {
+            _effect.emit(ForgotPasswordEffect.ShowSnackbar(R.string.error_invalid_password))
+        }
 
-            is AuthError.InvalidCredentials -> {
-                _effect.emit(ForgotPasswordEffect.ShowSnackbar(R.string.error_invalid_credentials))
-            }
+        is AuthError.InvalidCredentials -> {
+            _effect.emit(ForgotPasswordEffect.ShowSnackbar(R.string.error_invalid_credentials))
+        }
 
-            is AuthError.CodeExpired -> {
-                _effect.emit(ForgotPasswordEffect.ShowSnackbar(R.string.error_code_expired))
-            }
+        is AuthError.CodeExpired -> {
+            _effect.emit(ForgotPasswordEffect.ShowSnackbar(R.string.error_code_expired))
+        }
 
-            is AuthError.CodeMismatch -> {
-                _effect.emit(ForgotPasswordEffect.ShowSnackbar(R.string.error_code_mismatch))
-            }
+        is AuthError.CodeMismatch -> {
+            _effect.emit(ForgotPasswordEffect.ShowSnackbar(R.string.error_code_mismatch))
+        }
 
-            is AuthError.Unknown,
-            is AuthError.UsernameAlreadyExists -> {
-                _effect.emit(ForgotPasswordEffect.ShowSnackbar(R.string.error_unknown))
-            }
+        is AuthError.Unknown,
+        is AuthError.UsernameAlreadyExists -> {
+            _effect.emit(ForgotPasswordEffect.ShowSnackbar(R.string.error_unknown))
         }
     }
+
 }

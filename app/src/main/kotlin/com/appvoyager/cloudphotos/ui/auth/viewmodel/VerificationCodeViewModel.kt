@@ -132,53 +132,49 @@ class VerificationCodeViewModel @Inject constructor(
         }
     }
 
-    private suspend fun handleConfirmError(error: AuthError) {
-        when (error) {
-            is AuthError.CodeMismatch -> {
-                _uiState.update { it.copy(codeError = R.string.error_code_mismatch) }
-            }
+    private suspend fun handleConfirmError(error: AuthError) = when (error) {
+        is AuthError.CodeMismatch -> {
+            _uiState.update { it.copy(codeError = R.string.error_code_mismatch) }
+        }
 
-            is AuthError.CodeExpired -> {
-                _uiState.update { it.copy(codeError = R.string.error_code_expired) }
-            }
+        is AuthError.CodeExpired -> {
+            _uiState.update { it.copy(codeError = R.string.error_code_expired) }
+        }
 
-            is AuthError.Network -> {
-                _effect.emit(VerificationEffect.ShowSnackbar(R.string.error_network))
-            }
+        is AuthError.Network -> {
+            _effect.emit(VerificationEffect.ShowSnackbar(R.string.error_network))
+        }
 
-            is AuthError.TooManyRequests -> {
-                _effect.emit(VerificationEffect.ShowSnackbar(R.string.error_too_many_requests))
-            }
+        is AuthError.TooManyRequests -> {
+            _effect.emit(VerificationEffect.ShowSnackbar(R.string.error_too_many_requests))
+        }
 
-            is AuthError.InvalidCredentials,
-            is AuthError.InvalidPassword,
-            is AuthError.Unknown,
-            is AuthError.UserNotConfirmed,
-            is AuthError.UsernameAlreadyExists -> {
-                _effect.emit(VerificationEffect.ShowSnackbar(R.string.error_unknown))
-            }
+        is AuthError.InvalidCredentials,
+        is AuthError.InvalidPassword,
+        is AuthError.Unknown,
+        is AuthError.UserNotConfirmed,
+        is AuthError.UsernameAlreadyExists -> {
+            _effect.emit(VerificationEffect.ShowSnackbar(R.string.error_unknown))
         }
     }
 
-    private suspend fun handleResendError(error: AuthError) {
-        when (error) {
-            is AuthError.Network -> {
-                _effect.emit(VerificationEffect.ShowSnackbar(R.string.error_network))
-            }
+    private suspend fun handleResendError(error: AuthError) = when (error) {
+        is AuthError.Network -> {
+            _effect.emit(VerificationEffect.ShowSnackbar(R.string.error_network))
+        }
 
-            is AuthError.TooManyRequests -> {
-                _effect.emit(VerificationEffect.ShowSnackbar(R.string.error_too_many_requests))
-            }
+        is AuthError.TooManyRequests -> {
+            _effect.emit(VerificationEffect.ShowSnackbar(R.string.error_too_many_requests))
+        }
 
-            is AuthError.CodeExpired,
-            is AuthError.CodeMismatch,
-            is AuthError.InvalidCredentials,
-            is AuthError.InvalidPassword,
-            is AuthError.Unknown,
-            is AuthError.UserNotConfirmed,
-            is AuthError.UsernameAlreadyExists -> {
-                _effect.emit(VerificationEffect.ShowSnackbar(R.string.error_resend_failed))
-            }
+        is AuthError.CodeExpired,
+        is AuthError.CodeMismatch,
+        is AuthError.InvalidCredentials,
+        is AuthError.InvalidPassword,
+        is AuthError.Unknown,
+        is AuthError.UserNotConfirmed,
+        is AuthError.UsernameAlreadyExists -> {
+            _effect.emit(VerificationEffect.ShowSnackbar(R.string.error_resend_failed))
         }
     }
 
@@ -196,4 +192,5 @@ class VerificationCodeViewModel @Inject constructor(
     companion object {
         private const val ARG_EMAIL = "email"
     }
+
 }

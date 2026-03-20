@@ -45,7 +45,6 @@ class ResetPasswordViewModel @Inject constructor(
     private val _effect = MutableSharedFlow<ResetPasswordEffect>(extraBufferCapacity = 1)
     val effect: SharedFlow<ResetPasswordEffect> = _effect.asSharedFlow()
 
-
     fun startTimerIfNeeded() {
         if (!isTimerStarted) {
             isTimerStarted = true
@@ -73,17 +72,11 @@ class ResetPasswordViewModel @Inject constructor(
         _uiState.update { it.copy(codes = currentCodes) }
     }
 
-    fun onNewPasswordChanged(value: String) {
+    fun onNewPasswordChanged(value: String) =
         _uiState.update { it.copy(newPassword = value, passwordError = null) }
-    }
 
-    fun onToggleNewPasswordVisibility() {
+    fun onToggleNewPasswordVisibility() =
         _uiState.update { it.copy(isNewPasswordVisible = !it.isNewPasswordVisible) }
-    }
-
-    fun onClearCodes() {
-        _uiState.update { it.copy(codes = List(it.codes.size) { "" }, codeError = null) }
-    }
 
     fun onConfirm() {
         if (_uiState.value.isLoading || !validateForm()) return
@@ -143,60 +136,56 @@ class ResetPasswordViewModel @Inject constructor(
             _uiState.update { it.copy(codeError = R.string.error_enter_code) }
             valid = false
         }
-        if (_uiState.value.newPassword.length < 8) {
+        if (_uiState.value.newPassword.length < MIN_PASSWORD_LENGTH) {
             _uiState.update { it.copy(passwordError = R.string.error_password_too_short) }
             valid = false
         }
         return valid
     }
 
-    private suspend fun handleConfirmError(error: AuthError) {
-        when (error) {
-            is AuthError.CodeMismatch -> {
-                _uiState.update { it.copy(codeError = R.string.error_code_mismatch) }
-            }
+    private suspend fun handleConfirmError(error: AuthError) = when (error) {
+        is AuthError.CodeMismatch -> {
+            _uiState.update { it.copy(codeError = R.string.error_code_mismatch) }
+        }
 
-            is AuthError.CodeExpired -> {
-                _uiState.update { it.copy(codeError = R.string.error_code_expired) }
-            }
+        is AuthError.CodeExpired -> {
+            _uiState.update { it.copy(codeError = R.string.error_code_expired) }
+        }
 
-            is AuthError.Network -> {
-                _effect.emit(ResetPasswordEffect.ShowSnackbar(R.string.error_network))
-            }
+        is AuthError.Network -> {
+            _effect.emit(ResetPasswordEffect.ShowSnackbar(R.string.error_network))
+        }
 
-            is AuthError.TooManyRequests -> {
-                _effect.emit(ResetPasswordEffect.ShowSnackbar(R.string.error_too_many_requests))
-            }
+        is AuthError.TooManyRequests -> {
+            _effect.emit(ResetPasswordEffect.ShowSnackbar(R.string.error_too_many_requests))
+        }
 
-            is AuthError.InvalidCredentials,
-            is AuthError.InvalidPassword,
-            is AuthError.Unknown,
-            is AuthError.UserNotConfirmed,
-            is AuthError.UsernameAlreadyExists -> {
-                _effect.emit(ResetPasswordEffect.ShowSnackbar(R.string.error_unknown))
-            }
+        is AuthError.InvalidCredentials,
+        is AuthError.InvalidPassword,
+        is AuthError.Unknown,
+        is AuthError.UserNotConfirmed,
+        is AuthError.UsernameAlreadyExists -> {
+            _effect.emit(ResetPasswordEffect.ShowSnackbar(R.string.error_unknown))
         }
     }
 
-    private suspend fun handleResendError(error: AuthError) {
-        when (error) {
-            is AuthError.Network -> {
-                _effect.emit(ResetPasswordEffect.ShowSnackbar(R.string.error_network))
-            }
+    private suspend fun handleResendError(error: AuthError) = when (error) {
+        is AuthError.Network -> {
+            _effect.emit(ResetPasswordEffect.ShowSnackbar(R.string.error_network))
+        }
 
-            is AuthError.TooManyRequests -> {
-                _effect.emit(ResetPasswordEffect.ShowSnackbar(R.string.error_too_many_requests))
-            }
+        is AuthError.TooManyRequests -> {
+            _effect.emit(ResetPasswordEffect.ShowSnackbar(R.string.error_too_many_requests))
+        }
 
-            is AuthError.CodeExpired,
-            is AuthError.CodeMismatch,
-            is AuthError.InvalidCredentials,
-            is AuthError.InvalidPassword,
-            is AuthError.Unknown,
-            is AuthError.UserNotConfirmed,
-            is AuthError.UsernameAlreadyExists -> {
-                _effect.emit(ResetPasswordEffect.ShowSnackbar(R.string.error_resend_failed))
-            }
+        is AuthError.CodeExpired,
+        is AuthError.CodeMismatch,
+        is AuthError.InvalidCredentials,
+        is AuthError.InvalidPassword,
+        is AuthError.Unknown,
+        is AuthError.UserNotConfirmed,
+        is AuthError.UsernameAlreadyExists -> {
+            _effect.emit(ResetPasswordEffect.ShowSnackbar(R.string.error_resend_failed))
         }
     }
 
@@ -212,5 +201,7 @@ class ResetPasswordViewModel @Inject constructor(
 
     companion object {
         private const val ARG_EMAIL = "email"
+        private const val MIN_PASSWORD_LENGTH = 8
     }
+
 }

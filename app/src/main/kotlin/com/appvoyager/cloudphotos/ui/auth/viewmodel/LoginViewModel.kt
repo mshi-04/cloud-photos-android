@@ -53,28 +53,24 @@ class LoginViewModel @Inject constructor(
 
     val isFormValid: Boolean
         get() = with(_uiState.value) {
-            email.isNotBlank() && ValidationUtils.isValidEmailFormat(email) && password.length >= 8
+            email.isNotBlank() && ValidationUtils.isValidEmailFormat(email) && password.length >= MIN_PASSWORD_LENGTH
         }
 
-    fun onEmailChanged(value: String) {
+    fun onEmailChanged(value: String) =
         _uiState.update { it.copy(email = value, emailError = null) }
-    }
 
-    fun onPasswordChanged(value: String) {
+
+    fun onPasswordChanged(value: String) =
         _uiState.update { it.copy(password = value, passwordError = null) }
-    }
 
-    fun onTogglePasswordVisibility() {
+    fun onTogglePasswordVisibility() =
         _uiState.update { it.copy(isPasswordVisible = !it.isPasswordVisible) }
-    }
 
-    fun onClearEmail() {
+    fun onClearEmail() =
         _uiState.update { it.copy(email = "", emailError = null) }
-    }
 
-    fun onClearPassword() {
+    fun onClearPassword() =
         _uiState.update { it.copy(password = "", passwordError = null) }
-    }
 
     fun onForgotPassword() {
         viewModelScope.launch {
@@ -120,62 +116,66 @@ class LoginViewModel @Inject constructor(
         }
     }
 
-    private suspend fun handleSignInResult(result: AuthResult<SignInState>, requestedEmail: Email) {
-        when (result) {
-            is AuthResult.Success -> {
-                when (result.value) {
-                    is SignInState.SignedIn -> _effect.emit(LoginEffect.NavigateToHome)
-                    is SignInState.MFARequired,
-                    is SignInState.NewPasswordRequired,
-                    is SignInState.AdditionalStepRequired -> _effect.emit(LoginEffect.ShowSnackbar(R.string.error_additional_auth_required))
-                }
+    private suspend fun handleSignInResult(
+        result: AuthResult<SignInState>,
+        requestedEmail: Email
+    ) = when (result) {
+        is AuthResult.Success -> {
+            when (result.value) {
+                is SignInState.SignedIn -> _effect.emit(LoginEffect.NavigateToHome)
+                is SignInState.MFARequired,
+                is SignInState.NewPasswordRequired,
+                is SignInState.AdditionalStepRequired -> _effect.emit(LoginEffect.ShowSnackbar(R.string.error_additional_auth_required))
             }
-
-            is AuthResult.Error -> handleAuthError(result.error, requestedEmail)
         }
+
+        is AuthResult.Error -> handleAuthError(result.error, requestedEmail)
     }
 
-    private suspend fun handleSignUpResult(result: AuthResult<Unit>, requestedEmail: Email) {
-        when (result) {
-            is AuthResult.Success -> {
-                _effect.emit(LoginEffect.NavigateToVerification(requestedEmail))
-            }
 
-            is AuthResult.Error -> handleAuthError(result.error, requestedEmail)
+    private suspend fun handleSignUpResult(
+        result: AuthResult<Unit>,
+        requestedEmail: Email
+    ) = when (result) {
+        is AuthResult.Success -> {
+            _effect.emit(LoginEffect.NavigateToVerification(requestedEmail))
         }
+
+        is AuthResult.Error -> handleAuthError(result.error, requestedEmail)
     }
 
-    private suspend fun handleAuthError(error: AuthError, requestedEmail: Email) {
-        when (error) {
-            is AuthError.InvalidCredentials -> {
-                _uiState.update { it.copy(passwordError = R.string.error_invalid_credentials) }
-            }
+    private suspend fun handleAuthError(
+        error: AuthError,
+        requestedEmail: Email
+    ) = when (error) {
+        is AuthError.InvalidCredentials -> {
+            _uiState.update { it.copy(passwordError = R.string.error_invalid_credentials) }
+        }
 
-            is AuthError.InvalidPassword -> {
-                _uiState.update { it.copy(passwordError = R.string.error_invalid_password) }
-            }
+        is AuthError.InvalidPassword -> {
+            _uiState.update { it.copy(passwordError = R.string.error_invalid_password) }
+        }
 
-            is AuthError.UserNotConfirmed -> {
-                _effect.emit(LoginEffect.NavigateToVerification(requestedEmail))
-            }
+        is AuthError.UserNotConfirmed -> {
+            _effect.emit(LoginEffect.NavigateToVerification(requestedEmail))
+        }
 
-            is AuthError.UsernameAlreadyExists -> {
-                _uiState.update { it.copy(emailError = R.string.error_email_already_registered) }
-            }
+        is AuthError.UsernameAlreadyExists -> {
+            _uiState.update { it.copy(emailError = R.string.error_email_already_registered) }
+        }
 
-            is AuthError.Network -> {
-                _effect.emit(LoginEffect.ShowSnackbar(R.string.error_network))
-            }
+        is AuthError.Network -> {
+            _effect.emit(LoginEffect.ShowSnackbar(R.string.error_network))
+        }
 
-            is AuthError.TooManyRequests -> {
-                _effect.emit(LoginEffect.ShowSnackbar(R.string.error_too_many_requests))
-            }
+        is AuthError.TooManyRequests -> {
+            _effect.emit(LoginEffect.ShowSnackbar(R.string.error_too_many_requests))
+        }
 
-            is AuthError.CodeExpired,
-            is AuthError.CodeMismatch,
-            is AuthError.Unknown -> {
-                _effect.emit(LoginEffect.ShowSnackbar(R.string.error_unknown))
-            }
+        is AuthError.CodeExpired,
+        is AuthError.CodeMismatch,
+        is AuthError.Unknown -> {
+            _effect.emit(LoginEffect.ShowSnackbar(R.string.error_unknown))
         }
     }
 
@@ -186,10 +186,15 @@ class LoginViewModel @Inject constructor(
             _uiState.update { it.copy(emailError = R.string.error_invalid_email) }
             valid = false
         }
-        if (state.password.length < 8) {
+        if (state.password.length < MIN_PASSWORD_LENGTH) {
             _uiState.update { it.copy(passwordError = R.string.error_password_too_short) }
             valid = false
         }
         return valid
     }
+
+    companion object {
+        private const val MIN_PASSWORD_LENGTH = 8
+    }
+
 }
