@@ -148,7 +148,7 @@ fun MediaScreen(
                 .padding(innerPadding)
         ) {
             MediaContent(
-                loadState = uiState.loadState,
+                screenState = uiState.screenState,
                 gridColumnCount = uiState.gridColumnCount,
                 onGridSettingsClick = { viewModel.onShowSettingsDialog() },
                 onSignOut = onSignOut,
@@ -169,7 +169,7 @@ fun MediaScreen(
 
 @Composable
 private fun MediaContent(
-    loadState: MediaUiState.LoadState,
+    screenState: MediaUiState.ScreenState,
     gridColumnCount: GridColumnCount,
     onGridSettingsClick: () -> Unit,
     onSignOut: () -> Unit,
@@ -188,21 +188,21 @@ private fun MediaContent(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        when (loadState) {
-            is MediaUiState.LoadState.None -> {}
+        when (screenState) {
+            is MediaUiState.ScreenState.None -> {}
 
-            is MediaUiState.LoadState.PermissionRequired -> {
+            is MediaUiState.ScreenState.PermissionRequired -> {
                 PermissionRequiredContent(onRetryPermissions = onRetryPermissions)
             }
 
-            is MediaUiState.LoadState.Error -> {
+            is MediaUiState.ScreenState.Error -> {
                 ErrorContent(onRetry = onRetry)
             }
 
-            is MediaUiState.LoadState.Success -> {
-                if (loadState.mediaList.isNotEmpty()) {
+            is MediaUiState.ScreenState.Success -> {
+                if (screenState.mediaList.isNotEmpty()) {
                     MediaGrid(
-                        mediaList = loadState.mediaList,
+                        mediaList = screenState.mediaList,
                         gridColumnCount = gridColumnCount,
                         gridState = gridState,
                         topPadding = statusBarPadding,
@@ -493,7 +493,7 @@ private fun RequestMediaPermissions(
 private fun MediaContentPreview() {
     CloudPhotosTheme {
         MediaContent(
-            loadState = MediaUiState.LoadState.Success(
+            screenState = MediaUiState.ScreenState.Success(
                 mediaList = listOf(
                     Media(
                         id = MediaId.of("1"),
@@ -523,7 +523,7 @@ private fun MediaContentPreview() {
 private fun MediaContentErrorPreview() {
     CloudPhotosTheme {
         MediaContent(
-            loadState = MediaUiState.LoadState.Error(),
+            screenState = MediaUiState.ScreenState.Error(),
             gridColumnCount = GridColumnCount.of(3),
             onGridSettingsClick = {},
             onSignOut = {},
@@ -538,7 +538,7 @@ private fun MediaContentErrorPreview() {
 private fun MediaContentPermissionRequiredPreview() {
     CloudPhotosTheme {
         MediaContent(
-            loadState = MediaUiState.LoadState.PermissionRequired,
+            screenState = MediaUiState.ScreenState.PermissionRequired,
             gridColumnCount = GridColumnCount.of(3),
             onGridSettingsClick = {},
             onSignOut = {},

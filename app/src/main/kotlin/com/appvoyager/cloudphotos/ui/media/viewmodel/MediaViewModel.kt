@@ -62,46 +62,6 @@ class MediaViewModel @Inject constructor(
         }
     }
 
-    fun onShowSettingsDialog() =
-        _uiState.update { it.copy(isSettingsDialogVisible = true) }
-
-    fun onDismissSettingsDialog() =
-        _uiState.update { it.copy(isSettingsDialogVisible = false) }
-
-    fun onGridColumnCountChanged(count: Int) = viewModelScope.launch {
-        try {
-            val gridColumnCount = GridColumnCount.of(count)
-            setGridColumnCountUseCase(gridColumnCount)
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            _effect.send(MediaEffect.ShowSnackbar(R.string.error_unknown))
-        }
-    }
-
-    fun onPermissionDenied() =
-        _uiState.update { it.copy(loadState = MediaUiState.LoadState.PermissionRequired) }
-
-    fun loadMediaList() {
-        mediaListJob?.cancel()
-        _uiState.update { it.copy(loadState = MediaUiState.LoadState.None) }
-        mediaListJob = viewModelScope.launch {
-            getMediaListUseCase()
-                .catch { cause ->
-                    if (cause is SecurityException) {
-                        _uiState.update { it.copy(loadState = MediaUiState.LoadState.PermissionRequired) }
-                    } else {
-                        _uiState.update { it.copy(loadState = MediaUiState.LoadState.Error(cause)) }
-                        _effect.send(MediaEffect.ShowSnackbar(R.string.error_media_load_failed))
-                    }
-                }
-                .collect { mediaList ->
-                    _uiState.update {
-                        it.copy(loadState = MediaUiState.LoadState.Success(mediaList))
-                    }
-                }
-        }
-    }
-
     fun onScreenResumed() {
         val now = elapsedRealtimeProvider()
         val last = lastResumeElapsedRealtimeMs
@@ -115,6 +75,48 @@ class MediaViewModel @Inject constructor(
             scheduleDelete()
         }
     }
+
+    fun loadMediaList() {
+        mediaListJob?.cancel()
+        _uiState.update { it.copy(screenState = MediaUiState.ScreenState.None) }
+        mediaListJob = viewModelScope.launch {
+            getMediaListUseCase()
+                .catch { cause ->
+                    if (cause is SecurityException) {
+                        _uiState.update { it.copy(screenState = MediaUiState.ScreenState.PermissionRequired) }
+                    } else {
+                        _uiState.update { it.copy(screenState = MediaUiState.ScreenState.Error(cause)) }
+                        _effect.send(MediaEffect.ShowSnackbar(R.string.error_media_load_failed))
+                    }
+                }
+                .collect { mediaList ->
+                    _uiState.update {
+                        it.copy(screenState = MediaUiState.ScreenState.Success(mediaList))
+                    }
+                }
+        }
+    }
+
+    fun onGridColumnCountChanged(count: Int) {
+        viewModelScope.launch {
+            try {
+                val gridColumnCount = GridColumnCount.of(count)
+                setGridColumnCountUseCase(gridColumnCount)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                _effect.send(MediaEffect.ShowSnackbar(R.string.error_unknown))
+            }
+        }
+    }
+
+    fun onShowSettingsDialog() =
+        _uiState.update { it.copy(isSettingsDialogVisible = true) }
+
+    fun onDismissSettingsDialog() =
+        _uiState.update { it.copy(isSettingsDialogVisible = false) }
+
+    fun onPermissionDenied() =
+        _uiState.update { it.copy(screenState = MediaUiState.ScreenState.PermissionRequired) }
 
     private suspend fun syncRemote() {
         runCatching { syncUploadRecordsUseCase() }

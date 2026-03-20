@@ -21,21 +21,17 @@ import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
-import io.mockk.verify
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -91,11 +87,11 @@ class MediaViewModelTest {
 
         // Assert
         val state = viewModel.uiState.value
-        assertTrue(state.loadState is MediaUiState.LoadState.None)
+        assertTrue(state.screenState is MediaUiState.ScreenState.None)
     }
 
     @Test
-    fun `loadMediaList success updates loadState to Success`() = runTest {
+    fun `loadMediaList success updates screenState to Success`() = runTest {
         // Arrange
         every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
         val expectedList = listOf(
@@ -116,8 +112,8 @@ class MediaViewModelTest {
         advanceUntilIdle()
 
         // Assert
-        val loadState = viewModel.uiState.value.loadState
-        assertTrue(loadState is MediaUiState.LoadState.Success)
+        val screenState = viewModel.uiState.value.screenState
+        assertTrue(screenState is MediaUiState.ScreenState.Success)
     }
 
     @Test
@@ -142,12 +138,12 @@ class MediaViewModelTest {
         advanceUntilIdle()
 
         // Assert
-        val loadState = viewModel.uiState.value.loadState
-        assertEquals(expectedList, (loadState as MediaUiState.LoadState.Success).mediaList)
+        val screenState = viewModel.uiState.value.screenState
+        assertEquals(expectedList, (screenState as MediaUiState.ScreenState.Success).mediaList)
     }
 
     @Test
-    fun `loadMediaList error sets loadState to Error`() = runTest {
+    fun `loadMediaList error sets screenState to Error`() = runTest {
         // Arrange
         every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
         every { getMediaListUseCase() } returns flow { throw RuntimeException("load failed") }
@@ -160,7 +156,7 @@ class MediaViewModelTest {
         advanceUntilIdle()
 
         // Assert
-        assertTrue(viewModel.uiState.value.loadState is MediaUiState.LoadState.Error)
+        assertTrue(viewModel.uiState.value.screenState is MediaUiState.ScreenState.Error)
     }
 
     @Test
@@ -263,7 +259,7 @@ class MediaViewModelTest {
     }
 
     @Test
-    fun `onPermissionDenied sets loadState to PermissionRequired`() = runTest {
+    fun `onPermissionDenied sets screenState to PermissionRequired`() = runTest {
         // Arrange
         every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
         val viewModel = createViewModel()
@@ -273,7 +269,7 @@ class MediaViewModelTest {
         viewModel.onPermissionDenied()
 
         // Assert
-        assertTrue(viewModel.uiState.value.loadState is MediaUiState.LoadState.PermissionRequired)
+        assertTrue(viewModel.uiState.value.screenState is MediaUiState.ScreenState.PermissionRequired)
     }
 
     @Test
