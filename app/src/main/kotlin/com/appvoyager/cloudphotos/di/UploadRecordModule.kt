@@ -1,6 +1,7 @@
 package com.appvoyager.cloudphotos.di
 
 import android.content.Context
+import com.appvoyager.cloudphotos.R
 import com.appvoyager.cloudphotos.data.media.datasource.UploadRecordLocalDataSource
 import com.appvoyager.cloudphotos.data.media.datasource.UploadRecordLocalDataSourceImpl
 import com.appvoyager.cloudphotos.data.media.datasource.UploadRecordRemoteDataSource
@@ -71,7 +72,11 @@ abstract class UploadRecordModule {
         @Singleton
         fun provideUploadNotificationHelper(
             @ApplicationContext context: Context
-        ): UploadNotificationHelper = UploadNotificationHelper(context)
+        ): UploadNotificationHelper = UploadNotificationHelper(
+            context = context,
+            channelName = context.getString(R.string.notification_channel_upload),
+            uploadingMessage = { count -> context.getString(R.string.notification_uploading, count) }
+        )
     }
 
 }

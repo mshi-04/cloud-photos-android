@@ -18,6 +18,9 @@ class CloudPhotosApp : Application(), Configuration.Provider {
     @Inject
     lateinit var workerFactory: HiltWorkerFactory
 
+    @Inject
+    lateinit var uploadNotificationHelper: UploadNotificationHelper
+
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
             .setWorkerFactory(workerFactory)
@@ -36,7 +39,7 @@ class CloudPhotosApp : Application(), Configuration.Provider {
                 error
             )
         }
-        UploadNotificationHelper.createChannel(this)
+        uploadNotificationHelper.createChannel()
     }
 
 }
