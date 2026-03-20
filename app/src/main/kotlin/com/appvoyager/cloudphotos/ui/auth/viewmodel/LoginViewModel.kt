@@ -53,7 +53,7 @@ class LoginViewModel @Inject constructor(
 
     val isFormValid: Boolean
         get() = with(_uiState.value) {
-            email.isNotBlank() && ValidationUtils.isValidEmailFormat(email) && password.length >= 8
+            email.isNotBlank() && ValidationUtils.isValidEmailFormat(email) && password.length >= MIN_PASSWORD_LENGTH
         }
 
     fun onEmailChanged(value: String) =

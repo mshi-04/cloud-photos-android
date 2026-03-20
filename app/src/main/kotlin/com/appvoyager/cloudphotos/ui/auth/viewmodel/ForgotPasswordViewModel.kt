@@ -52,6 +52,8 @@ class ForgotPasswordViewModel @Inject constructor(
 
                     is AuthResult.Error -> handleError(result.error, email)
                 }
+            } catch (_: IllegalArgumentException) {
+                _uiState.update { it.copy(emailError = R.string.error_invalid_email) }
             } finally {
                 _uiState.update { it.copy(isLoading = false) }
             }

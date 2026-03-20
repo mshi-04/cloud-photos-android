@@ -136,7 +136,7 @@ class ResetPasswordViewModel @Inject constructor(
             _uiState.update { it.copy(codeError = R.string.error_enter_code) }
             valid = false
         }
-        if (_uiState.value.newPassword.length < 8) {
+        if (_uiState.value.newPassword.length < MIN_PASSWORD_LENGTH) {
             _uiState.update { it.copy(passwordError = R.string.error_password_too_short) }
             valid = false
         }
@@ -201,6 +201,7 @@ class ResetPasswordViewModel @Inject constructor(
 
     companion object {
         private const val ARG_EMAIL = "email"
+        private const val MIN_PASSWORD_LENGTH = 8
     }
 
 }
