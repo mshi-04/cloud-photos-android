@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
@@ -32,6 +33,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.BrokenImage
 import androidx.compose.material.icons.filled.PlayCircleOutline
 import androidx.compose.material3.Icon
@@ -62,6 +64,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -100,6 +103,10 @@ fun MediaScreen(
     val latestResources = rememberUpdatedState(LocalResources.current)
     val lifecycleOwner = LocalLifecycleOwner.current
     var permissionCheckKey by remember { mutableIntStateOf(0) }
+    var notificationPermissionRequested by remember { mutableStateOf(false) }
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { /* result ignored — notification is optional */ }
 
     LaunchedEffect(Unit) {
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -115,6 +122,13 @@ fun MediaScreen(
 
     LifecycleResumeEffect(Unit) {
         permissionCheckKey++
+        viewModel.onScreenResumed()
+        if (!notificationPermissionRequested
+            && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+        ) {
+            notificationPermissionRequested = true
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
         onPauseOrDispose {}
     }
 
@@ -134,7 +148,7 @@ fun MediaScreen(
                 .padding(innerPadding)
         ) {
             MediaContent(
-                loadState = uiState.loadState,
+                screenState = uiState.screenState,
                 gridColumnCount = uiState.gridColumnCount,
                 onGridSettingsClick = { viewModel.onShowSettingsDialog() },
                 onSignOut = onSignOut,
@@ -155,7 +169,7 @@ fun MediaScreen(
 
 @Composable
 private fun MediaContent(
-    loadState: MediaUiState.LoadState,
+    screenState: MediaUiState.ScreenState,
     gridColumnCount: GridColumnCount,
     onGridSettingsClick: () -> Unit,
     onSignOut: () -> Unit,
@@ -174,21 +188,21 @@ private fun MediaContent(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        when (loadState) {
-            is MediaUiState.LoadState.Loading -> {}
+        when (screenState) {
+            is MediaUiState.ScreenState.None -> {}
 
-            is MediaUiState.LoadState.PermissionRequired -> {
+            is MediaUiState.ScreenState.PermissionRequired -> {
                 PermissionRequiredContent(onRetryPermissions = onRetryPermissions)
             }
 
-            is MediaUiState.LoadState.Error -> {
+            is MediaUiState.ScreenState.Error -> {
                 ErrorContent(onRetry = onRetry)
             }
 
-            is MediaUiState.LoadState.Success -> {
-                if (loadState.mediaList.isNotEmpty()) {
+            is MediaUiState.ScreenState.Success -> {
+                if (screenState.mediaList.isNotEmpty()) {
                     MediaGrid(
-                        mediaList = loadState.mediaList,
+                        mediaList = screenState.mediaList,
                         gridColumnCount = gridColumnCount,
                         gridState = gridState,
                         topPadding = statusBarPadding,
@@ -217,7 +231,10 @@ private fun MediaContent(
                             .align(Alignment.TopEnd)
                             .padding(top = statusBarPadding + 8.dp, end = 8.dp)
                     ) {
-                        AppIconButton(onClick = onGridSettingsClick)
+                        Row {
+                            SignOutButton(onClick = onSignOut)
+                            AppIconButton(onClick = onGridSettingsClick)
+                        }
                     }
                 } else {
                     EmptyContent()
@@ -249,6 +266,18 @@ private fun rememberScrollButtonVisibility(gridState: LazyGridState): State<Bool
     }
 
     return isVisible
+}
+
+@Composable
+private fun SignOutButton(onClick: () -> Unit) {
+    IconButton(onClick = onClick) {
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.Logout,
+            contentDescription = stringResource(R.string.media_sign_out),
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(24.dp)
+        )
+    }
 }
 
 @Composable
@@ -365,6 +394,13 @@ private fun PermissionRequiredContent(onRetryPermissions: () -> Unit) {
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+        Text(
+            text = stringResource(R.string.error_permission_partial_access),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 8.dp, start = 32.dp, end = 32.dp),
+            textAlign = TextAlign.Center
+        )
         TextButton(
             onClick = { context.startActivity(createAppSettingsIntent(context)) },
             modifier = Modifier.padding(top = 16.dp)
@@ -457,7 +493,7 @@ private fun RequestMediaPermissions(
 private fun MediaContentPreview() {
     CloudPhotosTheme {
         MediaContent(
-            loadState = MediaUiState.LoadState.Success(
+            screenState = MediaUiState.ScreenState.Success(
                 mediaList = listOf(
                     Media(
                         id = MediaId.of("1"),
@@ -487,7 +523,22 @@ private fun MediaContentPreview() {
 private fun MediaContentErrorPreview() {
     CloudPhotosTheme {
         MediaContent(
-            loadState = MediaUiState.LoadState.Error(),
+            screenState = MediaUiState.ScreenState.Error(),
+            gridColumnCount = GridColumnCount.of(3),
+            onGridSettingsClick = {},
+            onSignOut = {},
+            onRetry = {},
+            onRetryPermissions = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun MediaContentPermissionRequiredPreview() {
+    CloudPhotosTheme {
+        MediaContent(
+            screenState = MediaUiState.ScreenState.PermissionRequired,
             gridColumnCount = GridColumnCount.of(3),
             onGridSettingsClick = {},
             onSignOut = {},

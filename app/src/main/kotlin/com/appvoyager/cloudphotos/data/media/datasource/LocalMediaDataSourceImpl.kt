@@ -61,7 +61,7 @@ class LocalMediaDataSourceImpl @Inject constructor(
                 while (cursor.moveToNext()) {
                     val idLong = cursor.getLong(idColumn)
                     val mediaTypeInt = cursor.getInt(typeColumn)
-                    val dateAddedSeconds = cursor.getLong(dateColumn)
+                    val dateAddedSeconds = cursor.getLong(dateColumn).coerceAtLeast(0)
 
                     val type = if (mediaTypeInt == MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE) {
                         MediaType.IMAGE

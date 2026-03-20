@@ -12,13 +12,14 @@ com.appvoyager.cloudphotos
 │   └── {feature}
 │       ├── usecase/        # UseCases
 │       ├── repository/     # Repository interfaces
-│       ├── datasource/     # DataSource interfaces
 │       ├── model/          # Domain models
-│       └── request/        # Request data classes
+│       ├── request/        # Request data classes
+│       └── valueobject/    # Value objects
 └── data
     └── {feature}
         ├── repository/     # RepositoryImpl
-        └── datasource/     # DataSourceImpl
+        ├── datasource/     # DataSource interfaces + DataSourceImpl
+        └── util/           # Error mappers etc.
 ```
 
 ## Rules

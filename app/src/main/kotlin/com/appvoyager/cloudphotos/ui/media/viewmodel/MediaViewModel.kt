@@ -1,9 +1,13 @@
 package com.appvoyager.cloudphotos.ui.media.viewmodel
 
+import android.os.SystemClock
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.appvoyager.cloudphotos.R
 import com.appvoyager.cloudphotos.domain.media.usecase.GetMediaListUseCase
+import com.appvoyager.cloudphotos.domain.media.usecase.PrepareUploadQueueUseCase
+import com.appvoyager.cloudphotos.domain.media.usecase.ScheduleDeleteUseCase
+import com.appvoyager.cloudphotos.domain.media.usecase.SyncUploadRecordsUseCase
 import com.appvoyager.cloudphotos.domain.settings.usecase.GetGridColumnCountUseCase
 import com.appvoyager.cloudphotos.domain.settings.usecase.SetGridColumnCountUseCase
 import com.appvoyager.cloudphotos.domain.settings.valueobject.GridColumnCount
@@ -11,6 +15,7 @@ import com.appvoyager.cloudphotos.ui.media.effect.MediaEffect
 import com.appvoyager.cloudphotos.ui.media.uistate.MediaUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,7 +32,10 @@ import kotlin.coroutines.cancellation.CancellationException
 class MediaViewModel @Inject constructor(
     private val getMediaListUseCase: GetMediaListUseCase,
     private val getGridColumnCountUseCase: GetGridColumnCountUseCase,
-    private val setGridColumnCountUseCase: SetGridColumnCountUseCase
+    private val setGridColumnCountUseCase: SetGridColumnCountUseCase,
+    private val syncUploadRecordsUseCase: SyncUploadRecordsUseCase,
+    private val prepareUploadQueueUseCase: PrepareUploadQueueUseCase,
+    private val scheduleDeleteUseCase: ScheduleDeleteUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MediaUiState())
@@ -37,6 +45,9 @@ class MediaViewModel @Inject constructor(
     val effect: Flow<MediaEffect> = _effect.receiveAsFlow()
 
     private var mediaListJob: Job? = null
+    private var syncJob: Job? = null
+    private var lastResumeElapsedRealtimeMs: Long? = null
+    internal var elapsedRealtimeProvider: () -> Long = { SystemClock.elapsedRealtime() }
 
     init {
         viewModelScope.launch {
@@ -51,12 +62,39 @@ class MediaViewModel @Inject constructor(
         }
     }
 
-    fun onShowSettingsDialog() {
-        _uiState.update { it.copy(isSettingsDialogVisible = true) }
+    fun onScreenResumed() {
+        val now = elapsedRealtimeProvider()
+        val last = lastResumeElapsedRealtimeMs
+        if (last != null && now - last < MIN_RESUME_INTERVAL_MS) return
+        lastResumeElapsedRealtimeMs = now
+        val previousJob = syncJob
+        syncJob = viewModelScope.launch {
+            previousJob?.cancelAndJoin()
+            syncRemote()
+            prepareUploadQueue()
+            scheduleDelete()
+        }
     }
 
-    fun onDismissSettingsDialog() {
-        _uiState.update { it.copy(isSettingsDialogVisible = false) }
+    fun loadMediaList() {
+        mediaListJob?.cancel()
+        _uiState.update { it.copy(screenState = MediaUiState.ScreenState.None) }
+        mediaListJob = viewModelScope.launch {
+            getMediaListUseCase()
+                .catch { cause ->
+                    if (cause is SecurityException) {
+                        _uiState.update { it.copy(screenState = MediaUiState.ScreenState.PermissionRequired) }
+                    } else {
+                        _uiState.update { it.copy(screenState = MediaUiState.ScreenState.Error(cause)) }
+                        _effect.send(MediaEffect.ShowSnackbar(R.string.error_media_load_failed))
+                    }
+                }
+                .collect { mediaList ->
+                    _uiState.update {
+                        it.copy(screenState = MediaUiState.ScreenState.Success(mediaList))
+                    }
+                }
+        }
     }
 
     fun onGridColumnCountChanged(count: Int) {
@@ -71,29 +109,35 @@ class MediaViewModel @Inject constructor(
         }
     }
 
-    fun onPermissionDenied() {
-        _uiState.update { it.copy(loadState = MediaUiState.LoadState.PermissionRequired) }
+    fun onShowSettingsDialog() =
+        _uiState.update { it.copy(isSettingsDialogVisible = true) }
+
+    fun onDismissSettingsDialog() =
+        _uiState.update { it.copy(isSettingsDialogVisible = false) }
+
+    fun onPermissionDenied() =
+        _uiState.update { it.copy(screenState = MediaUiState.ScreenState.PermissionRequired) }
+
+    private suspend fun syncRemote() {
+        runCatching { syncUploadRecordsUseCase() }
+            .onFailure { cause ->
+                if (cause is CancellationException) throw cause
+                _effect.send(MediaEffect.ShowSnackbar(R.string.error_unknown))
+            }
     }
 
-    fun loadMediaList() {
-        mediaListJob?.cancel()
-        _uiState.update { it.copy(loadState = MediaUiState.LoadState.Loading) }
-        mediaListJob = viewModelScope.launch {
-            getMediaListUseCase()
-                .catch { cause ->
-                    if (cause is SecurityException) {
-                        _uiState.update { it.copy(loadState = MediaUiState.LoadState.PermissionRequired) }
-                    } else {
-                        _uiState.update { it.copy(loadState = MediaUiState.LoadState.Error(cause)) }
-                        _effect.send(MediaEffect.ShowSnackbar(R.string.error_media_load_failed))
-                    }
-                }
-                .collect { mediaList ->
-                    _uiState.update {
-                        it.copy(loadState = MediaUiState.LoadState.Success(mediaList))
-                    }
-                }
-        }
+    private suspend fun prepareUploadQueue() {
+        runCatching { prepareUploadQueueUseCase() }
+            .onFailure { if (it is CancellationException) throw it }
+    }
+
+    private suspend fun scheduleDelete() {
+        runCatching { scheduleDeleteUseCase() }
+            .onFailure { if (it is CancellationException) throw it }
+    }
+
+    companion object {
+        internal const val MIN_RESUME_INTERVAL_MS = 3_000L
     }
 
 }

@@ -40,7 +40,7 @@ class GetMediaListUseCaseTest {
                 createdAt = MediaCreatedAt.of(1600000000000L)
             )
         )
-        every { localMediaRepository.getMediaList() } returns flowOf(expectedMediaList)
+        every { localMediaRepository.getMediaListFlow() } returns flowOf(expectedMediaList)
 
         // Act
         val result = getMediaListUseCase().first()
@@ -53,7 +53,7 @@ class GetMediaListUseCaseTest {
     fun `invoke propagates exception from repository`() = runTest {
         // Arrange
         val expected = RuntimeException("repository failure")
-        every { localMediaRepository.getMediaList() } returns flow { throw expected }
+        every { localMediaRepository.getMediaListFlow() } returns flow { throw expected }
 
         // Act & Assert
         val actual = assertThrows<RuntimeException> {
