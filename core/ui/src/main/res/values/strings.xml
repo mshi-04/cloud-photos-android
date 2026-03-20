@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- 確認コード入力画面 -->
+    <string name="verification_code_prompt">登録メールアドレス宛てに確認コードを送信しました。\nご確認いただきご入力ください。</string>
+    <string name="verification_code_resend_timer">再送信（%1$d）</string>
+    <string name="verification_code_resend">再送信</string>
+    <string name="verification_code_verify">認証</string>
+
+    <!-- パスワードリセット画面 -->
+    <string name="reset_password_title">パスワードのリセット</string>
+    <string name="reset_password_description">確認コードを %1$s に送信しました。\nコードと新しいパスワードを入力してください。</string>
+    <string name="new_password_label">新しいパスワード</string>
+    <string name="hide_password_description">パスワードを隠す</string>
+    <string name="show_password_description">パスワードを表示</string>
+    <string name="reset_password_button">パスワードをリセット</string>
+    <string name="reset_password_resend_timer">コードを再送信（%1$d）</string>
+    <string name="reset_password_resend">コードを再送信</string>
+
+    <!-- 成功メッセージ -->
+    <string name="message_code_resent">確認コードを再送信しました</string>
+    <string name="message_password_reset">パスワードをリセットしました</string>
+
+    <!-- メディア画面 -->
+    <string name="media_grid_settings">グリッド設定</string>
+    <string name="media_sign_out">ログアウト</string>
+    <string name="media_empty">写真がありません</string>
+    <string name="media_retry">再試行</string>
+    <string name="media_content_description_image">画像</string>
+    <string name="media_content_description_video">動画</string>
+    <string name="media_content_description_format">%1$s、撮影日 %2$s</string>
+
+    <!-- 設定ダイアログ -->
+    <string name="settings_grid_column_title">グリッド列数</string>
+    <string name="settings_grid_column_value">%1$d 列</string>
+    <string name="settings_confirm">OK</string>
+    <string name="settings_cancel">キャンセル</string>
+
+    <!-- エラーメッセージ -->
+    <string name="error_invalid_credentials">メールアドレスまたはパスワードが正しくありません</string>
+    <string name="error_network">ネットワークエラーが発生しました</string>
+    <string name="error_invalid_password">パスワードが正しくありません</string>
+    <string name="error_too_many_requests">しばらく時間をおいてから再度お試しください</string>
+    <string name="error_unknown">エラーが発生しました</string>
+    <string name="error_invalid_email">有効なメールアドレスを入力してください</string>
+    <string name="error_check_input">入力内容を確認してください</string>
+    <string name="error_password_too_short">パスワードは8文字以上で入力してください</string>
+    <string name="error_email_already_registered">このメールアドレスでは登録できません</string>
+    <string name="error_additional_auth_required">追加の認証ステップが必要です</string>
+    <string name="error_code_mismatch">確認コードが正しくありません</string>
+    <string name="error_code_expired">確認コードの有効期限が切れました。再送信してください</string>
+    <string name="error_confirm_code">正しい確認コードを入力してください</string>
+    <string name="error_enter_code">確認コードを入力してください</string>
+    <string name="error_resend_failed">再送信に失敗しました</string>
+    <string name="error_user_not_confirmed">パスワードリセットの前にメールアドレスの認証が必要です</string>
+    <string name="error_media_load_failed">メディアの読み込みに失敗しました</string>
+    <string name="error_permission_required">すべての写真・動画へのアクセスが必要です</string>
+    <string name="error_permission_partial_access">「一部のアクセスのみ許可」を選択した場合も、権限なしと同様に扱われます</string>
+    <string name="permission_open_settings">設定を開く</string>
+</resources>

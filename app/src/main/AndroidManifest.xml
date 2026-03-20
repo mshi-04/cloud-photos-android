@@ -25,7 +25,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.CloudPhotos">
         <activity
-            android:name=".ui.main.MainActivity"
+            android:name=".ui.MainActivity"
             android:exported="true"
             android:theme="@style/Theme.CloudPhotos">
             <intent-filter>
