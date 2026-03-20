@@ -2,8 +2,6 @@ package com.appvoyager.cloudphotos.domain.upload.usecase
 
 import com.appvoyager.cloudphotos.domain.media.model.UploadError
 import com.appvoyager.cloudphotos.domain.media.model.UploadResult
-import com.appvoyager.cloudphotos.domain.media.model.errorOrNull
-import com.appvoyager.cloudphotos.domain.media.model.getOrNull
 import com.appvoyager.cloudphotos.domain.media.repository.UploadRepository
 import com.appvoyager.cloudphotos.domain.media.request.UploadMediaRequest
 import com.appvoyager.cloudphotos.domain.media.usecase.UploadMediaUseCase
@@ -13,6 +11,7 @@ import com.appvoyager.cloudphotos.domain.media.valueobject.MediaUrl
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -22,6 +21,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class UploadMediaUseCaseTest {
 
     private val dispatcher = StandardTestDispatcher()
@@ -54,7 +54,7 @@ class UploadMediaUseCaseTest {
         val result = uploadMediaUseCase(request)
 
         // Assert
-        assertEquals(expectedPath, result.getOrNull())
+        assertEquals(UploadResult.Success(expectedPath), result)
     }
 
     @Test
@@ -71,6 +71,6 @@ class UploadMediaUseCaseTest {
         val result = uploadMediaUseCase(request)
 
         // Assert
-        assertEquals(expectedError, result.errorOrNull())
+        assertEquals(UploadResult.Error(expectedError), result)
     }
 }

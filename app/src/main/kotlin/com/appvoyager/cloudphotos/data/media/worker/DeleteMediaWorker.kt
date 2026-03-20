@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import com.appvoyager.cloudphotos.data.media.datasource.UploadDataSource
 import com.appvoyager.cloudphotos.domain.media.model.SyncStatus
 import com.appvoyager.cloudphotos.domain.media.repository.LocalUploadRecordsRepository
 import com.appvoyager.cloudphotos.domain.media.repository.RemoteUploadRecordsRepository
@@ -16,7 +17,8 @@ class DeleteMediaWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted workerParams: WorkerParameters,
     private val localRepository: LocalUploadRecordsRepository,
-    private val remoteRepository: RemoteUploadRecordsRepository
+    private val remoteRepository: RemoteUploadRecordsRepository,
+    private val uploadDataSource: UploadDataSource
 ) : CoroutineWorker(context, workerParams) {
 
     override suspend fun doWork(): Result {
@@ -24,10 +26,18 @@ class DeleteMediaWorker @AssistedInject constructor(
         var hasTemporaryFailure = false
 
         for (record in pendingRecords) {
+            val cloudStoragePath = record.cloudStoragePath
+            if (cloudStoragePath == null) {
+                runCatching {
+                    localRepository.deleteUploadRecord(record.mediaId)
+                }.onFailure { e ->
+                    if (e is CancellationException) throw e
+                    hasTemporaryFailure = true
+                }
+                continue
+            }
             runCatching {
-                remoteRepository.deleteStorageFile(record.cloudStoragePath)
                 remoteRepository.deleteUploadRecord(record.mediaId)
-                localRepository.deleteUploadRecord(record.mediaId)
             }.onFailure { e ->
                 if (e is CancellationException) throw e
                 if (isPermanentFailure(e)) {
@@ -37,6 +47,21 @@ class DeleteMediaWorker @AssistedInject constructor(
                 } else {
                     hasTemporaryFailure = true
                 }
+                continue
+            }
+
+            runCatching {
+                uploadDataSource.deleteUploadedObject(cloudStoragePath)
+            }.onFailure { e ->
+                if (e is CancellationException) throw e
+                // S3 orphan is acceptable; proceed to delete local record
+            }
+
+            runCatching {
+                localRepository.deleteUploadRecord(record.mediaId)
+            }.onFailure { e ->
+                if (e is CancellationException) throw e
+                hasTemporaryFailure = true
             }
         }
 

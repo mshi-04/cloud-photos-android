@@ -13,6 +13,4 @@ interface UploadRecordRemoteDataSource {
 
     suspend fun deleteUploadRecord(mediaId: MediaId)
 
-    suspend fun deleteStorageFile(cloudStoragePath: CloudStoragePath)
-
 }

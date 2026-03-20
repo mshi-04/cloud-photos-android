@@ -9,14 +9,18 @@ import com.appvoyager.cloudphotos.data.media.repository.RemoteUploadRecordsRepos
 import com.appvoyager.cloudphotos.data.media.worker.ContentTypeResolver
 import com.appvoyager.cloudphotos.data.media.worker.ContentTypeResolverImpl
 import com.appvoyager.cloudphotos.data.media.worker.DeleteSchedulerImpl
+import com.appvoyager.cloudphotos.data.media.worker.UploadNotificationHelper
 import com.appvoyager.cloudphotos.data.media.worker.UploadSchedulerImpl
 import com.appvoyager.cloudphotos.domain.media.repository.DeleteScheduler
 import com.appvoyager.cloudphotos.domain.media.repository.LocalUploadRecordsRepository
 import com.appvoyager.cloudphotos.domain.media.repository.RemoteUploadRecordsRepository
 import com.appvoyager.cloudphotos.domain.media.repository.UploadScheduler
+import android.content.Context
 import dagger.Binds
 import dagger.Module
+import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
@@ -61,5 +65,13 @@ abstract class UploadRecordModule {
     abstract fun bindContentTypeResolver(
         contentTypeResolverImpl: ContentTypeResolverImpl
     ): ContentTypeResolver
+
+    companion object {
+        @Provides
+        @Singleton
+        fun provideUploadNotificationHelper(
+            @ApplicationContext context: Context
+        ): UploadNotificationHelper = UploadNotificationHelper(context)
+    }
 
 }

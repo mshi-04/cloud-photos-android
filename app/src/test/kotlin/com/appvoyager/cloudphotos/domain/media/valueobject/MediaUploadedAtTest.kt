@@ -4,18 +4,18 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
-class MediaCreatedAtTest {
+class MediaUploadedAtTest {
 
     @Test
-    fun `of returns MediaCreatedAt with correct value`() {
+    fun `of returns MediaUploadedAt with correct value`() {
         // Arrange
         val expectedTimeMillis = 1678886400000L
 
         // Act
-        val createdAt = MediaCreatedAt.of(expectedTimeMillis)
+        val uploadedAt = MediaUploadedAt.of(expectedTimeMillis)
 
         // Assert
-        assertEquals(expectedTimeMillis, createdAt.value)
+        assertEquals(expectedTimeMillis, uploadedAt.value)
     }
 
     @Test
@@ -25,22 +25,22 @@ class MediaCreatedAtTest {
 
         // Act
         val exception = assertThrows<IllegalArgumentException> {
-            MediaCreatedAt.of(negativeMillis)
+            MediaUploadedAt.of(negativeMillis)
         }
 
         // Assert
-        assertEquals("createdAt must not be negative", exception.message)
+        assertEquals("uploadedAt must not be negative", exception.message)
     }
 
     @Test
-    fun `of returns MediaCreatedAt with zero value`() {
+    fun `of returns MediaUploadedAt with zero value`() {
         // Arrange
         val zeroMillis = 0L
 
         // Act
-        val createdAt = MediaCreatedAt.of(zeroMillis)
+        val uploadedAt = MediaUploadedAt.of(zeroMillis)
 
         // Assert
-        assertEquals(0L, createdAt.value)
+        assertEquals(0L, uploadedAt.value)
     }
 }

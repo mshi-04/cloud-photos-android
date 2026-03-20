@@ -3,9 +3,12 @@ package com.appvoyager.cloudphotos.data.media.worker
 import android.content.Context
 import androidx.work.ListenableWorker
 import androidx.work.WorkerParameters
+import com.appvoyager.cloudphotos.data.media.datasource.UploadDataSource
 import com.appvoyager.cloudphotos.domain.media.model.MediaType
 import com.appvoyager.cloudphotos.domain.media.model.SyncStatus
+import com.appvoyager.cloudphotos.domain.media.model.UploadError
 import com.appvoyager.cloudphotos.domain.media.model.UploadRecord
+import com.appvoyager.cloudphotos.domain.media.model.UploadResult
 import com.appvoyager.cloudphotos.domain.media.repository.LocalUploadRecordsRepository
 import com.appvoyager.cloudphotos.domain.media.repository.RemoteUploadRecordsRepository
 import com.appvoyager.cloudphotos.domain.media.request.CreateUploadRecordRequest
@@ -13,6 +16,7 @@ import com.appvoyager.cloudphotos.domain.media.valueobject.CloudStoragePath
 import com.appvoyager.cloudphotos.domain.media.valueobject.IsDeleted
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaId
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaUploadedAt
+import com.appvoyager.cloudphotos.domain.media.valueobject.MediaUrl
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -40,6 +44,8 @@ class UploadMediaWorkerTest {
     private val localRepository = mockk<LocalUploadRecordsRepository>()
     private val remoteRepository = mockk<RemoteUploadRecordsRepository>()
     private val contentTypeResolver = mockk<ContentTypeResolver>()
+    private val uploadDataSource = mockk<UploadDataSource>()
+    private val notificationHelper = mockk<UploadNotificationHelper>(relaxed = true)
 
     private lateinit var worker: UploadMediaWorker
 
@@ -51,7 +57,9 @@ class UploadMediaWorkerTest {
             workerParams,
             localRepository,
             remoteRepository,
-            contentTypeResolver
+            contentTypeResolver,
+            uploadDataSource,
+            notificationHelper
         )
     }
 
@@ -73,12 +81,17 @@ class UploadMediaWorkerTest {
     }
 
     @Test
-    fun `saves synced record on successful api call`() = runTest {
+    fun `uploads to S3 then saves synced record on successful api call`() = runTest {
         // Arrange
-        val record = createUploadRecord()
-        val createdRecord = record.copy(syncStatus = SyncStatus.SYNCED)
+        val record = createPendingRecord()
+        val uploadedPath = CloudStoragePath.of("private/identity123/uuid.jpg")
+        val createdRecord = record.copy(
+            cloudStoragePath = uploadedPath,
+            syncStatus = SyncStatus.SYNCED
+        )
         val slot = slot<List<UploadRecord>>()
         arrangePendingUploads(record)
+        coEvery { uploadDataSource.uploadMedia(any()) } returns UploadResult.Success(uploadedPath)
         coEvery { remoteRepository.createUploadRecord(any()) } returns createdRecord
         coEvery { localRepository.saveUploadRecords(capture(slot)) } just runs
 
@@ -90,9 +103,39 @@ class UploadMediaWorkerTest {
     }
 
     @Test
-    fun `marks record as error when file not found in mediastore`() = runTest {
+    fun `skips S3 upload when cloudStoragePath already set`() = runTest {
         // Arrange
         val record = createUploadRecord()
+        val createdRecord = record.copy(syncStatus = SyncStatus.SYNCED)
+        arrangePendingUploads(record)
+        coEvery { remoteRepository.createUploadRecord(any()) } returns createdRecord
+
+        // Act
+        worker.doWork()
+
+        // Assert
+        coVerify(exactly = 0) { uploadDataSource.uploadMedia(any()) }
+    }
+
+    @Test
+    fun `does not call uploadMedia when already synced`() = runTest {
+        // Arrange
+        val record = createUploadRecord()
+        val createdRecord = record.copy(syncStatus = SyncStatus.SYNCED)
+        arrangePendingUploads(record)
+        coEvery { remoteRepository.createUploadRecord(any()) } returns createdRecord
+
+        // Act
+        worker.doWork()
+
+        // Assert
+        coVerify(exactly = 0) { uploadDataSource.uploadMedia(any()) }
+    }
+
+    @Test
+    fun `marks record as error when file not found in mediastore`() = runTest {
+        // Arrange
+        val record = createPendingRecord()
         val slot = slot<List<UploadRecord>>()
         arrangePendingUploads(record, contentType = null)
         coEvery { localRepository.saveUploadRecords(capture(slot)) } just runs
@@ -105,6 +148,53 @@ class UploadMediaWorkerTest {
     }
 
     @Test
+    fun `marks record as error when resolveUri returns null`() = runTest {
+        // Arrange
+        val record = createPendingRecord()
+        val slot = slot<List<UploadRecord>>()
+        arrangePendingUploads(record, localUri = null)
+        coEvery { localRepository.saveUploadRecords(capture(slot)) } just runs
+
+        // Act
+        worker.doWork()
+
+        // Assert
+        assertEquals(SyncStatus.ERROR, slot.captured.first().syncStatus)
+    }
+
+    @Test
+    fun `marks record as error on S3 permanent failure`() = runTest {
+        // Arrange
+        val record = createPendingRecord()
+        val slot = slot<List<UploadRecord>>()
+        arrangePendingUploads(record)
+        coEvery { uploadDataSource.uploadMedia(any()) } returns
+                UploadResult.Error(UploadError.AccessDenied("denied"))
+        coEvery { localRepository.saveUploadRecords(capture(slot)) } just runs
+
+        // Act
+        worker.doWork()
+
+        // Assert
+        assertEquals(SyncStatus.ERROR, slot.captured.first().syncStatus)
+    }
+
+    @Test
+    fun `returns retry on S3 network failure`() = runTest {
+        // Arrange
+        val record = createPendingRecord()
+        arrangePendingUploads(record)
+        coEvery { uploadDataSource.uploadMedia(any()) } returns
+                UploadResult.Error(UploadError.Network("timeout"))
+
+        // Act
+        val result = worker.doWork()
+
+        // Assert
+        assertEquals(ListenableWorker.Result.retry(), result)
+    }
+
+    @Test
     fun `marks record as error on permanent api failure`() = runTest {
         // Arrange
         val record = createUploadRecord()
@@ -112,6 +202,7 @@ class UploadMediaWorkerTest {
         arrangePendingUploads(record)
         coEvery { remoteRepository.createUploadRecord(any()) } throws
                 Exception("Unexpected response code 400: Bad Request")
+        coEvery { uploadDataSource.deleteUploadedObject(any()) } just runs
         coEvery { localRepository.saveUploadRecords(capture(slot)) } just runs
 
         // Act
@@ -133,6 +224,36 @@ class UploadMediaWorkerTest {
 
         // Assert
         assertEquals(ListenableWorker.Result.retry(), result)
+    }
+
+    @Test
+    fun `invokes cleanup on permanent api failure`() = runTest {
+        // Arrange
+        val record = createUploadRecord()
+        arrangePendingUploads(record)
+        coEvery { remoteRepository.createUploadRecord(any()) } throws
+                Exception("Unexpected response code 400: Bad Request")
+        coEvery { uploadDataSource.deleteUploadedObject(any()) } just runs
+
+        // Act
+        worker.doWork()
+
+        // Assert
+        coVerify { uploadDataSource.deleteUploadedObject(any()) }
+    }
+
+    @Test
+    fun `does not invoke cleanup on temporary api failure`() = runTest {
+        // Arrange
+        val record = createUploadRecord()
+        arrangePendingUploads(record)
+        coEvery { remoteRepository.createUploadRecord(any()) } throws Exception("Network timeout")
+
+        // Act
+        worker.doWork()
+
+        // Assert
+        coVerify(exactly = 0) { uploadDataSource.deleteUploadedObject(any()) }
     }
 
     @Test
@@ -177,6 +298,7 @@ class UploadMediaWorkerTest {
         every { contentTypeResolver.resolve(any()) } returns "image/jpeg"
         coEvery { remoteRepository.createUploadRecord(any()) } throws
                 Exception("Unexpected response code 400: Bad Request")
+        coEvery { uploadDataSource.deleteUploadedObject(any()) } just runs
         coEvery { localRepository.saveUploadRecords(any()) } just runs
 
         // Act
@@ -193,6 +315,7 @@ class UploadMediaWorkerTest {
         arrangePendingUploads(record)
         coEvery { remoteRepository.createUploadRecord(any()) } throws
                 Exception("Unexpected response code 401: Unauthorized")
+        coEvery { uploadDataSource.deleteUploadedObject(any()) } just runs
 
         // Act
         val result = worker.doWork()
@@ -203,11 +326,13 @@ class UploadMediaWorkerTest {
 
     private fun arrangePendingUploads(
         record: UploadRecord = createUploadRecord(),
-        contentType: String? = "image/jpeg"
+        contentType: String? = "image/jpeg",
+        localUri: MediaUrl? = MediaUrl.of("content://media/external_primary/images/media/123")
     ) {
         coEvery { localRepository.getPendingUploadRecords() } returns listOf(record)
         coEvery { localRepository.getUploadRecords(any()) } returns listOf(record)
         every { contentTypeResolver.resolve(any()) } returns contentType
+        every { contentTypeResolver.resolveUri(any()) } returns localUri
         coEvery { localRepository.saveUploadRecords(any()) } just runs
     }
 
@@ -216,6 +341,16 @@ class UploadMediaWorkerTest {
     ): UploadRecord = UploadRecord(
         mediaId = MediaId.of(mediaId),
         cloudStoragePath = CloudStoragePath.of("private/identity123/uuid.jpg"),
+        isDeleted = IsDeleted.of(false),
+        syncStatus = SyncStatus.PENDING_UPLOAD,
+        mediaUploadedAt = MediaUploadedAt.of(1700000000000L)
+    )
+
+    private fun createPendingRecord(
+        mediaId: String = "external_primary_123"
+    ): UploadRecord = UploadRecord(
+        mediaId = MediaId.of(mediaId),
+        cloudStoragePath = null,
         isDeleted = IsDeleted.of(false),
         syncStatus = SyncStatus.PENDING_UPLOAD,
         mediaUploadedAt = MediaUploadedAt.of(1700000000000L)
