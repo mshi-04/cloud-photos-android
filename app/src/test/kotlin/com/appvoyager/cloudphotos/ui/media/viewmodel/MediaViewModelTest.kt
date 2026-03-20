@@ -4,6 +4,9 @@ import com.appvoyager.cloudphotos.R
 import com.appvoyager.cloudphotos.domain.media.model.Media
 import com.appvoyager.cloudphotos.domain.media.model.MediaType
 import com.appvoyager.cloudphotos.domain.media.usecase.GetMediaListUseCase
+import com.appvoyager.cloudphotos.domain.media.usecase.PrepareUploadQueueUseCase
+import com.appvoyager.cloudphotos.domain.media.usecase.ScheduleDeleteUseCase
+import com.appvoyager.cloudphotos.domain.media.usecase.SyncUploadRecordsUseCase
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaCreatedAt
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaId
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaUrl
@@ -15,7 +18,9 @@ import com.appvoyager.cloudphotos.ui.media.uistate.MediaUiState
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
+import io.mockk.runs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -40,6 +45,9 @@ class MediaViewModelTest {
     private lateinit var getMediaListUseCase: GetMediaListUseCase
     private lateinit var getGridColumnCountUseCase: GetGridColumnCountUseCase
     private lateinit var setGridColumnCountUseCase: SetGridColumnCountUseCase
+    private lateinit var syncUploadRecordsUseCase: SyncUploadRecordsUseCase
+    private lateinit var prepareUploadQueueUseCase: PrepareUploadQueueUseCase
+    private lateinit var scheduleDeleteUseCase: ScheduleDeleteUseCase
 
     @BeforeEach
     fun setup() {
@@ -47,6 +55,9 @@ class MediaViewModelTest {
         getMediaListUseCase = mockk()
         getGridColumnCountUseCase = mockk()
         setGridColumnCountUseCase = mockk()
+        syncUploadRecordsUseCase = mockk()
+        prepareUploadQueueUseCase = mockk()
+        scheduleDeleteUseCase = mockk()
     }
 
     @AfterEach
@@ -58,7 +69,10 @@ class MediaViewModelTest {
         return MediaViewModel(
             getMediaListUseCase = getMediaListUseCase,
             getGridColumnCountUseCase = getGridColumnCountUseCase,
-            setGridColumnCountUseCase = setGridColumnCountUseCase
+            setGridColumnCountUseCase = setGridColumnCountUseCase,
+            syncUploadRecordsUseCase = syncUploadRecordsUseCase,
+            prepareUploadQueueUseCase = prepareUploadQueueUseCase,
+            scheduleDeleteUseCase = scheduleDeleteUseCase
         )
     }
 
@@ -73,11 +87,11 @@ class MediaViewModelTest {
 
         // Assert
         val state = viewModel.uiState.value
-        assertTrue(state.loadState is MediaUiState.LoadState.Loading)
+        assertTrue(state.screenState is MediaUiState.ScreenState.None)
     }
 
     @Test
-    fun `loadMediaList success updates loadState to Success`() = runTest {
+    fun `loadMediaList success updates screenState to Success`() = runTest {
         // Arrange
         every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
         val expectedList = listOf(
@@ -98,13 +112,38 @@ class MediaViewModelTest {
         advanceUntilIdle()
 
         // Assert
-        val loadState = viewModel.uiState.value.loadState
-        assertTrue(loadState is MediaUiState.LoadState.Success)
-        assertEquals(expectedList, (loadState as MediaUiState.LoadState.Success).mediaList)
+        val screenState = viewModel.uiState.value.screenState
+        assertTrue(screenState is MediaUiState.ScreenState.Success)
     }
 
     @Test
-    fun `loadMediaList error sets loadState to Error and sends snackbar effect`() = runTest {
+    fun `loadMediaList success contains expected media list`() = runTest {
+        // Arrange
+        every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
+        val expectedList = listOf(
+            Media(
+                id = MediaId.of("1"),
+                url = MediaUrl.of("content://media/external/images/1"),
+                type = MediaType.IMAGE,
+                createdAt = MediaCreatedAt.of(1700000000000L)
+            )
+        )
+        every { getMediaListUseCase() } returns flowOf(expectedList)
+
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // Act
+        viewModel.loadMediaList()
+        advanceUntilIdle()
+
+        // Assert
+        val screenState = viewModel.uiState.value.screenState
+        assertEquals(expectedList, (screenState as MediaUiState.ScreenState.Success).mediaList)
+    }
+
+    @Test
+    fun `loadMediaList error sets screenState to Error`() = runTest {
         // Arrange
         every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
         every { getMediaListUseCase() } returns flow { throw RuntimeException("load failed") }
@@ -117,7 +156,23 @@ class MediaViewModelTest {
         advanceUntilIdle()
 
         // Assert
-        assertTrue(viewModel.uiState.value.loadState is MediaUiState.LoadState.Error)
+        assertTrue(viewModel.uiState.value.screenState is MediaUiState.ScreenState.Error)
+    }
+
+    @Test
+    fun `loadMediaList error sends snackbar effect`() = runTest {
+        // Arrange
+        every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
+        every { getMediaListUseCase() } returns flow { throw RuntimeException("load failed") }
+
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // Act
+        viewModel.loadMediaList()
+        advanceUntilIdle()
+
+        // Assert
         val effect = viewModel.effect.first()
         assertEquals(
             R.string.error_media_load_failed,
@@ -204,7 +259,7 @@ class MediaViewModelTest {
     }
 
     @Test
-    fun `onPermissionDenied sets loadState to PermissionRequired`() = runTest {
+    fun `onPermissionDenied sets screenState to PermissionRequired`() = runTest {
         // Arrange
         every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
         val viewModel = createViewModel()
@@ -214,7 +269,7 @@ class MediaViewModelTest {
         viewModel.onPermissionDenied()
 
         // Assert
-        assertTrue(viewModel.uiState.value.loadState is MediaUiState.LoadState.PermissionRequired)
+        assertTrue(viewModel.uiState.value.screenState is MediaUiState.ScreenState.PermissionRequired)
     }
 
     @Test
@@ -231,4 +286,152 @@ class MediaViewModelTest {
         // Assert
         assertFalse(viewModel.uiState.value.isSettingsDialogVisible)
     }
+
+    @Test
+    fun `onScreenResumed calls syncUploadRecordsUseCase`() = runTest {
+        // Arrange
+        every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
+        coEvery { syncUploadRecordsUseCase() } returns Unit
+        coEvery { prepareUploadQueueUseCase() } just runs
+        coEvery { scheduleDeleteUseCase() } just runs
+
+        val viewModel = createViewModel()
+        viewModel.elapsedRealtimeProvider = { MediaViewModel.MIN_RESUME_INTERVAL_MS }
+        advanceUntilIdle()
+
+        // Act
+        viewModel.onScreenResumed()
+        advanceUntilIdle()
+
+        // Assert
+        coVerify { syncUploadRecordsUseCase() }
+    }
+
+    @Test
+    fun `onScreenResumed calls prepareUploadQueueUseCase`() = runTest {
+        // Arrange
+        every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
+        coEvery { syncUploadRecordsUseCase() } returns Unit
+        coEvery { prepareUploadQueueUseCase() } just runs
+        coEvery { scheduleDeleteUseCase() } just runs
+
+        val viewModel = createViewModel()
+        viewModel.elapsedRealtimeProvider = { MediaViewModel.MIN_RESUME_INTERVAL_MS }
+        advanceUntilIdle()
+
+        // Act
+        viewModel.onScreenResumed()
+        advanceUntilIdle()
+
+        // Assert
+        coVerify { prepareUploadQueueUseCase() }
+    }
+
+    @Test
+    fun `onScreenResumed calls scheduleDeleteUseCase`() = runTest {
+        // Arrange
+        every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
+        coEvery { syncUploadRecordsUseCase() } returns Unit
+        coEvery { prepareUploadQueueUseCase() } just runs
+        coEvery { scheduleDeleteUseCase() } just runs
+
+        val viewModel = createViewModel()
+        viewModel.elapsedRealtimeProvider = { MediaViewModel.MIN_RESUME_INTERVAL_MS }
+        advanceUntilIdle()
+
+        // Act
+        viewModel.onScreenResumed()
+        advanceUntilIdle()
+
+        // Assert
+        coVerify { scheduleDeleteUseCase() }
+    }
+
+    @Test
+    fun `onScreenResumed throttling limits syncUploadRecordsUseCase to one call`() = runTest {
+        // Arrange
+        every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
+        coEvery { syncUploadRecordsUseCase() } returns Unit
+        coEvery { prepareUploadQueueUseCase() } just runs
+        coEvery { scheduleDeleteUseCase() } just runs
+
+        val viewModel = createViewModel()
+        viewModel.elapsedRealtimeProvider = { MediaViewModel.MIN_RESUME_INTERVAL_MS }
+        advanceUntilIdle()
+
+        // Act: 1回目は通過、2回目は同じ時刻なのでスロットルされる
+        viewModel.onScreenResumed()
+        advanceUntilIdle()
+        viewModel.onScreenResumed()
+        advanceUntilIdle()
+
+        // Assert
+        coVerify(exactly = 1) { syncUploadRecordsUseCase() }
+    }
+
+    @Test
+    fun `onScreenResumed throttling limits prepareUploadQueueUseCase to one call`() = runTest {
+        // Arrange
+        every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
+        coEvery { syncUploadRecordsUseCase() } returns Unit
+        coEvery { prepareUploadQueueUseCase() } just runs
+        coEvery { scheduleDeleteUseCase() } just runs
+
+        val viewModel = createViewModel()
+        viewModel.elapsedRealtimeProvider = { MediaViewModel.MIN_RESUME_INTERVAL_MS }
+        advanceUntilIdle()
+
+        // Act: 1回目は通過、2回目は同じ時刻なのでスロットルされる
+        viewModel.onScreenResumed()
+        advanceUntilIdle()
+        viewModel.onScreenResumed()
+        advanceUntilIdle()
+
+        // Assert
+        coVerify(exactly = 1) { prepareUploadQueueUseCase() }
+    }
+
+    @Test
+    fun `onScreenResumed throttling limits scheduleDeleteUseCase to one call`() = runTest {
+        // Arrange
+        every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
+        coEvery { syncUploadRecordsUseCase() } returns Unit
+        coEvery { prepareUploadQueueUseCase() } just runs
+        coEvery { scheduleDeleteUseCase() } just runs
+
+        val viewModel = createViewModel()
+        viewModel.elapsedRealtimeProvider = { MediaViewModel.MIN_RESUME_INTERVAL_MS }
+        advanceUntilIdle()
+
+        // Act: 1回目は通過、2回目は同じ時刻なのでスロットルされる
+        viewModel.onScreenResumed()
+        advanceUntilIdle()
+        viewModel.onScreenResumed()
+        advanceUntilIdle()
+
+        // Assert
+        coVerify(exactly = 1) { scheduleDeleteUseCase() }
+    }
+
+    @Test
+    fun `onScreenResumed syncRemote failure sends snackbar effect`() = runTest {
+        // Arrange
+        every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
+        coEvery { syncUploadRecordsUseCase() } throws RuntimeException("sync failed")
+        coEvery { prepareUploadQueueUseCase() } just runs
+        coEvery { scheduleDeleteUseCase() } just runs
+
+        val viewModel = createViewModel()
+        viewModel.elapsedRealtimeProvider = { MediaViewModel.MIN_RESUME_INTERVAL_MS }
+        advanceUntilIdle()
+
+        // Act
+        viewModel.onScreenResumed()
+        advanceUntilIdle()
+
+        // Assert
+        val effect = viewModel.effect.first()
+        assertEquals(R.string.error_unknown, (effect as MediaEffect.ShowSnackbar).messageResId)
+    }
+
 }

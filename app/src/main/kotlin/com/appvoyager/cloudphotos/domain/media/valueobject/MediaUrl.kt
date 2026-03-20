@@ -14,12 +14,6 @@ value class MediaUrl private constructor(val value: String) {
                 require(isValidUrl(it)) { "MediaUrl must be a valid URL/URI." }
             }.let(::MediaUrl)
 
-        fun ofOrNull(raw: String?): MediaUrl? {
-            if (raw.isNullOrBlank()) return null
-            val trimmed = raw.trim()
-            return if (isValidUrl(trimmed)) MediaUrl(trimmed) else null
-        }
-
         @Suppress("SwallowedException")
         private fun isValidUrl(url: String): Boolean {
             return try {

@@ -4,17 +4,17 @@ import com.appvoyager.cloudphotos.domain.media.model.Media
 import com.appvoyager.cloudphotos.domain.settings.valueobject.GridColumnCount
 
 data class MediaUiState(
-    val loadState: LoadState = LoadState.Loading,
+    val screenState: ScreenState = ScreenState.None,
     val gridColumnCount: GridColumnCount = GridColumnCount.of(3),
     val isSettingsDialogVisible: Boolean = false
 ) {
 
-    sealed class LoadState {
+    sealed class ScreenState {
 
-        data object Loading : LoadState()
-        data object PermissionRequired : LoadState()
-        data class Success(val mediaList: List<Media>) : LoadState()
-        data class Error(val error: Throwable? = null) : LoadState()
+        data object None : ScreenState()
+        data object PermissionRequired : ScreenState()
+        data class Success(val mediaList: List<Media>) : ScreenState()
+        data class Error(val error: Throwable? = null) : ScreenState()
 
     }
 
