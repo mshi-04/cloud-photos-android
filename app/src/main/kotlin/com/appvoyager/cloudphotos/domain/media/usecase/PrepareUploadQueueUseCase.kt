@@ -1,8 +1,8 @@
 package com.appvoyager.cloudphotos.domain.media.usecase
 
+import com.appvoyager.cloudphotos.domain.common.Clock
 import com.appvoyager.cloudphotos.domain.media.model.SyncStatus
 import com.appvoyager.cloudphotos.domain.media.model.UploadRecord
-import com.appvoyager.cloudphotos.domain.common.Clock
 import com.appvoyager.cloudphotos.domain.media.repository.LocalMediaRepository
 import com.appvoyager.cloudphotos.domain.media.repository.LocalUploadRecordsRepository
 import com.appvoyager.cloudphotos.domain.media.repository.UploadScheduler

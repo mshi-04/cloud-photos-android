@@ -1,5 +1,6 @@
 package com.appvoyager.cloudphotos.di
 
+import android.content.Context
 import com.appvoyager.cloudphotos.data.media.datasource.UploadRecordLocalDataSource
 import com.appvoyager.cloudphotos.data.media.datasource.UploadRecordLocalDataSourceImpl
 import com.appvoyager.cloudphotos.data.media.datasource.UploadRecordRemoteDataSource
@@ -15,7 +16,6 @@ import com.appvoyager.cloudphotos.domain.media.repository.DeleteScheduler
 import com.appvoyager.cloudphotos.domain.media.repository.LocalUploadRecordsRepository
 import com.appvoyager.cloudphotos.domain.media.repository.RemoteUploadRecordsRepository
 import com.appvoyager.cloudphotos.domain.media.repository.UploadScheduler
-import android.content.Context
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
