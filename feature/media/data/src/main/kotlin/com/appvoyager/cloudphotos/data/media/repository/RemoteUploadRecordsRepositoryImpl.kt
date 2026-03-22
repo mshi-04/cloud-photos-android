@@ -5,6 +5,7 @@ import com.appvoyager.cloudphotos.domain.media.model.UploadRecord
 import com.appvoyager.cloudphotos.domain.media.repository.RemoteUploadRecordsRepository
 import com.appvoyager.cloudphotos.domain.media.request.CreateUploadRecordRequest
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaId
+import com.appvoyager.cloudphotos.domain.media.valueobject.UploadSuccessCount
 import javax.inject.Inject
 
 class RemoteUploadRecordsRepositoryImpl @Inject constructor(
@@ -19,5 +20,8 @@ class RemoteUploadRecordsRepositoryImpl @Inject constructor(
 
     override suspend fun deleteUploadRecord(mediaId: MediaId) =
         remoteDataSource.deleteUploadRecord(mediaId)
+
+    override suspend fun completeUpload(successCount: UploadSuccessCount) =
+        remoteDataSource.completeUpload(successCount)
 
 }

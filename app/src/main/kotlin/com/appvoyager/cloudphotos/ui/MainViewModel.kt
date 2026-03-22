@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.appvoyager.cloudphotos.domain.auth.model.AuthResult
 import com.appvoyager.cloudphotos.domain.auth.usecase.GetSessionUseCase
+import com.appvoyager.cloudphotos.domain.auth.usecase.SignOutUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -14,12 +15,23 @@ import javax.inject.Inject
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val getSessionUseCase: GetSessionUseCase,
+    private val signOutUseCase: SignOutUseCase
 ) : ViewModel() {
 
     var uiState by mutableStateOf<MainUiState>(MainUiState.Loading)
         private set
 
     private var isSessionChecked = false
+
+    fun signOut() {
+        viewModelScope.launch {
+            try {
+                signOutUseCase()
+            } finally {
+                uiState = MainUiState.Unauthenticated
+            }
+        }
+    }
 
     fun checkSession() {
         if (isSessionChecked) return

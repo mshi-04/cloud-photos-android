@@ -2,11 +2,13 @@ package com.appvoyager.cloudphotos.data.media.datasource
 
 import com.amplifyframework.api.rest.RestOptions
 import com.amplifyframework.core.Amplify
+import com.appvoyager.cloudphotos.data.common.AMPLIFY_API_NAME
 import com.appvoyager.cloudphotos.data.media.util.RemoteUploadRecordMapper
 import com.appvoyager.cloudphotos.domain.common.Clock
 import com.appvoyager.cloudphotos.domain.media.model.UploadRecord
 import com.appvoyager.cloudphotos.domain.media.request.CreateUploadRecordRequest
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaId
+import com.appvoyager.cloudphotos.domain.media.valueobject.UploadSuccessCount
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.json.JSONObject
 import javax.inject.Inject
@@ -23,7 +25,7 @@ class UploadRecordRemoteDataSourceImpl @Inject constructor(
 
         val response = suspendCancellableCoroutine { coroutine ->
             val operation = Amplify.API.get(
-                API_NAME,
+                AMPLIFY_API_NAME,
                 request,
                 { apiResponse ->
                     if (apiResponse.code.isSuccessful) {
@@ -58,7 +60,7 @@ class UploadRecordRemoteDataSourceImpl @Inject constructor(
 
         val response = suspendCancellableCoroutine { coroutine ->
             val operation = Amplify.API.post(
-                API_NAME,
+                AMPLIFY_API_NAME,
                 restOptions,
                 { apiResponse ->
                     if (apiResponse.code.isSuccessful) {
@@ -83,6 +85,36 @@ class UploadRecordRemoteDataSourceImpl @Inject constructor(
         )
     }
 
+    override suspend fun completeUpload(successCount: UploadSuccessCount) {
+        val body = JSONObject().apply {
+            put("successCount", successCount.value)
+        }.toString()
+
+        val restOptions = RestOptions.builder()
+            .addPath("/media/uploads/complete")
+            .addHeaders(mapOf("Content-Type" to "application/json"))
+            .addBody(body.toByteArray())
+            .build()
+
+        suspendCancellableCoroutine { coroutine ->
+            val operation = Amplify.API.post(
+                AMPLIFY_API_NAME,
+                restOptions,
+                { apiResponse ->
+                    if (apiResponse.code.isSuccessful) {
+                        coroutine.resume(Unit) { _, _, _ -> }
+                    } else {
+                        coroutine.resumeWithException(
+                            Exception("Unexpected response code ${apiResponse.code}: ${apiResponse.data.asString()}")
+                        )
+                    }
+                },
+                { coroutine.resumeWithException(it) }
+            )
+            coroutine.invokeOnCancellation { operation?.cancel() }
+        }
+    }
+
     override suspend fun deleteUploadRecord(mediaId: MediaId) {
         val request = RestOptions.builder()
             .addPath("/media/uploads/${mediaId.value}")
@@ -90,7 +122,7 @@ class UploadRecordRemoteDataSourceImpl @Inject constructor(
 
         suspendCancellableCoroutine { coroutine ->
             val operation = Amplify.API.delete(
-                API_NAME,
+                AMPLIFY_API_NAME,
                 request,
                 { apiResponse ->
                     if (apiResponse.code.isSuccessful) {
@@ -105,10 +137,6 @@ class UploadRecordRemoteDataSourceImpl @Inject constructor(
             )
             coroutine.invokeOnCancellation { operation?.cancel() }
         }
-    }
-
-    companion object {
-        private const val API_NAME = "CloudPhotosAPI"
     }
 
 }

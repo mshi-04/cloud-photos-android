@@ -2,4 +2,5 @@
 <resources>
     <string name="notification_channel_upload">Upload</string>
     <string name="notification_uploading">Uploading %1$d item(s)</string>
+    <string name="notification_channel_upload_complete">Upload Complete</string>
 </resources>
