@@ -24,18 +24,6 @@ class MainViewModel @Inject constructor(
 
     private var isSessionChecked = false
 
-    fun signOut() {
-        viewModelScope.launch {
-            runCatching { signOutUseCase() }.fold(
-                onSuccess = { uiState = MainUiState.Unauthenticated },
-                onFailure = {
-                    if (it is CancellationException) throw it
-                    else uiState = MainUiState.Unauthenticated
-                }
-            )
-        }
-    }
-
     fun checkSession() {
         if (isSessionChecked) return
         isSessionChecked = true
@@ -58,6 +46,18 @@ class MainViewModel @Inject constructor(
                 isSessionChecked = false
                 uiState = MainUiState.Unauthenticated
             }
+        }
+    }
+
+    fun signOut() {
+        viewModelScope.launch {
+            runCatching { signOutUseCase() }.fold(
+                onSuccess = { uiState = MainUiState.Unauthenticated },
+                onFailure = {
+                    if (it is CancellationException) throw it
+                    else uiState = MainUiState.Unauthenticated
+                }
+            )
         }
     }
 

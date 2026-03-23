@@ -11,4 +11,7 @@ dependencies {
     implementation(project(":core:common"))
     implementation(libs.amplify.core)
     implementation(libs.amplify.api)
+
+    testImplementation(libs.junit.jupiter)
+    testRuntimeOnly(libs.junit.platform.launcher)
 }

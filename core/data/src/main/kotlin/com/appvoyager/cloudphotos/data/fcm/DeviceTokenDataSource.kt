@@ -14,9 +14,9 @@ import kotlin.coroutines.resumeWithException
 
 class DeviceTokenDataSource @Inject constructor() {
 
-    suspend fun register(token: String) {
+    suspend fun register(token: DeviceToken) {
         val body = JSONObject().apply {
-            put("deviceToken", token)
+            put("deviceToken", token.value)
             put("platform", "android")
         }.toString()
         callDeviceApi(body) { name, opts, onResp, onErr ->
@@ -29,9 +29,9 @@ class DeviceTokenDataSource @Inject constructor() {
         }
     }
 
-    suspend fun unregister(token: String) {
+    suspend fun unregister(token: DeviceToken) {
         val body = JSONObject().apply {
-            put("deviceToken", token)
+            put("deviceToken", token.value)
         }.toString()
         callDeviceApi(body) { name, opts, onResp, onErr ->
             Amplify.API.delete(

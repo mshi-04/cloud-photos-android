@@ -6,6 +6,7 @@ import com.amplifyframework.auth.result.step.AuthSignInStep
 import com.amplifyframework.core.Amplify
 import com.appvoyager.cloudphotos.data.auth.util.AuthErrorMapper
 import com.appvoyager.cloudphotos.data.auth.util.AuthSignInStepMapper
+import com.appvoyager.cloudphotos.data.fcm.DeviceToken
 import com.appvoyager.cloudphotos.data.fcm.DeviceTokenDataSource
 import com.appvoyager.cloudphotos.domain.auth.model.AuthResult
 import com.appvoyager.cloudphotos.domain.auth.model.AuthSession
@@ -219,7 +220,8 @@ class AuthDataSourceImpl @Inject constructor(
                     .addOnFailureListener { coroutine.resumeWithException(it) }
             }
         }.onFailure { if (it is CancellationException) throw it }
-            .getOrNull() ?: return
+            .getOrNull()
+            ?.let { runCatching { DeviceToken.of(it) }.getOrNull() } ?: return
 
         runCatching { deviceTokenDataSource.unregister(token) }
             .onFailure { if (it is CancellationException) throw it }

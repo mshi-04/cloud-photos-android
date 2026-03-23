@@ -9,6 +9,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
+import com.appvoyager.cloudphotos.data.fcm.DeviceToken
 import com.appvoyager.cloudphotos.data.fcm.DeviceTokenDataSource
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -23,7 +24,7 @@ class RegisterDeviceTokenWorker @AssistedInject constructor(
 ) : CoroutineWorker(context, workerParams) {
 
     override suspend fun doWork(): Result {
-        val token = inputData.getString(KEY_TOKEN) ?: return Result.failure()
+        val token = inputData.getString(KEY_TOKEN)?.let { DeviceToken.of(it) } ?: return Result.failure()
         return runCatching { deviceTokenDataSource.register(token) }
             .fold(
                 onSuccess = { Result.success() },
