@@ -19,14 +19,28 @@ class DeviceTokenDataSource @Inject constructor() {
             put("deviceToken", token)
             put("platform", "android")
         }.toString()
-        callDeviceApi(body) { name, opts, onResp, onErr -> Amplify.API.put(name, opts, onResp, onErr) }
+        callDeviceApi(body) { name, opts, onResp, onErr ->
+            Amplify.API.put(
+                name,
+                opts,
+                onResp,
+                onErr
+            )
+        }
     }
 
     suspend fun unregister(token: String) {
         val body = JSONObject().apply {
             put("deviceToken", token)
         }.toString()
-        callDeviceApi(body) { name, opts, onResp, onErr -> Amplify.API.delete(name, opts, onResp, onErr) }
+        callDeviceApi(body) { name, opts, onResp, onErr ->
+            Amplify.API.delete(
+                name,
+                opts,
+                onResp,
+                onErr
+            )
+        }
     }
 
     private suspend fun callDeviceApi(

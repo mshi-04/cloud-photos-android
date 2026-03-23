@@ -28,7 +28,10 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             runCatching { signOutUseCase() }.fold(
                 onSuccess = { uiState = MainUiState.Unauthenticated },
-                onFailure = { if (it is CancellationException) throw it else uiState = MainUiState.Unauthenticated }
+                onFailure = {
+                    if (it is CancellationException) throw it
+                    else uiState = MainUiState.Unauthenticated
+                }
             )
         }
     }

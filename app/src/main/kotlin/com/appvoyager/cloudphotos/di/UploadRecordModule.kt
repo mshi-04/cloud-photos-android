@@ -75,7 +75,12 @@ abstract class UploadRecordModule {
         ): UploadNotificationHelper = UploadNotificationHelper(
             context = context,
             channelName = context.getString(R.string.notification_channel_upload),
-            uploadingMessage = { count -> context.getString(R.string.notification_uploading, count) }
+            uploadingMessage = { count ->
+                context.getString(
+                    R.string.notification_uploading,
+                    count
+                )
+            }
         )
     }
 

@@ -47,7 +47,13 @@ class DeleteMediaWorkerTest {
     @BeforeEach
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        worker = DeleteMediaWorker(context, workerParams, localRepository, remoteRepository, uploadDataSource)
+        worker = DeleteMediaWorker(
+            context,
+            workerParams,
+            localRepository,
+            remoteRepository,
+            uploadDataSource
+        )
     }
 
     @AfterEach

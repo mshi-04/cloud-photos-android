@@ -1,7 +1,6 @@
 package com.appvoyager.cloudphotos.data.auth.datasource
 
 import com.amplifyframework.auth.AuthUserAttributeKey
-import com.amplifyframework.auth.cognito.result.AWSCognitoAuthSignOutResult
 import com.amplifyframework.auth.options.AuthSignUpOptions
 import com.amplifyframework.auth.result.step.AuthSignInStep
 import com.amplifyframework.core.Amplify
@@ -115,32 +114,11 @@ class AuthDataSourceImpl @Inject constructor(
         runCatching { cleanUpFcmToken() }
             .onFailure { if (it is CancellationException) throw it }
 
-        return runCatching {
-            val result = suspendCancellableCoroutine { coroutine ->
-                Amplify.Auth.signOut { signOutResult ->
-                    coroutine.resume(signOutResult) { _, _, _ -> }
-                }
-            }
+        suspendCancellableCoroutine { coroutine ->
+            Amplify.Auth.signOut { coroutine.resume(it) { _, _, _ -> } }
+        }
 
-            when (result) {
-                is AWSCognitoAuthSignOutResult.CompleteSignOut -> Unit
-                is AWSCognitoAuthSignOutResult.PartialSignOut -> {
-                    throw result.globalSignOutError?.exception
-                        ?: result.hostedUIError?.exception
-                        ?: result.revokeTokenError?.exception
-                        ?: Exception("Partial sign-out: local success but remote operations failed")
-                }
-
-                is AWSCognitoAuthSignOutResult.FailedSignOut -> {
-                    throw result.exception
-                }
-
-                else -> throw IllegalStateException("Unknown sign-out result type: ${result::class}")
-            }
-        }.fold(
-            onSuccess = { AuthResult.Success(Unit) },
-            onFailure = { AuthResult.Error(AuthErrorMapper.map(it)) }
-        )
+        return AuthResult.Success(Unit)
     }
 
     override suspend fun fetchCurrentUser(): AuthResult<AuthUser> =
