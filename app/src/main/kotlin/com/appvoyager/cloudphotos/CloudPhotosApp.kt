@@ -4,13 +4,9 @@ import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.util.Log
 import androidx.hilt.work.HiltWorkerFactory
-import androidx.work.BackoffPolicy
 import androidx.work.Configuration
-import androidx.work.ExistingWorkPolicy
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.WorkManager
-import androidx.work.workDataOf
 import com.amplifyframework.AmplifyException
 import com.amplifyframework.api.aws.AWSApiPlugin
 import com.amplifyframework.auth.cognito.AWSCognitoAuthPlugin
@@ -21,7 +17,6 @@ import com.appvoyager.cloudphotos.fcm.CloudPhotosFirebaseMessagingService
 import com.appvoyager.cloudphotos.fcm.RegisterDeviceTokenWorker
 import com.google.firebase.messaging.FirebaseMessaging
 import dagger.hilt.android.HiltAndroidApp
-import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 @HiltAndroidApp
@@ -67,22 +62,17 @@ class CloudPhotosApp : Application(), Configuration.Provider {
     }
 
     private fun registerFcmToken() {
-        FirebaseMessaging.getInstance().token.addOnSuccessListener { token ->
-            scheduleDeviceTokenRegistration(token)
+        FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                RegisterDeviceTokenWorker.enqueue(this, task.result)
+            } else {
+                Log.e(TAG, "Failed to retrieve FCM token", task.exception)
+            }
         }
     }
 
-    internal fun scheduleDeviceTokenRegistration(token: String) {
-        val request = OneTimeWorkRequestBuilder<RegisterDeviceTokenWorker>()
-            .setInputData(workDataOf(RegisterDeviceTokenWorker.KEY_TOKEN to token))
-            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
-            .build()
-        WorkManager.getInstance(this)
-            .enqueueUniqueWork(
-                RegisterDeviceTokenWorker.WORK_NAME,
-                ExistingWorkPolicy.REPLACE,
-                request
-            )
+    private companion object {
+        const val TAG = "CloudPhotosApp"
     }
 
 }

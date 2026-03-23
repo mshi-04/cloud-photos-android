@@ -11,6 +11,7 @@ import com.appvoyager.cloudphotos.domain.auth.usecase.SignOutUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlin.coroutines.cancellation.CancellationException
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
@@ -25,11 +26,10 @@ class MainViewModel @Inject constructor(
 
     fun signOut() {
         viewModelScope.launch {
-            try {
-                signOutUseCase()
-            } finally {
-                uiState = MainUiState.Unauthenticated
-            }
+            runCatching { signOutUseCase() }.fold(
+                onSuccess = { uiState = MainUiState.Unauthenticated },
+                onFailure = { if (it is CancellationException) throw it else uiState = MainUiState.Unauthenticated }
+            )
         }
     }
 
