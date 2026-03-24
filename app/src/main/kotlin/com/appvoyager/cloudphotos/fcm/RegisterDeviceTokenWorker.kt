@@ -24,15 +24,18 @@ class RegisterDeviceTokenWorker @AssistedInject constructor(
 ) : CoroutineWorker(context, workerParams) {
 
     override suspend fun doWork(): Result {
-        val token = inputData.getString(KEY_TOKEN)?.let { DeviceToken.of(it) } ?: return Result.failure()
-        return runCatching { deviceTokenDataSource.register(token) }
-            .fold(
-                onSuccess = { Result.success() },
-                onFailure = { e ->
-                    if (e is CancellationException) throw e
-                    Result.retry()
-                }
-            )
+        val rawToken = inputData.getString(KEY_TOKEN) ?: return Result.failure()
+        return runCatching {
+            val token = DeviceToken.of(rawToken)
+            deviceTokenDataSource.register(token)
+        }.fold(
+            onSuccess = { Result.success() },
+            onFailure = { e ->
+                if (e is CancellationException) throw e
+                if (e is IllegalArgumentException) Result.failure()
+                else Result.retry()
+            }
+        )
     }
 
     companion object {
