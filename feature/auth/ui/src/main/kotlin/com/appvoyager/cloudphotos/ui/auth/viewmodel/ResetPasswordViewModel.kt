@@ -137,7 +137,7 @@ class ResetPasswordViewModel @Inject constructor(
             _uiState.update { it.copy(codeError = AuthFieldError.EnterCode) }
             valid = false
         }
-        if (_uiState.value.newPassword.length < MIN_PASSWORD_LENGTH) {
+        if (_uiState.value.newPassword.trim().length < MIN_PASSWORD_LENGTH) {
             _uiState.update { it.copy(passwordError = AuthFieldError.PasswordTooShort) }
             valid = false
         }

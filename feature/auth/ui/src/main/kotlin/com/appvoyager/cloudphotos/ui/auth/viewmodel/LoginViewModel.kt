@@ -54,7 +54,7 @@ class LoginViewModel @Inject constructor(
 
     val isFormValid: Boolean
         get() = with(_uiState.value) {
-            email.isNotBlank() && ValidationUtils.isValidEmailFormat(email) && password.length >= MIN_PASSWORD_LENGTH
+            email.isNotBlank() && ValidationUtils.isValidEmailFormat(email) && password.trim().length >= MIN_PASSWORD_LENGTH
         }
 
     fun onEmailChanged(value: String) =
@@ -188,7 +188,7 @@ class LoginViewModel @Inject constructor(
             _uiState.update { it.copy(emailError = AuthFieldError.InvalidEmail) }
             valid = false
         }
-        if (state.password.length < MIN_PASSWORD_LENGTH) {
+        if (state.password.trim().length < MIN_PASSWORD_LENGTH) {
             _uiState.update { it.copy(passwordError = AuthFieldError.PasswordTooShort) }
             valid = false
         }
