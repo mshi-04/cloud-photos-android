@@ -57,20 +57,26 @@ class CloudPhotosApp : Application(), Configuration.Provider {
             getString(R.string.notification_channel_upload_complete),
             NotificationManager.IMPORTANCE_DEFAULT
         )
+        channel.description = getString(R.string.notification_channel_upload_complete_description)
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.createNotificationChannel(channel)
     }
 
     private fun registerFcmToken() {
         FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
-            if (task.isSuccessful) {
-                RegisterDeviceTokenWorker.enqueue(this, DeviceToken.of(task.result))
+            if (!task.isSuccessful) {
+                return@addOnCompleteListener
+            }
+            val rawToken = task.result
+            if (rawToken.isNullOrBlank()) {
+                return@addOnCompleteListener
+            }
+            try {
+                RegisterDeviceTokenWorker.enqueue(this, DeviceToken.of(rawToken))
+            } catch (_: IllegalArgumentException) {
+
             }
         }
-    }
-
-    private companion object {
-        const val TAG = "CloudPhotosApp"
     }
 
 }
