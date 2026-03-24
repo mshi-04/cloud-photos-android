@@ -95,6 +95,9 @@ fun NavGraph(
                     navController.navigate(AuthRoute.HOME) {
                         popUpTo(AuthRoute.URI_LOGIN) { inclusive = true }
                     }
+                },
+                onNavigateBack = {
+                    navController.popBackStack()
                 }
             )
         }
