@@ -10,6 +10,10 @@ class ResendTimer(
     private val scope: CoroutineScope,
     private val onTick: (seconds: Int) -> Unit
 ) {
+    init {
+        require(durationSeconds >= 0) { "durationSeconds must be non-negative" }
+    }
+
     private var job: Job? = null
 
     fun start() {
