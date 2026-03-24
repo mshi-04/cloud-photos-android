@@ -10,7 +10,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.appvoyager.cloudphotos.core.ui.R
 
 private const val CODE_LENGTH = 6
 
@@ -37,23 +39,24 @@ fun CodeInputRow(
                 value = code,
                 isError = isError,
                 focusRequester = focusRequesters[index],
+                contentDescription = stringResource(R.string.code_input_box_description, index + 1),
                 onValueChange = { newValue ->
                     val digits = newValue.filter { it.isDigit() }
                     if (digits.length > 1) {
                         onCodeChanged(index, digits)
-                        val targetIndex = (index + digits.length).coerceAtMost(5)
+                        val targetIndex = (index + digits.length).coerceAtMost(CODE_LENGTH - 1)
                         focusRequesters[targetIndex].requestFocus()
-                        if (targetIndex == 5) {
+                        if (targetIndex == CODE_LENGTH - 1) {
                             keyboardController?.hide()
                         }
                         return@CodeInputBox
                     }
 
                     onCodeChanged(index, digits.take(1))
-                    if (digits.isNotEmpty() && index < 5) {
+                    if (digits.isNotEmpty() && index < CODE_LENGTH - 1) {
                         focusRequesters[index + 1].requestFocus()
                     }
-                    if (digits.isNotEmpty() && index == 5) {
+                    if (digits.isNotEmpty() && index == CODE_LENGTH - 1) {
                         keyboardController?.hide()
                     }
                 },

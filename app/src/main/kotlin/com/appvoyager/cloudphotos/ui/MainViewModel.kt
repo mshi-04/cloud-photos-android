@@ -42,7 +42,8 @@ class MainViewModel @Inject constructor(
 
                     is AuthResult.Error -> MainUiState.Unauthenticated
                 }
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 isSessionChecked = false
                 uiState = MainUiState.Unauthenticated
             }

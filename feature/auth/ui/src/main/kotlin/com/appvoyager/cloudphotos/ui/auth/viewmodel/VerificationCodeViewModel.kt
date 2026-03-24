@@ -35,7 +35,8 @@ class VerificationCodeViewModel @Inject constructor(
     private val resendSignUpCodeUseCase: ResendSignUpCodeUseCase
 ) : ViewModel() {
 
-    val email: String = savedStateHandle.get<String>(ARG_EMAIL).orEmpty()
+    val email: Email? = savedStateHandle.get<String>(ARG_EMAIL)
+        ?.let { runCatching { Email.of(it) }.getOrNull() }
 
     private val _uiState = MutableStateFlow(VerificationCodeUiState())
     val uiState: StateFlow<VerificationCodeUiState> = _uiState.asStateFlow()
@@ -47,7 +48,7 @@ class VerificationCodeViewModel @Inject constructor(
     private var resendTimerJob: Job? = null
 
     init {
-        if (email.isBlank()) {
+        if (email == null) {
             viewModelScope.launch {
                 _effect.emit(VerificationEffect.ShowSnackbar(AuthSnackbarMessage.Unknown))
             }
@@ -89,13 +90,13 @@ class VerificationCodeViewModel @Inject constructor(
     }
 
     fun onVerify() {
+        val emailValue = email ?: return
         if (!_uiState.value.isCodeComplete || _uiState.value.isLoading) return
         _uiState.update { it.copy(isLoading = true) }
         val fullCode = _uiState.value.codes.joinToString("")
 
         viewModelScope.launch {
             try {
-                val emailValue = Email.of(email)
                 val codeValue = ConfirmationCode.of(fullCode)
                 when (val confirmResult =
                     confirmSignUpUseCase(ConfirmSignUpRequest(emailValue, codeValue))) {
@@ -111,12 +112,12 @@ class VerificationCodeViewModel @Inject constructor(
     }
 
     fun onResend() {
+        val emailValue = email ?: return
         if (!_uiState.value.isResendEnabled || _uiState.value.isLoading) return
         _uiState.update { it.copy(isLoading = true) }
 
         viewModelScope.launch {
             try {
-                val emailValue = Email.of(email)
                 when (val result = resendSignUpCodeUseCase(ResendSignUpCodeRequest(emailValue))) {
                     is AuthResult.Success -> {
                         _effect.emit(VerificationEffect.ShowSnackbar(AuthSnackbarMessage.CodeResent))

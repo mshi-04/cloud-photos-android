@@ -35,8 +35,10 @@ class ResetPasswordViewModel @Inject constructor(
     private val resetPasswordUseCase: ResetPasswordUseCase
 ) : ViewModel() {
 
-    val email: String = savedStateHandle.get<String>(ARG_EMAIL)
-        ?: error("Missing required nav argument: $ARG_EMAIL")
+    val email: Email = Email.of(
+        savedStateHandle.get<String>(ARG_EMAIL)
+            ?: error("Missing required nav argument: $ARG_EMAIL")
+    )
 
     private val _uiState = MutableStateFlow(ResetPasswordUiState())
     val uiState: StateFlow<ResetPasswordUiState> = _uiState.asStateFlow()
@@ -86,11 +88,10 @@ class ResetPasswordViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                val emailVO = Email.of(email)
                 val code = ConfirmationCode.of(fullCode)
                 val password = Password.of(_uiState.value.newPassword)
                 val result = confirmResetPasswordUseCase(
-                    ConfirmResetPasswordRequest(emailVO, code, password)
+                    ConfirmResetPasswordRequest(email, code, password)
                 )
 
                 when (result) {
@@ -114,8 +115,7 @@ class ResetPasswordViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                val emailVO = Email.of(email)
-                when (val result = resetPasswordUseCase(ResetPasswordRequest(emailVO))) {
+                when (val result = resetPasswordUseCase(ResetPasswordRequest(email))) {
                     is AuthResult.Success -> {
                         _effect.emit(ResetPasswordEffect.ShowSnackbar(AuthSnackbarMessage.CodeResent))
                         startResendTimer()

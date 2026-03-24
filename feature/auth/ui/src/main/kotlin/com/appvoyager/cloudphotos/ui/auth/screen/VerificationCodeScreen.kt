@@ -85,7 +85,7 @@ fun VerificationCodeScreen(
                 .padding(innerPadding)
         ) {
             VerificationContent(
-                email = viewModel.email,
+                email = viewModel.email?.value.orEmpty(),
                 codes = uiState.codes,
                 codeError = uiState.codeError?.toCodeMessage(),
                 isCodeComplete = uiState.isCodeComplete,
@@ -140,7 +140,7 @@ private fun VerificationContent(
     onResend: () -> Unit
 ) {
     val maskedEmail = runCatching { StringUtils.maskEmail(Email.of(email)) }
-        .getOrElse { "" }
+        .getOrDefault(email)
 
     Column(
         modifier = Modifier

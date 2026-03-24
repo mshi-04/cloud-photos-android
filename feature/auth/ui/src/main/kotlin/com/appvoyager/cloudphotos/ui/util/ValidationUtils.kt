@@ -1,7 +1,8 @@
 package com.appvoyager.cloudphotos.ui.util
 
-object ValidationUtils {
-    private val EMAIL_REGEX = Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")
+import com.appvoyager.cloudphotos.domain.auth.valueobject.Email
 
-    fun isValidEmailFormat(email: String): Boolean = EMAIL_REGEX.matches(email.trim())
+object ValidationUtils {
+    fun isValidEmailFormat(email: String): Boolean =
+        runCatching { Email.of(email) }.isSuccess
 }
