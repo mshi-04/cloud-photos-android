@@ -3,7 +3,6 @@ package com.appvoyager.cloudphotos.fcm
 import android.Manifest
 import android.app.NotificationManager
 import android.app.PendingIntent
-import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
@@ -37,7 +36,7 @@ class CloudPhotosFirebaseMessagingService : FirebaseMessagingService() {
         if (!hasNotificationPermission()) return
 
         val notificationManager =
-            getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            getSystemService(NOTIFICATION_SERVICE) as NotificationManager
 
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP

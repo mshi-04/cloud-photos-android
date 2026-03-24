@@ -5,13 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import com.appvoyager.cloudphotos.ui.theme.CloudPhotosTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -32,16 +26,6 @@ class MainActivity : ComponentActivity() {
                 dynamicColor = true
             ) {
                 when (mainViewModel.uiState) {
-                    is MainUiState.Loading -> {
-                        Column(
-                            modifier = Modifier.fillMaxSize(),
-                            verticalArrangement = Arrangement.Center,
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            CircularProgressIndicator()
-                        }
-                    }
-
                     is MainUiState.Authenticated -> {
                         NavGraph(
                             startDestination = AuthRoute.HOME,
