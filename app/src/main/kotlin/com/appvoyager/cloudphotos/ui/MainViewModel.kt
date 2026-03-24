@@ -51,13 +51,15 @@ class MainViewModel @Inject constructor(
 
     fun signOut() {
         viewModelScope.launch {
-            runCatching { signOutUseCase() }.fold(
-                onSuccess = { uiState = MainUiState.Unauthenticated },
-                onFailure = {
-                    if (it is CancellationException) throw it
-                    else uiState = MainUiState.Unauthenticated
+            try {
+                val result = signOutUseCase()
+                uiState = when (result) {
+                    is AuthResult.Success -> MainUiState.Unauthenticated
+                    is AuthResult.Error -> MainUiState.Authenticated
                 }
-            )
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+            }
         }
     }
 

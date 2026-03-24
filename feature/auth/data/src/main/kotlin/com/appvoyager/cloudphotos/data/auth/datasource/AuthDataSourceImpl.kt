@@ -1,6 +1,7 @@
 package com.appvoyager.cloudphotos.data.auth.datasource
 
 import com.amplifyframework.auth.AuthUserAttributeKey
+import com.amplifyframework.auth.cognito.result.AWSCognitoAuthSignOutResult
 import com.amplifyframework.auth.options.AuthSignUpOptions
 import com.amplifyframework.auth.result.step.AuthSignInStep
 import com.amplifyframework.core.Amplify
@@ -115,11 +116,15 @@ class AuthDataSourceImpl @Inject constructor(
         runCatching { cleanUpFcmToken() }
             .onFailure { if (it is CancellationException) throw it }
 
-        suspendCancellableCoroutine { coroutine ->
+        val result = suspendCancellableCoroutine { coroutine ->
             Amplify.Auth.signOut { coroutine.resume(it) { _, _, _ -> } }
         }
 
-        return AuthResult.Success(Unit)
+        return if (result is AWSCognitoAuthSignOutResult.FailedSignOut) {
+            AuthResult.Error(AuthErrorMapper.map(result.exception))
+        } else {
+            AuthResult.Success(Unit)
+        }
     }
 
     override suspend fun fetchCurrentUser(): AuthResult<AuthUser> =
@@ -213,26 +218,21 @@ class AuthDataSourceImpl @Inject constructor(
         )
 
     private suspend fun cleanUpFcmToken() {
-        val token = runCatching {
-            suspendCancellableCoroutine { coroutine ->
+        try {
+            val rawToken = suspendCancellableCoroutine { coroutine ->
                 FirebaseMessaging.getInstance().token
                     .addOnSuccessListener { coroutine.resume(it) { _, _, _ -> } }
                     .addOnFailureListener { coroutine.resumeWithException(it) }
             }
-        }.onFailure { if (it is CancellationException) throw it }
-            .getOrNull()
-            ?.let { runCatching { DeviceToken.of(it) }.getOrNull() } ?: return
-
-        runCatching { deviceTokenDataSource.unregister(token) }
-            .onFailure { if (it is CancellationException) throw it }
-
-        runCatching {
+            val token = DeviceToken.of(rawToken)
+            deviceTokenDataSource.unregister(token)
+        } finally {
             suspendCancellableCoroutine { coroutine ->
                 FirebaseMessaging.getInstance().deleteToken()
                     .addOnSuccessListener { coroutine.resume(Unit) { _, _, _ -> } }
                     .addOnFailureListener { coroutine.resumeWithException(it) }
             }
-        }.onFailure { if (it is CancellationException) throw it }
+        }
     }
 
 }

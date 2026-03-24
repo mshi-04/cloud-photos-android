@@ -31,11 +31,21 @@ class RegisterDeviceTokenWorker @AssistedInject constructor(
         }.fold(
             onSuccess = { Result.success() },
             onFailure = { e ->
-                if (e is CancellationException) throw e
-                if (e is IllegalArgumentException) Result.failure()
-                else Result.retry()
+                when {
+                    e is CancellationException -> throw e
+                    e is IllegalArgumentException -> Result.failure()
+                    isClientError(e) -> Result.failure()
+                    else -> Result.retry()
+                }
             }
         )
+    }
+
+    private fun isClientError(e: Throwable): Boolean {
+        val message = e.message ?: return false
+        val match = Regex("Unexpected response code (\\d+)").find(message) ?: return false
+        val code = match.groupValues[1].toIntOrNull() ?: return false
+        return code in 400..499
     }
 
     companion object {
