@@ -339,6 +339,7 @@ class UploadMediaWorkerTest {
         worker.doWork()
 
         // Assert
+        coVerify(exactly = 1) { remoteRepository.completeUpload(any()) }
         assertEquals(UploadSuccessCount.of(1), slot.captured)
     }
 

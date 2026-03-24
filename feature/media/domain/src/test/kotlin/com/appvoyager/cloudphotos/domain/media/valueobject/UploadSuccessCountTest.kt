@@ -15,7 +15,7 @@ class UploadSuccessCountTest {
         val count = UploadSuccessCount.of(raw)
 
         // Assert
-        assertEquals(5, count.value)
+        assertEquals(raw, count.value)
     }
 
     @Test
