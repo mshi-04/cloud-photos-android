@@ -49,7 +49,6 @@ class VerificationCodeViewModel @Inject constructor(
     init {
         if (email.isBlank()) {
             viewModelScope.launch {
-                _effect.emit(VerificationEffect.ShowSnackbar(AuthSnackbarMessage.Unknown))
                 _effect.emit(VerificationEffect.NavigateBack)
             }
         }
