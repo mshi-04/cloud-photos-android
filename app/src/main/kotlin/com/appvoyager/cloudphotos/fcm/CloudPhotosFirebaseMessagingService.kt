@@ -5,6 +5,7 @@ import android.app.NotificationManager
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.appvoyager.cloudphotos.data.fcm.DeviceToken
@@ -16,7 +17,13 @@ import dagger.hilt.android.AndroidEntryPoint
 class CloudPhotosFirebaseMessagingService : FirebaseMessagingService() {
 
     override fun onNewToken(token: String) {
-        RegisterDeviceTokenWorker.enqueue(this, DeviceToken.of(token))
+        val deviceToken = try {
+            DeviceToken.of(token)
+        } catch (e: IllegalArgumentException) {
+            Log.e(TAG, "Invalid FCM token: ${e.message}")
+            return
+        }
+        RegisterDeviceTokenWorker.enqueue(this, deviceToken)
     }
 
     override fun onMessageReceived(message: RemoteMessage) {
@@ -53,6 +60,7 @@ class CloudPhotosFirebaseMessagingService : FirebaseMessagingService() {
     companion object {
         const val CHANNEL_ID = "upload_complete"
         private const val NOTIFICATION_ID = 2001
+        private const val TAG = "CloudPhotosFirebaseMessagingService"
     }
 
 }
