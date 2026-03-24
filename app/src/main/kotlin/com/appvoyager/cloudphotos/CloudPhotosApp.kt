@@ -4,7 +4,6 @@ import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
-import android.util.Log
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import com.amplifyframework.AmplifyException
@@ -66,8 +65,6 @@ class CloudPhotosApp : Application(), Configuration.Provider {
         FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
             if (task.isSuccessful) {
                 RegisterDeviceTokenWorker.enqueue(this, DeviceToken.of(task.result))
-            } else {
-                Log.e(TAG, "Failed to retrieve FCM token", task.exception)
             }
         }
     }

@@ -5,7 +5,6 @@ import android.app.NotificationManager
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
-import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.appvoyager.cloudphotos.data.fcm.DeviceToken
@@ -19,8 +18,7 @@ class CloudPhotosFirebaseMessagingService : FirebaseMessagingService() {
     override fun onNewToken(token: String) {
         val deviceToken = try {
             DeviceToken.of(token)
-        } catch (e: IllegalArgumentException) {
-            Log.e(TAG, "Invalid FCM token: ${e.message}")
+        } catch (_: IllegalArgumentException) {
             return
         }
         RegisterDeviceTokenWorker.enqueue(this, deviceToken)
