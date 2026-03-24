@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
+import com.appvoyager.cloudphotos.data.fcm.DeviceToken
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import dagger.hilt.android.AndroidEntryPoint
@@ -15,7 +16,7 @@ import dagger.hilt.android.AndroidEntryPoint
 class CloudPhotosFirebaseMessagingService : FirebaseMessagingService() {
 
     override fun onNewToken(token: String) {
-        RegisterDeviceTokenWorker.enqueue(this, token)
+        RegisterDeviceTokenWorker.enqueue(this, DeviceToken.of(token))
     }
 
     override fun onMessageReceived(message: RemoteMessage) {

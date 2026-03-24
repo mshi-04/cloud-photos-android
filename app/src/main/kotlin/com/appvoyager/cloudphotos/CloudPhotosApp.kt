@@ -12,6 +12,7 @@ import com.amplifyframework.api.aws.AWSApiPlugin
 import com.amplifyframework.auth.cognito.AWSCognitoAuthPlugin
 import com.amplifyframework.core.Amplify
 import com.amplifyframework.storage.s3.AWSS3StoragePlugin
+import com.appvoyager.cloudphotos.data.fcm.DeviceToken
 import com.appvoyager.cloudphotos.data.media.worker.UploadNotificationHelper
 import com.appvoyager.cloudphotos.fcm.CloudPhotosFirebaseMessagingService
 import com.appvoyager.cloudphotos.fcm.RegisterDeviceTokenWorker
@@ -64,7 +65,7 @@ class CloudPhotosApp : Application(), Configuration.Provider {
     private fun registerFcmToken() {
         FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
             if (task.isSuccessful) {
-                RegisterDeviceTokenWorker.enqueue(this, task.result)
+                RegisterDeviceTokenWorker.enqueue(this, DeviceToken.of(task.result))
             } else {
                 Log.e(TAG, "Failed to retrieve FCM token", task.exception)
             }

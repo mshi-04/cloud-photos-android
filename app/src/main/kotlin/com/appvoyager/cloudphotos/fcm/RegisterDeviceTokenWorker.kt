@@ -42,9 +42,9 @@ class RegisterDeviceTokenWorker @AssistedInject constructor(
         const val WORK_NAME = "register_device_token_worker"
         const val KEY_TOKEN = "token"
 
-        fun enqueue(context: Context, token: String) {
+        fun enqueue(context: Context, token: DeviceToken) {
             val request = OneTimeWorkRequestBuilder<RegisterDeviceTokenWorker>()
-                .setInputData(workDataOf(KEY_TOKEN to token))
+                .setInputData(workDataOf(KEY_TOKEN to token.value))
                 .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
                 .build()
             WorkManager.getInstance(context)
