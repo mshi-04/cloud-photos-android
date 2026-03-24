@@ -15,9 +15,8 @@ import com.appvoyager.cloudphotos.ui.auth.effect.AuthSnackbarMessage
 import com.appvoyager.cloudphotos.ui.auth.effect.VerificationEffect
 import com.appvoyager.cloudphotos.ui.auth.uistate.AuthFieldError
 import com.appvoyager.cloudphotos.ui.auth.uistate.VerificationCodeUiState
+import com.appvoyager.cloudphotos.ui.util.ResendTimer
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -45,7 +44,10 @@ class VerificationCodeViewModel @Inject constructor(
     val effect: SharedFlow<VerificationEffect> = _effect.asSharedFlow()
 
     private var isTimerStarted = false
-    private var resendTimerJob: Job? = null
+    private val resendTimer = ResendTimer(
+        durationSeconds = VerificationCodeUiState.DEFAULT_RESEND_COOLDOWN_SECONDS,
+        scope = viewModelScope
+    ) { seconds -> _uiState.update { it.copy(resendTimerSeconds = seconds) } }
 
     init {
         if (email == null) {
@@ -58,7 +60,7 @@ class VerificationCodeViewModel @Inject constructor(
     fun startTimer() {
         if (!isTimerStarted) {
             isTimerStarted = true
-            startResendTimer()
+            resendTimer.start()
         }
     }
 
@@ -121,7 +123,7 @@ class VerificationCodeViewModel @Inject constructor(
                 when (val result = resendSignUpCodeUseCase(ResendSignUpCodeRequest(emailValue))) {
                     is AuthResult.Success -> {
                         _effect.emit(VerificationEffect.ShowSnackbar(AuthSnackbarMessage.CodeResent))
-                        startResendTimer()
+                        resendTimer.start()
                     }
 
                     is AuthResult.Error -> handleResendError(result.error)
@@ -177,17 +179,6 @@ class VerificationCodeViewModel @Inject constructor(
         is AuthError.UserNotConfirmed,
         is AuthError.UsernameAlreadyExists -> {
             _effect.emit(VerificationEffect.ShowSnackbar(AuthSnackbarMessage.ResendFailed))
-        }
-    }
-
-    private fun startResendTimer() {
-        resendTimerJob?.cancel()
-        _uiState.update { it.copy(resendTimerSeconds = VerificationCodeUiState.DEFAULT_RESEND_COOLDOWN_SECONDS) }
-        resendTimerJob = viewModelScope.launch {
-            while (_uiState.value.resendTimerSeconds > 0) {
-                delay(1_000L)
-                _uiState.update { it.copy(resendTimerSeconds = it.resendTimerSeconds - 1) }
-            }
         }
     }
 

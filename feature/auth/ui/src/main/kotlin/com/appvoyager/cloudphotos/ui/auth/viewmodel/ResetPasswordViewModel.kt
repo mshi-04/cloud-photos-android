@@ -16,8 +16,8 @@ import com.appvoyager.cloudphotos.ui.auth.effect.AuthSnackbarMessage
 import com.appvoyager.cloudphotos.ui.auth.effect.ResetPasswordEffect
 import com.appvoyager.cloudphotos.ui.auth.uistate.AuthFieldError
 import com.appvoyager.cloudphotos.ui.auth.uistate.ResetPasswordUiState
+import com.appvoyager.cloudphotos.ui.util.ResendTimer
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -44,6 +44,10 @@ class ResetPasswordViewModel @Inject constructor(
     val uiState: StateFlow<ResetPasswordUiState> = _uiState.asStateFlow()
 
     private var isTimerStarted = false
+    private val resendTimer = ResendTimer(
+        durationSeconds = ResetPasswordUiState.DEFAULT_RESEND_COOLDOWN_SECONDS,
+        scope = viewModelScope
+    ) { seconds -> _uiState.update { it.copy(resendTimerSeconds = seconds) } }
 
     private val _effect = MutableSharedFlow<ResetPasswordEffect>(extraBufferCapacity = 1)
     val effect: SharedFlow<ResetPasswordEffect> = _effect.asSharedFlow()
@@ -51,7 +55,7 @@ class ResetPasswordViewModel @Inject constructor(
     fun startTimerIfNeeded() {
         if (!isTimerStarted) {
             isTimerStarted = true
-            startResendTimer()
+            resendTimer.start()
         }
     }
 
@@ -118,7 +122,7 @@ class ResetPasswordViewModel @Inject constructor(
                 when (val result = resetPasswordUseCase(ResetPasswordRequest(email))) {
                     is AuthResult.Success -> {
                         _effect.emit(ResetPasswordEffect.ShowSnackbar(AuthSnackbarMessage.CodeResent))
-                        startResendTimer()
+                        resendTimer.start()
                     }
 
                     is AuthResult.Error -> handleResendError(result.error)
@@ -190,16 +194,6 @@ class ResetPasswordViewModel @Inject constructor(
         is AuthError.UserNotConfirmed,
         is AuthError.UsernameAlreadyExists -> {
             _effect.emit(ResetPasswordEffect.ShowSnackbar(AuthSnackbarMessage.ResendFailed))
-        }
-    }
-
-    private fun startResendTimer() {
-        _uiState.update { it.copy(resendTimerSeconds = ResetPasswordUiState.DEFAULT_RESEND_COOLDOWN_SECONDS) }
-        viewModelScope.launch {
-            while (_uiState.value.resendTimerSeconds > 0) {
-                delay(1_000L)
-                _uiState.update { it.copy(resendTimerSeconds = it.resendTimerSeconds - 1) }
-            }
         }
     }
 
