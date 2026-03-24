@@ -71,11 +71,7 @@ class CloudPhotosApp : Application(), Configuration.Provider {
             if (rawToken.isNullOrBlank()) {
                 return@addOnCompleteListener
             }
-            try {
-                RegisterDeviceTokenWorker.enqueue(this, DeviceToken.of(rawToken))
-            } catch (_: IllegalArgumentException) {
-
-            }
+            RegisterDeviceTokenWorker.enqueue(this, DeviceToken.of(rawToken))
         }
     }
 
