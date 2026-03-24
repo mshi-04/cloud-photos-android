@@ -161,8 +161,11 @@ class ResetPasswordViewModel @Inject constructor(
             _effect.emit(ResetPasswordEffect.ShowSnackbar(AuthSnackbarMessage.TooManyRequests))
         }
 
+        is AuthError.InvalidPassword -> {
+            _uiState.update { it.copy(passwordError = AuthFieldError.InvalidPassword) }
+        }
+
         is AuthError.InvalidCredentials,
-        is AuthError.InvalidPassword,
         is AuthError.Unknown,
         is AuthError.UserNotConfirmed,
         is AuthError.UsernameAlreadyExists -> {
