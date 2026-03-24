@@ -50,7 +50,8 @@ import com.appvoyager.cloudphotos.ui.util.StringUtils
 @Composable
 fun VerificationCodeScreen(
     viewModel: VerificationCodeViewModel = hiltViewModel(),
-    onNavigateToHome: () -> Unit
+    onNavigateToHome: () -> Unit,
+    onNavigateBack: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -58,6 +59,7 @@ fun VerificationCodeScreen(
     val context = LocalContext.current
     val latestContext = rememberUpdatedState(context)
     val latestOnNavigateToHome = rememberUpdatedState(onNavigateToHome)
+    val latestOnNavigateBack = rememberUpdatedState(onNavigateBack)
 
     LaunchedEffect(Unit) {
         viewModel.startTimer()
@@ -65,6 +67,10 @@ fun VerificationCodeScreen(
             when (effect) {
                 is VerificationEffect.NavigateToHome -> {
                     latestOnNavigateToHome.value()
+                }
+
+                is VerificationEffect.NavigateBack -> {
+                    latestOnNavigateBack.value()
                 }
 
                 is VerificationEffect.ShowSnackbar -> {
