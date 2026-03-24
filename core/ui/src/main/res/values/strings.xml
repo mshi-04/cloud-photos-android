@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
+    <!-- 確認コード入力ボックス -->
+    <string name="code_input_box_description">確認コード %1$d 桁目</string>
+
     <!-- 確認コード入力画面 -->
     <string name="verification_code_prompt">登録メールアドレス宛てに確認コードを送信しました。\nご確認いただきご入力ください。</string>
     <string name="verification_code_resend_timer">再送信（%1$d）</string>

@@ -17,6 +17,6 @@ object AuthModule {
     @Singleton
     @Named("clientId")
     @JvmName("provideClientId")
-    fun provideClientId(): ClientId = ClientId(BuildConfig.COGNITO_CLIENT_ID)
+    fun provideClientId(): ClientId = ClientId.of(BuildConfig.COGNITO_CLIENT_ID)
 
 }
