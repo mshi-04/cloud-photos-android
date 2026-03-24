@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Verification Code Input Box -->
+    <string name="code_input_box_description">Verification code digit %1$d</string>
+
     <!-- Verification Code Screen -->
     <string name="verification_code_prompt">A verification code has been sent to your registered
         email address.\nPlease check and enter it below.</string>

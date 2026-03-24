@@ -6,7 +6,6 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import javax.inject.Named
 import javax.inject.Singleton
 
 @Module
@@ -15,7 +14,6 @@ object AuthModule {
 
     @Provides
     @Singleton
-    @Named("clientId")
     @JvmName("provideClientId")
     fun provideClientId(): ClientId = ClientId.of(BuildConfig.COGNITO_CLIENT_ID)
 
