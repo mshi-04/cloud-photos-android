@@ -125,7 +125,10 @@ class LoginViewModel @Inject constructor(
                 is SignInState.SignedIn -> _effect.emit(LoginEffect.NavigateToHome)
                 is SignInState.MFARequired,
                 is SignInState.NewPasswordRequired,
-                is SignInState.AdditionalStepRequired -> _effect.emit(LoginEffect.ShowSnackbar(AuthSnackbarMessage.AdditionalAuthRequired))
+                is SignInState.AdditionalStepRequired ->
+                    _effect.emit(
+                        LoginEffect.ShowSnackbar(AuthSnackbarMessage.AdditionalAuthRequired)
+                    )
             }
         }
 

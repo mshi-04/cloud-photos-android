@@ -35,7 +35,6 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.BrokenImage
-import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.PlayCircleOutline
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -77,7 +76,6 @@ import androidx.lifecycle.repeatOnLifecycle
 import coil3.compose.AsyncImage
 import com.appvoyager.cloudphotos.core.ui.R
 import com.appvoyager.cloudphotos.domain.media.model.Media
-import com.appvoyager.cloudphotos.ui.media.effect.MediaSnackbarMessage
 import com.appvoyager.cloudphotos.domain.media.model.MediaType
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaCreatedAt
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaId
@@ -85,6 +83,7 @@ import com.appvoyager.cloudphotos.domain.media.valueobject.MediaUrl
 import com.appvoyager.cloudphotos.domain.settings.valueobject.GridColumnCount
 import com.appvoyager.cloudphotos.ui.media.component.GridColumnSettingsDialog
 import com.appvoyager.cloudphotos.ui.media.effect.MediaEffect
+import com.appvoyager.cloudphotos.ui.media.effect.MediaSnackbarMessage
 import com.appvoyager.cloudphotos.ui.media.uistate.MediaUiState
 import com.appvoyager.cloudphotos.ui.media.viewmodel.MediaViewModel
 import com.appvoyager.cloudphotos.ui.theme.CloudPhotosTheme

@@ -17,6 +17,7 @@ import com.appvoyager.cloudphotos.domain.media.valueobject.IsDeleted
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaId
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaUploadedAt
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaUrl
+import com.appvoyager.cloudphotos.domain.media.valueobject.UploadSuccessCount
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -324,6 +325,70 @@ class UploadMediaWorkerTest {
         assertEquals(ListenableWorker.Result.success(), result)
     }
 
+    @Test
+    fun `calls completeUpload with success count when all records upload successfully`() = runTest {
+        // Arrange
+        val record = createUploadRecord()
+        val createdRecord = record.copy(syncStatus = SyncStatus.SYNCED)
+        val slot = slot<UploadSuccessCount>()
+        arrangePendingUploads(record)
+        coEvery { remoteRepository.createUploadRecord(any()) } returns createdRecord
+        coEvery { remoteRepository.completeUpload(capture(slot)) } just runs
+
+        // Act
+        worker.doWork()
+
+        // Assert
+        assertEquals(UploadSuccessCount.of(1), slot.captured)
+    }
+
+    @Test
+    fun `does not call completeUpload when successCount is zero`() = runTest {
+        // Arrange
+        val record = createUploadRecord()
+        arrangePendingUploads(record)
+        coEvery { remoteRepository.createUploadRecord(any()) } throws
+                Exception("Unexpected response code 401: Unauthorized")
+        coEvery { uploadDataSource.deleteUploadedObject(any()) } just runs
+
+        // Act
+        worker.doWork()
+
+        // Assert
+        coVerify(exactly = 0) { remoteRepository.completeUpload(any()) }
+    }
+
+    @Test
+    fun `does not call completeUpload when hasTemporaryFailure is true`() = runTest {
+        // Arrange
+        val record = createPendingRecord()
+        arrangePendingUploads(record)
+        coEvery { uploadDataSource.uploadMedia(any()) } returns
+                UploadResult.Error(UploadError.Network("timeout"))
+
+        // Act
+        worker.doWork()
+
+        // Assert
+        coVerify(exactly = 0) { remoteRepository.completeUpload(any()) }
+    }
+
+    @Test
+    fun `returns success even when completeUpload throws`() = runTest {
+        // Arrange
+        val record = createUploadRecord()
+        val createdRecord = record.copy(syncStatus = SyncStatus.SYNCED)
+        arrangePendingUploads(record)
+        coEvery { remoteRepository.createUploadRecord(any()) } returns createdRecord
+        coEvery { remoteRepository.completeUpload(any()) } throws Exception("Network error")
+
+        // Act
+        val result = worker.doWork()
+
+        // Assert
+        assertEquals(ListenableWorker.Result.success(), result)
+    }
+
     private fun arrangePendingUploads(
         record: UploadRecord = createUploadRecord(),
         contentType: String? = "image/jpeg",
@@ -334,6 +399,7 @@ class UploadMediaWorkerTest {
         every { contentTypeResolver.resolve(any()) } returns contentType
         every { contentTypeResolver.resolveUri(any()) } returns localUri
         coEvery { localRepository.saveUploadRecords(any()) } just runs
+        coEvery { remoteRepository.completeUpload(any()) } just runs
     }
 
     private fun createUploadRecord(

@@ -1,6 +1,9 @@
 package com.appvoyager.cloudphotos
 
 import android.app.Application
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import com.amplifyframework.AmplifyException
@@ -8,7 +11,11 @@ import com.amplifyframework.api.aws.AWSApiPlugin
 import com.amplifyframework.auth.cognito.AWSCognitoAuthPlugin
 import com.amplifyframework.core.Amplify
 import com.amplifyframework.storage.s3.AWSS3StoragePlugin
+import com.appvoyager.cloudphotos.data.fcm.DeviceToken
 import com.appvoyager.cloudphotos.data.media.worker.UploadNotificationHelper
+import com.appvoyager.cloudphotos.fcm.CloudPhotosFirebaseMessagingService
+import com.appvoyager.cloudphotos.fcm.RegisterDeviceTokenWorker
+import com.google.firebase.messaging.FirebaseMessaging
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 
@@ -40,6 +47,32 @@ class CloudPhotosApp : Application(), Configuration.Provider {
             )
         }
         uploadNotificationHelper.createChannel()
+        createUploadCompleteNotificationChannel()
+        registerFcmToken()
+    }
+
+    private fun createUploadCompleteNotificationChannel() {
+        val channel = NotificationChannel(
+            CloudPhotosFirebaseMessagingService.CHANNEL_ID,
+            getString(R.string.notification_channel_upload_complete),
+            NotificationManager.IMPORTANCE_DEFAULT
+        )
+        channel.description = getString(R.string.notification_channel_upload_complete_description)
+        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        manager.createNotificationChannel(channel)
+    }
+
+    private fun registerFcmToken() {
+        FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+            if (!task.isSuccessful) {
+                return@addOnCompleteListener
+            }
+            val rawToken = task.result
+            if (rawToken.isNullOrBlank()) {
+                return@addOnCompleteListener
+            }
+            RegisterDeviceTokenWorker.enqueue(this, DeviceToken.of(rawToken))
+        }
     }
 
 }

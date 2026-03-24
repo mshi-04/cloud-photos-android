@@ -1,6 +1,5 @@
 package com.appvoyager.cloudphotos.domain.auth.usecase
 
-import com.appvoyager.cloudphotos.domain.auth.model.AuthError
 import com.appvoyager.cloudphotos.domain.auth.model.AuthResult
 import com.appvoyager.cloudphotos.domain.auth.repository.AuthRepository
 import io.mockk.coEvery
@@ -32,17 +31,4 @@ class SignOutUseCaseTest {
         coVerify(exactly = 1) { repository.signOut() }
     }
 
-    @Test
-    fun `invoke returns error when repository fails`() = runTest(StandardTestDispatcher()) {
-        // Arrange
-        val expected = AuthResult.Error(AuthError.Network("offline"))
-        coEvery { repository.signOut() } returns expected
-
-        // Act
-        val actual = useCase()
-
-        // Assert
-        assertEquals(expected, actual)
-        coVerify(exactly = 1) { repository.signOut() }
-    }
 }

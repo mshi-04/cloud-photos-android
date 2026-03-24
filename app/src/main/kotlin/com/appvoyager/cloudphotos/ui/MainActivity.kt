@@ -43,7 +43,10 @@ class MainActivity : ComponentActivity() {
                     }
 
                     is MainUiState.Authenticated -> {
-                        NavGraph(startDestination = AuthRoute.HOME)
+                        NavGraph(
+                            startDestination = AuthRoute.HOME,
+                            onSignOut = { mainViewModel.signOut() }
+                        )
                     }
 
                     is MainUiState.Unauthenticated -> {

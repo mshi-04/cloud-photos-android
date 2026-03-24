@@ -14,6 +14,7 @@ import com.appvoyager.cloudphotos.domain.media.repository.RemoteUploadRecordsRep
 import com.appvoyager.cloudphotos.domain.media.request.CreateUploadRecordRequest
 import com.appvoyager.cloudphotos.domain.media.request.UploadMediaRequest
 import com.appvoyager.cloudphotos.domain.media.valueobject.ContentType
+import com.appvoyager.cloudphotos.domain.media.valueobject.UploadSuccessCount
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlin.coroutines.cancellation.CancellationException
@@ -36,6 +37,7 @@ class UploadMediaWorker @AssistedInject constructor(
         notificationHelper.show(pendingRecords.size)
 
         var hasTemporaryFailure = false
+        var successCount = 0
 
         for (record in pendingRecords) {
             val current = localRepository.getUploadRecords(listOf(record.mediaId)).firstOrNull()
@@ -108,6 +110,7 @@ class UploadMediaWorker @AssistedInject constructor(
                     )
                 )
                 localRepository.saveUploadRecords(listOf(created))
+                successCount++
             }.onFailure { e ->
                 if (e is CancellationException) throw e
                 if (isPermanentFailure(e)) {
@@ -135,6 +138,12 @@ class UploadMediaWorker @AssistedInject constructor(
         }
 
         notificationHelper.cancel()
+
+        if (!hasTemporaryFailure && successCount > 0) {
+            runCatching { remoteRepository.completeUpload(UploadSuccessCount.of(successCount)) }
+                .onFailure { if (it is CancellationException) throw it }
+        }
+
         return if (hasTemporaryFailure) Result.retry() else Result.success()
     }
 

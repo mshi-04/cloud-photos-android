@@ -7,13 +7,16 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.appvoyager.cloudphotos.domain.auth.model.AuthResult
 import com.appvoyager.cloudphotos.domain.auth.usecase.GetSessionUseCase
+import com.appvoyager.cloudphotos.domain.auth.usecase.SignOutUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlin.coroutines.cancellation.CancellationException
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val getSessionUseCase: GetSessionUseCase,
+    private val signOutUseCase: SignOutUseCase
 ) : ViewModel() {
 
     var uiState by mutableStateOf<MainUiState>(MainUiState.Loading)
@@ -43,6 +46,18 @@ class MainViewModel @Inject constructor(
                 isSessionChecked = false
                 uiState = MainUiState.Unauthenticated
             }
+        }
+    }
+
+    fun signOut() {
+        viewModelScope.launch {
+            runCatching { signOutUseCase() }.fold(
+                onSuccess = { uiState = MainUiState.Unauthenticated },
+                onFailure = {
+                    if (it is CancellationException) throw it
+                    else uiState = MainUiState.Unauthenticated
+                }
+            )
         }
     }
 
