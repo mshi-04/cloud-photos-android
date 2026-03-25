@@ -69,10 +69,12 @@ class LocalMediaDataSourceImpl @Inject constructor(
                         MediaType.VIDEO
                     }
 
-                    val contentUri = ContentUris.withAppendedId(
-                        MediaStore.Files.getContentUri(volumeName),
-                        idLong
-                    )
+                    val baseUri = if (type == MediaType.VIDEO) {
+                        MediaStore.Video.Media.getContentUri(volumeName)
+                    } else {
+                        MediaStore.Images.Media.getContentUri(volumeName)
+                    }
+                    val contentUri = ContentUris.withAppendedId(baseUri, idLong)
 
                     mediaList.add(
                         Media(
@@ -91,7 +93,7 @@ class LocalMediaDataSourceImpl @Inject constructor(
     }
 
     companion object {
-        private val TARGET_PATHS = arrayOf("DCIM/%", "Pictures/%", "Download/%")
+        private val TARGET_PATHS = arrayOf("DCIM/%", "Pictures/%", "Download/%", "Movies/%")
     }
 
 }

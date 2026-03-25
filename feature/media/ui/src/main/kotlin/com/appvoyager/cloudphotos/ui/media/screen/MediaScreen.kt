@@ -12,6 +12,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,7 +31,7 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
@@ -104,7 +105,8 @@ private fun MediaSnackbarMessage.toMessage(context: android.content.Context): St
 fun MediaScreen(
     viewModel: MediaViewModel = hiltViewModel(),
     onNavigateToCamera: () -> Unit,
-    onSignOut: () -> Unit
+    onSignOut: () -> Unit,
+    onMediaClick: (index: Int) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -169,6 +171,7 @@ fun MediaScreen(
                 gridColumnCount = uiState.gridColumnCount,
                 onGridSettingsClick = { viewModel.onShowSettingsDialog() },
                 onSignOut = onSignOut,
+                onMediaClick = onMediaClick,
                 onRetry = { viewModel.loadMediaList() },
                 onRetryPermissions = { permissionCheckKey++ }
             )
@@ -190,6 +193,7 @@ private fun MediaContent(
     gridColumnCount: GridColumnCount,
     onGridSettingsClick: () -> Unit,
     onSignOut: () -> Unit,
+    onMediaClick: (index: Int) -> Unit,
     onRetry: () -> Unit,
     onRetryPermissions: () -> Unit
 ) {
@@ -223,7 +227,8 @@ private fun MediaContent(
                         gridColumnCount = gridColumnCount,
                         gridState = gridState,
                         topPadding = statusBarPadding,
-                        bottomPadding = navigationBarPadding
+                        bottomPadding = navigationBarPadding,
+                        onMediaClick = onMediaClick
                     )
 
                     AnimatedVisibility(
@@ -315,7 +320,8 @@ private fun MediaGrid(
     gridColumnCount: GridColumnCount,
     gridState: LazyGridState,
     topPadding: androidx.compose.ui.unit.Dp,
-    bottomPadding: androidx.compose.ui.unit.Dp
+    bottomPadding: androidx.compose.ui.unit.Dp,
+    onMediaClick: (index: Int) -> Unit
 ) {
     LazyVerticalGrid(
         state = gridState,
@@ -330,17 +336,23 @@ private fun MediaGrid(
         verticalArrangement = Arrangement.spacedBy(2.dp),
         modifier = Modifier.fillMaxSize()
     ) {
-        items(
+        itemsIndexed(
             items = mediaList,
-            key = { it.id.value }
-        ) { media ->
-            MediaGridItem(media = media)
+            key = { _, media -> media.id.value }
+        ) { index, media ->
+            MediaGridItem(
+                media = media,
+                onClick = { onMediaClick(index) }
+            )
         }
     }
 }
 
 @Composable
-private fun MediaGridItem(media: Media) {
+private fun MediaGridItem(
+    media: Media,
+    onClick: () -> Unit
+) {
     val mediaTypeLabel = if (media.type == MediaType.VIDEO) {
         stringResource(R.string.media_content_description_video)
     } else {
@@ -360,6 +372,7 @@ private fun MediaGridItem(media: Media) {
         modifier = Modifier
             .aspectRatio(1f)
             .clip(MaterialTheme.shapes.extraSmall)
+            .clickable(onClick = onClick)
             .semantics(mergeDescendants = true) {
                 contentDescription = accessibilityLabel
             }
@@ -529,6 +542,7 @@ private fun MediaContentPreview() {
             gridColumnCount = GridColumnCount.of(3),
             onGridSettingsClick = {},
             onSignOut = {},
+            onMediaClick = {},
             onRetry = {},
             onRetryPermissions = {}
         )
@@ -544,6 +558,7 @@ private fun MediaContentErrorPreview() {
             gridColumnCount = GridColumnCount.of(3),
             onGridSettingsClick = {},
             onSignOut = {},
+            onMediaClick = {},
             onRetry = {},
             onRetryPermissions = {}
         )
@@ -559,6 +574,7 @@ private fun MediaContentPermissionRequiredPreview() {
             gridColumnCount = GridColumnCount.of(3),
             onGridSettingsClick = {},
             onSignOut = {},
+            onMediaClick = {},
             onRetry = {},
             onRetryPermissions = {}
         )

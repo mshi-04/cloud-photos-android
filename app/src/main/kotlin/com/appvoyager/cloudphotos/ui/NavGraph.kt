@@ -20,9 +20,16 @@ import com.appvoyager.cloudphotos.ui.auth.screen.LoginScreen
 import com.appvoyager.cloudphotos.ui.auth.screen.ResetPasswordScreen
 import com.appvoyager.cloudphotos.ui.auth.screen.VerificationCodeScreen
 import com.appvoyager.cloudphotos.ui.media.screen.CameraScreen
+import com.appvoyager.cloudphotos.ui.media.screen.MediaDetailScreen
 import com.appvoyager.cloudphotos.ui.media.screen.MediaScreen
 
 private const val TRANSITION_DURATION_MS = 300
+
+object MediaRoute {
+    internal const val URI_DETAIL = "media_detail/{initialIndex}"
+
+    fun detail(initialIndex: Int): String = "media_detail/$initialIndex"
+}
 
 object AuthRoute {
 
@@ -163,6 +170,9 @@ fun NavGraph(
                 },
                 onSignOut = {
                     onSignOut()
+                },
+                onMediaClick = { index ->
+                    navController.navigate(MediaRoute.detail(index))
                 }
             )
         }
@@ -178,6 +188,21 @@ fun NavGraph(
                 onNavigateBack = {
                     navController.popBackStack()
                 }
+            )
+        }
+
+        composable(
+            route = MediaRoute.URI_DETAIL,
+            arguments = listOf(navArgument("initialIndex") { type = NavType.IntType }),
+            enterTransition = { enterForward() },
+            exitTransition = { exitForward() },
+            popEnterTransition = { enterBack() },
+            popExitTransition = { exitBack() }
+        ) { backStackEntry ->
+            val initialIndex = backStackEntry.arguments?.getInt("initialIndex") ?: 0
+            MediaDetailScreen(
+                initialIndex = initialIndex,
+                onNavigateBack = { navController.popBackStack() }
             )
         }
     }
