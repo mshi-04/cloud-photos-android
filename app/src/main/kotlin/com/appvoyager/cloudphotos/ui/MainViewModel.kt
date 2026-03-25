@@ -9,6 +9,9 @@ import com.appvoyager.cloudphotos.domain.auth.model.AuthResult
 import com.appvoyager.cloudphotos.domain.auth.usecase.GetSessionUseCase
 import com.appvoyager.cloudphotos.domain.auth.usecase.SignOutUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
@@ -19,16 +22,26 @@ class MainViewModel @Inject constructor(
     private val signOutUseCase: SignOutUseCase
 ) : ViewModel() {
 
-    var uiState by mutableStateOf<MainUiState>(MainUiState.Loading)
+    var uiState by mutableStateOf<MainUiState>(MainUiState.None)
         private set
 
-    private var isSessionChecked = false
+    var isCheckingSession by mutableStateOf(true)
+        private set
+
+    var isRetrying by mutableStateOf(false)
+        private set
+
+    private val _uiEvent = Channel<MainUiEvent>(Channel.BUFFERED)
+    val uiEvent = _uiEvent.receiveAsFlow()
+
+    private var checkSessionJob: Job? = null
+    private var signOutJob: Job? = null
 
     fun checkSession() {
-        if (isSessionChecked) return
-        isSessionChecked = true
-
-        viewModelScope.launch {
+        if (checkSessionJob?.isActive == true) return
+        val retrying = uiState is MainUiState.SessionCheckError
+        checkSessionJob = viewModelScope.launch {
+            if (retrying) isRetrying = true
             try {
                 val result = getSessionUseCase()
                 uiState = when (result) {
@@ -40,26 +53,34 @@ class MainViewModel @Inject constructor(
                         }
                     }
 
-                    is AuthResult.Error -> MainUiState.Unauthenticated
+                    is AuthResult.Error -> MainUiState.SessionCheckError
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                isSessionChecked = false
-                uiState = MainUiState.Unauthenticated
+                uiState = MainUiState.SessionCheckError
+            } finally {
+                isCheckingSession = false
+                isRetrying = false
             }
         }
     }
 
     fun signOut() {
-        viewModelScope.launch {
+        if (signOutJob?.isActive == true) return
+        signOutJob = viewModelScope.launch {
             try {
                 val result = signOutUseCase()
                 uiState = when (result) {
                     is AuthResult.Success -> MainUiState.Unauthenticated
-                    is AuthResult.Error -> MainUiState.Authenticated
+                    is AuthResult.Error -> {
+                        _uiEvent.trySend(MainUiEvent.SignOutFailed)
+                        MainUiState.Authenticated
+                    }
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
+                uiState = MainUiState.Authenticated
+                _uiEvent.trySend(MainUiEvent.SignOutFailed)
             }
         }
     }

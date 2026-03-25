@@ -1,17 +1,15 @@
 package com.appvoyager.cloudphotos.ui
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import com.appvoyager.cloudphotos.R
 import com.appvoyager.cloudphotos.ui.theme.CloudPhotosTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -21,26 +19,29 @@ class MainActivity : ComponentActivity() {
     private val mainViewModel: MainViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
+        mainViewModel.checkSession()
+        splashScreen.setKeepOnScreenCondition { mainViewModel.isCheckingSession }
         enableEdgeToEdge()
         setContent {
+            val context = LocalContext.current
             LaunchedEffect(Unit) {
-                mainViewModel.checkSession()
+                mainViewModel.uiEvent.collect { event ->
+                    when (event) {
+                        is MainUiEvent.SignOutFailed -> Toast.makeText(
+                            context,
+                            context.getString(R.string.error_sign_out),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
             }
-
             CloudPhotosTheme(
                 dynamicColor = true
             ) {
                 when (mainViewModel.uiState) {
-                    is MainUiState.Loading -> {
-                        Column(
-                            modifier = Modifier.fillMaxSize(),
-                            verticalArrangement = Arrangement.Center,
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            CircularProgressIndicator()
-                        }
-                    }
+                    is MainUiState.None -> {}
 
                     is MainUiState.Authenticated -> {
                         NavGraph(
@@ -51,6 +52,13 @@ class MainActivity : ComponentActivity() {
 
                     is MainUiState.Unauthenticated -> {
                         NavGraph(startDestination = AuthRoute.login())
+                    }
+
+                    is MainUiState.SessionCheckError -> {
+                        SessionCheckErrorScreen(
+                            isRetrying = mainViewModel.isRetrying,
+                            onRetry = { mainViewModel.checkSession() }
+                        )
                     }
                 }
             }

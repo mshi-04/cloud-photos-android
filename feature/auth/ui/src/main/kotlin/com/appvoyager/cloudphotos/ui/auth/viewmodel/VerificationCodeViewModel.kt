@@ -37,7 +37,7 @@ class VerificationCodeViewModel @Inject constructor(
     val email: Email? = savedStateHandle.get<String>(ARG_EMAIL)
         ?.let { runCatching { Email.of(it) }.getOrNull() }
 
-    private val _uiState = MutableStateFlow(VerificationCodeUiState())
+    private val _uiState = MutableStateFlow(VerificationCodeUiState(isLoading = false))
     val uiState: StateFlow<VerificationCodeUiState> = _uiState.asStateFlow()
 
     private val _effect = MutableSharedFlow<VerificationEffect>(extraBufferCapacity = 1)

@@ -3,7 +3,6 @@ package com.appvoyager.cloudphotos
 import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.content.Context
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import com.amplifyframework.AmplifyException
@@ -58,7 +57,7 @@ class CloudPhotosApp : Application(), Configuration.Provider {
             NotificationManager.IMPORTANCE_DEFAULT
         )
         channel.description = getString(R.string.notification_channel_upload_complete_description)
-        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val manager = getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(channel)
     }
 
