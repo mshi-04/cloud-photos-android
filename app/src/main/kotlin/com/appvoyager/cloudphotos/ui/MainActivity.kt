@@ -41,6 +41,8 @@ class MainActivity : ComponentActivity() {
                 dynamicColor = true
             ) {
                 when (mainViewModel.uiState) {
+                    is MainUiState.None -> {}
+
                     is MainUiState.Authenticated -> {
                         NavGraph(
                             startDestination = AuthRoute.HOME,
@@ -50,6 +52,13 @@ class MainActivity : ComponentActivity() {
 
                     is MainUiState.Unauthenticated -> {
                         NavGraph(startDestination = AuthRoute.login())
+                    }
+
+                    is MainUiState.SessionCheckError -> {
+                        SessionCheckErrorScreen(
+                            isRetrying = mainViewModel.isRetrying,
+                            onRetry = { mainViewModel.checkSession() }
+                        )
                     }
                 }
             }

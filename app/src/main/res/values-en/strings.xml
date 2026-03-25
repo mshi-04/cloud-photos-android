@@ -5,4 +5,6 @@
     <string name="notification_channel_upload_complete">Upload Complete</string>
     <string name="notification_channel_upload_complete_description">Notifies you when your photos have finished uploading</string>
     <string name="error_sign_out">Failed to sign out</string>
+    <string name="error_session_check">Failed to verify login\nPlease try again</string>
+    <string name="retry">Retry</string>
 </resources>

@@ -22,10 +22,13 @@ class MainViewModel @Inject constructor(
     private val signOutUseCase: SignOutUseCase
 ) : ViewModel() {
 
-    var uiState by mutableStateOf<MainUiState>(MainUiState.Unauthenticated)
+    var uiState by mutableStateOf<MainUiState>(MainUiState.None)
         private set
 
     var isCheckingSession by mutableStateOf(true)
+        private set
+
+    var isRetrying by mutableStateOf(false)
         private set
 
     private val _uiEvent = Channel<MainUiEvent>(Channel.BUFFERED)
@@ -36,7 +39,9 @@ class MainViewModel @Inject constructor(
 
     fun checkSession() {
         if (checkSessionJob?.isActive == true) return
+        val retrying = uiState is MainUiState.SessionCheckError
         checkSessionJob = viewModelScope.launch {
+            if (retrying) isRetrying = true
             try {
                 val result = getSessionUseCase()
                 uiState = when (result) {
@@ -48,13 +53,14 @@ class MainViewModel @Inject constructor(
                         }
                     }
 
-                    is AuthResult.Error -> MainUiState.Unauthenticated
+                    is AuthResult.Error -> MainUiState.SessionCheckError
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                uiState = MainUiState.Unauthenticated
+                uiState = MainUiState.SessionCheckError
             } finally {
                 isCheckingSession = false
+                isRetrying = false
             }
         }
     }
