@@ -32,6 +32,7 @@ class MainViewModel @Inject constructor(
     val uiEvent = _uiEvent.receiveAsFlow()
 
     private var checkSessionJob: Job? = null
+    private var signOutJob: Job? = null
 
     fun checkSession() {
         if (checkSessionJob?.isActive == true) return
@@ -59,7 +60,8 @@ class MainViewModel @Inject constructor(
     }
 
     fun signOut() {
-        viewModelScope.launch {
+        if (signOutJob?.isActive == true) return
+        signOutJob = viewModelScope.launch {
             try {
                 val result = signOutUseCase()
                 uiState = when (result) {
