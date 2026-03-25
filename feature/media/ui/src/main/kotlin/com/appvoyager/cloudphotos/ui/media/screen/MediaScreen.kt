@@ -35,7 +35,9 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.BrokenImage
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.PlayCircleOutline
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -101,6 +103,7 @@ private fun MediaSnackbarMessage.toMessage(context: android.content.Context): St
 @Composable
 fun MediaScreen(
     viewModel: MediaViewModel = hiltViewModel(),
+    onNavigateToCamera: () -> Unit,
     onSignOut: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -146,6 +149,16 @@ fun MediaScreen(
 
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+        floatingActionButton = {
+            if (uiState.screenState is MediaUiState.ScreenState.Success) {
+                FloatingActionButton(onClick = onNavigateToCamera) {
+                    Icon(
+                        imageVector = Icons.Default.CameraAlt,
+                        contentDescription = stringResource(R.string.camera_cd_take_photo)
+                    )
+                }
+            }
+        },
         contentWindowInsets = WindowInsets(0)
     ) { innerPadding ->
         Box(

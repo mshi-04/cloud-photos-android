@@ -19,6 +19,7 @@ import com.appvoyager.cloudphotos.ui.auth.screen.ForgotPasswordScreen
 import com.appvoyager.cloudphotos.ui.auth.screen.LoginScreen
 import com.appvoyager.cloudphotos.ui.auth.screen.ResetPasswordScreen
 import com.appvoyager.cloudphotos.ui.auth.screen.VerificationCodeScreen
+import com.appvoyager.cloudphotos.ui.media.screen.CameraScreen
 import com.appvoyager.cloudphotos.ui.media.screen.MediaScreen
 
 private const val TRANSITION_DURATION_MS = 300
@@ -26,6 +27,7 @@ private const val TRANSITION_DURATION_MS = 300
 object AuthRoute {
 
     const val HOME = "home"
+    const val CAMERA = "camera"
     internal const val LOGIN = "login"
     internal const val FORGOT_PASSWORD = "forgot_password"
 
@@ -145,11 +147,10 @@ fun NavGraph(
                 val fromRoute = initialState.destination.route
                 if (fromRoute == AuthRoute.URI_LOGIN) {
                     EnterTransition.None
+                } else if (fromRoute == AuthRoute.CAMERA) {
+                    enterBack()
                 } else {
-                    slideIntoContainer(
-                        towards = AnimatedContentTransitionScope.SlideDirection.Left,
-                        animationSpec = tween(TRANSITION_DURATION_MS)
-                    )
+                    enterForward()
                 }
             },
             exitTransition = null,
@@ -157,8 +158,25 @@ fun NavGraph(
             popExitTransition = { exitBack() }
         ) {
             MediaScreen(
+                onNavigateToCamera = {
+                    navController.navigate(AuthRoute.CAMERA)
+                },
                 onSignOut = {
                     onSignOut()
+                }
+            )
+        }
+
+        composable(
+            route = AuthRoute.CAMERA,
+            enterTransition = { enterForward() },
+            exitTransition = { exitForward() },
+            popEnterTransition = { enterBack() },
+            popExitTransition = { exitBack() }
+        ) {
+            CameraScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
                 }
             )
         }
