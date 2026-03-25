@@ -9,6 +9,8 @@ import com.appvoyager.cloudphotos.domain.auth.model.AuthResult
 import com.appvoyager.cloudphotos.domain.auth.usecase.GetSessionUseCase
 import com.appvoyager.cloudphotos.domain.auth.usecase.SignOutUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
@@ -24,6 +26,9 @@ class MainViewModel @Inject constructor(
 
     var isCheckingSession by mutableStateOf(true)
         private set
+
+    private val _uiEvent = Channel<MainUiEvent>(Channel.BUFFERED)
+    val uiEvent = _uiEvent.receiveAsFlow()
 
     fun checkSession() {
         if (!isCheckingSession) return
@@ -60,6 +65,8 @@ class MainViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
+                uiState = MainUiState.Authenticated
+                _uiEvent.trySend(MainUiEvent.SignOutFailed)
             }
         }
     }

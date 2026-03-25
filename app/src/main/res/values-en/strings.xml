@@ -4,4 +4,5 @@
     <string name="notification_uploading">Uploading %1$d item(s)</string>
     <string name="notification_channel_upload_complete">Upload Complete</string>
     <string name="notification_channel_upload_complete_description">Notifies you when your photos have finished uploading</string>
+    <string name="error_sign_out">Failed to sign out</string>
 </resources>

@@ -36,7 +36,7 @@ class CloudPhotosFirebaseMessagingService : FirebaseMessagingService() {
         if (!hasNotificationPermission()) return
 
         val notificationManager =
-            getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+            getSystemService(NotificationManager::class.java) ?: return
 
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP

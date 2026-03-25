@@ -5,6 +5,6 @@
 
     <style name="Theme.CloudPhotos.Starting" parent="Theme.SplashScreen">
         <item name="postSplashScreenTheme">@style/Theme.CloudPhotos</item>
-        <item name="android:windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
     </style>
 </resources>

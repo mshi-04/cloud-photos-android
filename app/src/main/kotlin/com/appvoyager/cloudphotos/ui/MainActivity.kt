@@ -1,11 +1,15 @@
 package com.appvoyager.cloudphotos.ui
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalContext
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import com.appvoyager.cloudphotos.R
 import com.appvoyager.cloudphotos.ui.theme.CloudPhotosTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -21,6 +25,18 @@ class MainActivity : ComponentActivity() {
         splashScreen.setKeepOnScreenCondition { mainViewModel.isCheckingSession }
         enableEdgeToEdge()
         setContent {
+            val context = LocalContext.current
+            LaunchedEffect(Unit) {
+                mainViewModel.uiEvent.collect { event ->
+                    when (event) {
+                        is MainUiEvent.SignOutFailed -> Toast.makeText(
+                            context,
+                            context.getString(R.string.error_sign_out),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+            }
             CloudPhotosTheme(
                 dynamicColor = true
             ) {
