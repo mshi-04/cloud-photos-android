@@ -1,10 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.CloudPhotos" parent="@android:style/Theme.DeviceDefault.NoActionBar" />
-
     <style name="Theme.CloudPhotos.Starting" parent="Theme.SplashScreen">
         <item name="postSplashScreenTheme">@style/Theme.CloudPhotos</item>
         <item name="android:windowSplashScreenBackground">@color/splash_background</item>
     </style>
+
 </resources>

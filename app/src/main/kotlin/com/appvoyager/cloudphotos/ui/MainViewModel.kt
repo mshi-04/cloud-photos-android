@@ -22,7 +22,11 @@ class MainViewModel @Inject constructor(
     var uiState by mutableStateOf<MainUiState>(MainUiState.Unauthenticated)
         private set
 
+    var isCheckingSession by mutableStateOf(true)
+        private set
+
     fun checkSession() {
+        if (!isCheckingSession) return
         viewModelScope.launch {
             try {
                 val result = getSessionUseCase()
@@ -40,6 +44,8 @@ class MainViewModel @Inject constructor(
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 uiState = MainUiState.Unauthenticated
+            } finally {
+                isCheckingSession = false
             }
         }
     }
