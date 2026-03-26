@@ -223,18 +223,19 @@ fun CameraScreen(
                         }
 
                         val isCapturing = state is CameraUiState.Capturing
+                        val isCameraReady = cameraPreviewManager.isCameraBound && !isCapturing
                         val takePhotoLabel = stringResource(R.string.camera_cd_take_photo)
                         Box(
                             modifier = Modifier
                                 .size(72.dp)
                                 .clip(CircleShape)
-                                .background(if (isCapturing) Color.LightGray else Color.White)
+                                .background(if (isCameraReady) Color.White else Color.LightGray)
                                 .border(4.dp, Color.LightGray, CircleShape)
                                 .semantics {
                                     role = Role.Button
                                     contentDescription = takePhotoLabel
                                 }
-                                .clickable(enabled = !isCapturing) {
+                                .clickable(enabled = isCameraReady) {
                                     cameraPreviewManager.createCaptureHandle()?.let { handle ->
                                         viewModel.takePhoto(
                                             handle = handle,

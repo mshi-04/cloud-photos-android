@@ -11,6 +11,9 @@ import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
@@ -35,6 +38,9 @@ class CameraPreviewManager(
     private var imageCapture: ImageCapture? = null
     private var camera: Camera? = null
     private var preview: Preview? = null
+
+    var isCameraBound by mutableStateOf(false)
+        private set
 
     suspend fun startCamera(lensFacing: Int = CameraSelector.LENS_FACING_BACK) {
         try {
@@ -62,6 +68,7 @@ class CameraPreviewManager(
             )
             preview = previewUseCase
             imageCapture = imageCaptureUseCase
+            isCameraBound = true
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -74,6 +81,7 @@ class CameraPreviewManager(
         camera = null
         imageCapture = null
         preview = null
+        isCameraBound = false
     }
 
     fun handlePinchToZoom(zoomDelta: Float) {
@@ -119,12 +127,14 @@ class CameraPreviewManager(
                                         )
                                     } else {
                                         runCatching { context.contentResolver.delete(savedUri, null, null) }
+                                            .onFailure { if (it is CancellationException) throw it }
                                         continuation.resume(
                                             SavePhotoResult.Error(SavePhotoResult.ErrorType.SAVE_FAILED)
                                         )
                                     }
                                 } catch (_: Exception) {
                                     runCatching { context.contentResolver.delete(savedUri, null, null) }
+                                        .onFailure { if (it is CancellationException) throw it }
                                     continuation.resume(
                                         SavePhotoResult.Error(SavePhotoResult.ErrorType.SAVE_FAILED)
                                     )
