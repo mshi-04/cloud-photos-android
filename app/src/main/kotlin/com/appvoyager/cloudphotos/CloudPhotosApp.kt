@@ -54,7 +54,7 @@ class CloudPhotosApp : Application(), Configuration.Provider {
         val channel = NotificationChannel(
             CloudPhotosFirebaseMessagingService.CHANNEL_ID,
             getString(R.string.notification_channel_upload_complete),
-            NotificationManager.IMPORTANCE_DEFAULT
+            NotificationManager.IMPORTANCE_LOW
         )
         channel.description = getString(R.string.notification_channel_upload_complete_description)
         val manager = getSystemService(NotificationManager::class.java)
