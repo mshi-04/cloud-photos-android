@@ -1,74 +1,56 @@
 ---
 name: android-auth-error
-description: "Use when adding new AuthError types, modifying AuthErrorMapper, handling auth errors in DataSource, or mapping Cognito exceptions to domain errors"
+description: "Use when adding or modifying auth error types, auth error mappers, auth-step translation, or provider-specific auth exception handling"
 ---
 
 # Auth Error Handling Guidelines
 
+## Primary references
+
+Read these first before using this skill:
+1. `AGENTS.md`
+2. `feature/auth/AGENTS.md`
+
+This skill is a quick auth-error pattern guide.
+If it conflicts with repository guidance, prefer the repository guidance.
+
+## Ownership
+
+Auth error handling belongs to the `auth` feature.
+Provider-specific auth behavior must stay inside the auth data layer.
+
 ## Structure
-```text
-domain/auth/model/AuthError.kt        ← sealed class (Domain層)
-data/auth/util/AuthErrorMapper.kt     ← Cognitoの例外をAuthErrorにマップ (Data層)
-```
+
+Typical ownership in this repository:
+- `feature/auth/domain/...` = domain-facing auth error/result models
+- `feature/auth/data/...` = Cognito/Amplify exception mapping and provider translation
+- `feature/auth/ui/...` = UI-facing rendering/effect decisions based on domain auth errors
 
 ## Rules
-1. AuthError は Domain層。AWS/Amplify依存を一切持たない
-2. AuthErrorMapper は `internal object`。Data層の外に公開しない
-3. 新しいCognito例外は必ず AuthErrorMapper に追加する
-4. `Unknown` はログ専用の逃げ道。causeをDomain層に漏らさない
-5. アカウント列挙攻撃対策: `UserNotFoundException` は `InvalidCredentials` にマップする（ユーザーの存在を明かさない）
 
-## AuthError sealed class
-```kotlin
-sealed class AuthError(open val message: String?) {
-    data class CodeExpired(override val message: String? = null) : AuthError(message)
-    data class CodeMismatch(override val message: String? = null) : AuthError(message)
-    data class InvalidCredentials(override val message: String? = null) : AuthError(message)
-    data class InvalidPassword(override val message: String? = null) : AuthError(message)
-    data class Network(override val message: String? = null) : AuthError(message)
-    data class TooManyRequests(override val message: String? = null) : AuthError(message)
-    data class Unknown(override val message: String? = null) : AuthError(message)
-    data class UserNotConfirmed(override val message: String? = null) : AuthError(message)
-    data class UsernameAlreadyExists(override val message: String? = null) : AuthError(message)
-}
-```
+1. Domain auth error models must not depend on AWS/Amplify SDK types.
+2. Provider-specific exceptions must be translated in auth data-layer mapper objects.
+3. Do not leak Cognito/Amplify exception types to domain or UI.
+4. Keep account-enumeration-safe mappings intact.
+5. `Unknown` is an escape hatch, not a place to leak provider internals upward.
+6. Re-throw `CancellationException` in coroutine error handling.
 
-## AuthErrorMapper Pattern
-```kotlin
-internal object AuthErrorMapper {
+## Mapping guidance
 
-    fun map(throwable: Throwable): AuthError =
-        when (throwable) {
-            is NotAuthorizedException -> AuthError.InvalidCredentials(throwable.message)
-            is SessionExpiredException -> AuthError.InvalidCredentials(throwable.message)
-            is SignedOutException -> AuthError.InvalidCredentials(throwable.message)
-            is IOException -> AuthError.Network(throwable.message)
-            is ServiceException -> mapServiceException(throwable)
-            is ValidationException -> mapValidationException(throwable)
-            else -> AuthError.Unknown(throwable.message)
-        }
+- Add new provider exception mappings in the auth data layer.
+- Prefer existing mapper objects instead of scattering translation logic across data sources.
+- Keep auth-step and auth-error translation readable and localized.
+- If a mapping changes user-visible behavior, call that out explicitly.
 
-    private fun mapServiceException(exception: ServiceException): AuthError =
-        when (val cause = exception.cause) {
-            is ExpiredCodeException -> AuthError.CodeExpired(cause.message)
-            is CodeMismatchException -> AuthError.CodeMismatch(cause.message)
-            is NotAuthorizedException -> AuthError.InvalidCredentials(cause.message)
-            is InvalidPasswordException -> AuthError.InvalidPassword(cause.message)
-            is LimitExceededException -> AuthError.TooManyRequests(cause.message)
-            is TooManyRequestsException -> AuthError.TooManyRequests(cause.message)
-            is UserNotConfirmedException -> AuthError.UserNotConfirmed(cause.message)
-            is UsernameExistsException -> AuthError.UsernameAlreadyExists(cause.message)
-            is UserNotFoundException -> AuthError.InvalidCredentials(cause.message)
-            // UserNotFoundException は InvalidCredentials にマップ（アカウント列挙攻撃対策）
-            else -> AuthError.Unknown(exception.message)
-        }
+## Security guidance
 
-    private fun mapValidationException(exception: ValidationException): AuthError {
-        val message = exception.message ?: ""
-        return when {
-            message.contains("code", ignoreCase = true) -> AuthError.CodeMismatch(exception.message)
-            else -> AuthError.Unknown(exception.message)
-        }
-    }
-}
-```
+Be careful with mappings that reveal whether a user/account exists.
+Preserve existing protections that intentionally collapse provider errors into safer domain-level errors.
+
+## Output expectations
+
+When using this skill, report:
+- which auth mapper/model changed
+- whether user-visible auth error behavior changed
+- whether security-sensitive mapping behavior changed
+- tests run

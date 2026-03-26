@@ -1,83 +1,80 @@
 ---
 name: android-testing
-description: "Use when creating, writing, or modifying unit tests, instrumentation tests, or any test-related code in an Android project"
+description: "Use when creating or modifying unit tests, ViewModel tests, use case tests, mapper tests, or test utilities in this Android project"
 ---
 
 # Android Testing Guidelines
 
-## Frameworks
-- Unit Tests: JUnit 5 + MockK
-- Coroutines: runTest (kotlinx-coroutines-test)
-- Assertions: assertEquals, assertFalse, assertNull (kotlin.test)
+## Primary references
+
+Read these first before using this skill:
+1. `AGENTS.md`
+2. local module guidance such as `feature/<target>/AGENTS.md`, `core/AGENTS.md`, or `app/AGENTS.md`
+
+This skill is a quick testing pattern guide.
+If it conflicts with repository guidance, prefer the repository guidance.
+
+## Current test stack
+
+- JUnit 5
+- MockK
+- `kotlinx-coroutines-test`
+- Gradle module tests
+- CI-aligned entrypoint via `bundle exec fastlane test`
 
 ## Rules
-1. Test対象: UseCase と ViewModel を優先的にテストする
-2. MockK: `mockk<>()` で直接生成、@ExtendWithは使わない
-3. Dispatcher: StandardTestDispatcher + setMain/resetMain (@BeforeEach/@AfterEach)
-4. テスト名: バッククォート + 英語 (`initial state has empty email`)
-5. AAA構造を守る (Arrange / Act / Assert)
-6. 1テスト1アサーションを原則とする
 
-## ViewModel Test Template
-```kotlin
-@OptIn(ExperimentalCoroutinesApi::class)
-class HogeViewModelTest {
+1. Prefer targeted tests for the changed module first.
+2. Prioritize testing use cases, ViewModels, mappers, repositories, and worker behavior where risk is highest.
+3. Use `mockk<>()` directly; do not introduce unnecessary test framework ceremony.
+4. For coroutine tests, use repository-consistent dispatcher setup patterns.
+5. Preserve readable test names and existing style in the target module.
+6. Follow Arrange / Act / Assert structure.
+7. If changing worker/scheduler behavior, prefer behavior-focused tests over shallow coverage.
 
-    private val testDispatcher = StandardTestDispatcher()
-    private val hogeUseCase = mockk<HogeUseCase>()
+## ViewModel test guidance
 
-    private lateinit var viewModel: HogeViewModel
+- Own state transitions in the ViewModel.
+- Mock use cases, not repository implementations, unless the tested class is itself part of data.
+- Validate state/effect behavior in terms that match the target feature's UI contract.
 
-    @BeforeEach
-    fun setUp() {
-        Dispatchers.setMain(testDispatcher)
-        viewModel = HogeViewModel(hogeUseCase)
-    }
+## UseCase test guidance
 
-    @AfterEach
-    fun tearDown() {
-        Dispatchers.resetMain()
-    }
+- Mock repository interfaces.
+- Keep tests focused on one domain behavior at a time.
+- Prefer testing domain behavior, validation, and orchestration rather than implementation trivia.
 
-    @Test
-    fun `state after DoSomething is Success`() = runTest(testDispatcher) {
-        // Arrange
-        coEvery { hogeUseCase() } returns Result.success(Unit)
+## Mapper / data test guidance
 
-        // Act
-        viewModel.onIntent(HogeIntent.DoSomething)
-        advanceUntilIdle()
+- Test provider/data translation at the mapper boundary.
+- When changing auth or media translation, verify domain-facing output rather than SDK-internal behavior.
+- For persistence-related code, test the semantics that matter to the feature, not just field copying.
 
-        // Assert
-        assertEquals(HogeUiState.Success, viewModel.uiState.value)
-    }
-}
+## Verification guidance
+
+Use the smallest relevant scope first, for example:
+
+```bash
+./gradlew :feature:auth:domain:test
+./gradlew :feature:auth:data:test
+./gradlew :feature:auth:ui:test
+./gradlew :feature:media:domain:test
+./gradlew :feature:media:data:test
+./gradlew :feature:media:ui:test
+./gradlew :feature:settings:domain:test
 ```
 
-## UseCase Test Template
-```kotlin
-@OptIn(ExperimentalCoroutinesApi::class)
-class HogeUseCaseTest {
+For broader impact changes, prefer:
 
-    private val hogeRepository = mockk<HogeRepository>()
-
-    private lateinit var useCase: HogeUseCase
-
-    @BeforeEach
-    fun setUp() {
-        useCase = HogeUseCase(hogeRepository)
-    }
-
-    @Test
-    fun `fetch success returns success result`() = runTest {
-        // Arrange
-        coEvery { hogeRepository.fetch() } returns Result.success(fakeData)
-
-        // Act
-        val result = useCase()
-
-        // Assert
-        assertTrue(result.isSuccess)
-    }
-}
+```bash
+./gradlew test
+bundle exec fastlane test
 ```
+
+## Output expectations
+
+When using this skill, report:
+- which test scope was run
+- which layers were covered
+- tests not run, if any
+- remaining gaps or risky untested paths

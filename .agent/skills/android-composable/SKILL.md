@@ -1,109 +1,75 @@
 ---
 name: android-composable
-description: "Use when creating or modifying Composable screens, components, or UI elements in an Android Jetpack Compose project"
+description: "Use when creating or modifying Compose screens, components, ViewModels, UI state/effect, or screen structure in this project"
 ---
 
 # Jetpack Compose Guidelines
 
-## Screen Structure
-Screen（hiltViewModel付き）とContent（stateless）を必ず分離する
+## Primary references
+
+Read these first before using this skill:
+1. `AGENTS.md`
+2. `app/AGENTS.md` when changing top-level navigation/start flow
+3. `feature/<target>/AGENTS.md`
+
+This skill is a quick Compose pattern guide.
+If it conflicts with repository guidance or local feature guidance, prefer those files.
+
+## Screen structure
+
+Prefer the repository pattern:
+- Screen = stateful entry point
+- Content = stateless/private rendering function when applicable
+
 ```text
-HogeScreen        ← ViewModelを持つ、effectを収集する
-└── HogeContent   ← stateless、全状態をパラメータで受け取る
+HogeScreen   ← ViewModel acquisition, state/effect collection, top-level orchestration
+└─ HogeContent ← rendering-only, receives state and callbacks as parameters
 ```
 
 ## Rules
-1. Screen Composable: `hiltViewModel()` でVM取得、`collectAsStateWithLifecycle()` でstate収集
-2. Content Composable: `private` にする。状態は全てパラメータで受け取る
-3. Effect収集: `LaunchedEffect(Unit)` + `rememberUpdatedState` でコールバックをラップする
-4. ナビゲーションコールバック: `rememberUpdatedState` でラップする
-5. ローディング中のバックハンドラ: `BackHandler(enabled = uiState.isLoading) {}` で無効化
-6. Loading overlay: `Box` で `HogeContent` の上に重ねる
-7. MaterialTheme: Material 3 (`androidx.compose.material3`) のみ使う
-8. 文字列: `stringResource()` を使う。ハードコード禁止
 
-## Preview Rules
-1. Contentに対して複数Previewを作る（正常系・エラー系・ローディング系）
-2. Previewは `private` にする
-3. 必ず `CloudPhotosTheme` でラップする
-4. 全コールバックは `{}` で渡す
+1. Keep screen state in ViewModels or dedicated UI state classes.
+2. Keep composables declarative; avoid embedding business rules in UI.
+3. ViewModels should call use cases, not repository implementations or SDKs.
+4. Use `stringResource()` for user-visible strings.
+5. Follow existing effect handling patterns such as `LaunchedEffect(Unit)` and `rememberUpdatedState` where applicable.
+6. Keep navigation callbacks localized and consistent with existing feature patterns.
+7. Keep loading and one-shot effects aligned with established screen structure in the same feature.
+8. Use Material 3 and existing shared UI patterns from `core/ui`.
 
-## Screen Template
-```kotlin
-@Composable
-fun HogeScreen(
-    viewModel: HogeViewModel = hiltViewModel(),
-    onNavigateToNext: () -> Unit
-) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val snackbarHostState = remember { SnackbarHostState() }
-    val latestResources = rememberUpdatedState(LocalResources.current)
-    val latestOnNavigateToNext = rememberUpdatedState(onNavigateToNext)
+## When to split Screen and Content
 
-    LaunchedEffect(Unit) {
-        viewModel.effect.collect { effect ->
-            when (effect) {
-                is HogeEffect.NavigateToNext -> latestOnNavigateToNext.value()
-                is HogeEffect.ShowSnackbar -> {
-                    snackbarHostState.showSnackbar(latestResources.value.getString(effect.messageResId))
-                }
-            }
-        }
-    }
+Prefer splitting Screen and Content when the screen:
+- collects state/effects from a ViewModel
+- needs previews for multiple UI states
+- contains enough rendering logic to benefit from a stateless rendering function
 
-    BackHandler(enabled = uiState.isLoading) {}
+If the UI is very small, keep it simple, but still preserve clear separation of state ownership.
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
-    ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
-            HogeContent(
-                uiState = uiState,
-                onIntent = viewModel::onIntent
-            )
-            if (uiState.isLoading) LoadingOverlay()
-        }
-    }
-}
-```
+## Preview rules
 
-## Content Template
-```kotlin
-@Composable
-private fun HogeContent(
-    // 全状態をパラメータで受け取る
-    isLoading: Boolean,
-    onHogeAction: () -> Unit
-) {
-    // UI実装
-}
-```
+- Add previews to rendering-focused composables when useful.
+- Wrap previews in `CloudPhotosTheme`.
+- Prefer multiple previews for representative states.
+- Keep preview callbacks empty (`{}`) unless a more meaningful stub is necessary.
 
-## Preview Template
-```kotlin
-@Preview(showBackground = true)
-@Composable
-private fun HogeContentPreview() {
-    CloudPhotosTheme {
-        HogeContent(
-            isLoading = false,
-            onHogeAction = {}
-        )
-    }
-}
+## ViewModel interaction rules
 
-@Preview(showBackground = true)
-@Composable
-private fun HogeContentLoadingPreview() {
-    CloudPhotosTheme {
-        Box(modifier = Modifier.fillMaxSize()) {
-            HogeContent(isLoading = true, onHogeAction = {})
-            LoadingOverlay()
-        }
-    }
-}
-```
+- Acquire ViewModel using `hiltViewModel()` from `androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel`. Do **not** use the deprecated `androidx.hilt.navigation.compose.hiltViewModel`.
+- Keep state/effect collection in the screen layer.
+- Do not move domain logic into composables.
+- Do not add provider/framework translation logic to UI.
+
+## Navigation rules
+
+- `app` owns top-level navigation composition.
+- Feature modules own feature-local state/UI behavior.
+- If a route or start flow changes, check whether the change belongs in `app` rather than the feature screen itself.
+
+## Output expectations
+
+When using this skill, report:
+- touched UI module(s)
+- whether screen structure changed
+- whether navigation/effect behavior changed
+- tests run
