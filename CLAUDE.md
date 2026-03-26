@@ -1,9 +1,26 @@
 # CloudPhotos (`com.appvoyager.cloudphotos`)
 
+## Primary instruction source
+
+`AGENTS.md` is the source of truth for repository-wide development rules.
+When working in this repository, read and follow `AGENTS.md` first.
+If this file and `AGENTS.md` overlap, prefer `AGENTS.md`.
+
+## Purpose of this file
+
+This file is intentionally lightweight.
+It supplements `AGENTS.md` with Claude-oriented entry guidance and quick repo context.
+Do not duplicate detailed architectural policy here unless there is a Claude-specific reason.
+
 ## Stack
-Kotlin / Jetpack Compose (Material 3) / Clean Architecture / Hilt+KSP
-AWS Amplify (Cognito) / Firebase (Analytics, FCM)
-Min SDK: 29 / Compile SDK: 36 / Java: 17 / Flavors: dev, prod
+- Kotlin
+- Jetpack Compose (Material 3)
+- Clean Architecture
+- Hilt + KSP
+- AWS Amplify (Cognito)
+- Firebase (Analytics, FCM)
+- Min SDK 29 / Compile SDK 36 / Java 17
+- Flavors: `dev`, `prod`
 
 ## Skills
 - `.agent/skills/android-clean-arch/SKILL.md`
@@ -11,32 +28,32 @@ Min SDK: 29 / Compile SDK: 36 / Java: 17 / Flavors: dev, prod
 - `.agent/skills/android-auth-error/SKILL.md`
 - `.agent/skills/android-testing/SKILL.md`
 
-## Key Conventions
-- UseCase: `suspend operator fun invoke()`, single responsibility
-- RepositoryImpl: delegates to DataSource only, no business logic
-- Domain layer: pure Kotlin, no Android dependencies
-- Error mapping: done in Data layer via internal mapper objects
-- CancellationException must be re-thrown in runCatching blocks
+## Claude quick-start
 
-## Value Objects
-- Use `@JvmInline value class` with `private constructor`
-- Instantiate via `companion object { fun of(raw: String) }` only
-- Validate in `of()` using `require()`
-- Trim input before validation
-- Located in `domain/{feature}/valueobject/`
-- NEVER use raw primitives (String, Int, etc.) for domain concepts
-- ALWAYS use value objects for: Email, Password, UserId, and any domain-specific identifier or validated input
+Before making changes:
+1. Read `AGENTS.md`.
+2. Identify the smallest affected module.
+3. Reuse patterns already present in the same feature.
+4. Keep changes local and avoid silent refactors.
+5. Run the smallest relevant test scope, then report what changed.
 
-## UI Conventions
-- Screen = stateful / Content = stateless private Composable
-- Effects: `LaunchedEffect(Unit)` + `rememberUpdatedState`
-- Loading: `BackHandler(enabled = isLoading) {}` + `LoadingOverlay()`
-- Strings: `stringResource()` only
-- Preview: normal / loading / error, wrapped in `CloudPhotosTheme`
+## Repo-specific reminders
 
-## Testing
-- JUnit 5 + MockK + kotlinx-coroutines-test
-- MockK: `mockk<>()` directly, no `@ExtendWith`
-- Dispatcher: `StandardTestDispatcher` + `setMain`/`resetMain`
-- Test names: backtick English (`initial state has empty email`)
-- Structure: AAA, 1 assertion per test
+- UseCase style: `suspend operator fun invoke()` with a single responsibility.
+- Repository implementations should delegate to data sources and avoid business logic.
+- Error mapping belongs in the data layer via mapper objects.
+- `CancellationException` must be re-thrown in `runCatching` flows.
+- Domain models should prefer value objects over raw primitives for validated concepts.
+- Compose screens should stay declarative, with state owned by ViewModels/UI state classes.
+- UI strings should come from `stringResource()`.
+- Tests use JUnit 5 + MockK + `kotlinx-coroutines-test`.
+
+## Testing entrypoint
+
+For CI-aligned verification, prefer the repository's existing test entrypoint when appropriate:
+
+```bash
+bundle exec fastlane test
+```
+
+Use narrower Gradle module tests for focused local validation, following `AGENTS.md`.
