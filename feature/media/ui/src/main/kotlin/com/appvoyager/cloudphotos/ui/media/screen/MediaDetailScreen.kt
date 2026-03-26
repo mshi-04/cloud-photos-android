@@ -25,7 +25,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,61 +33,36 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.appvoyager.cloudphotos.core.ui.R
 import com.appvoyager.cloudphotos.domain.media.model.Media
 import com.appvoyager.cloudphotos.domain.media.model.MediaType
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaId
 import com.appvoyager.cloudphotos.ui.media.component.ImageDetailContent
 import com.appvoyager.cloudphotos.ui.media.component.VideoDetailContent
-import com.appvoyager.cloudphotos.ui.media.effect.MediaDetailEffect
-import com.appvoyager.cloudphotos.ui.media.uistate.MediaDetailUiState
-import com.appvoyager.cloudphotos.ui.media.viewmodel.MediaDetailViewModel
 
 @Composable
 fun MediaDetailScreen(
+    mediaList: List<Media>,
     initialMediaId: MediaId,
-    viewModel: MediaDetailViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit
 ) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val latestOnNavigateBack = rememberUpdatedState(onNavigateBack)
-
-    LaunchedEffect(Unit) {
-        viewModel.effect.collect { effect ->
-            when (effect) {
-                MediaDetailEffect.NavigateBack -> latestOnNavigateBack.value()
-            }
-        }
+    if (mediaList.isEmpty()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black)
+        )
+        return
     }
 
-    when (val state = uiState.screenState) {
-        is MediaDetailUiState.ScreenState.Loading -> {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black)
-            )
-        }
-        is MediaDetailUiState.ScreenState.Error -> {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black)
-            )
-        }
-        is MediaDetailUiState.ScreenState.Success -> {
-            val initialIndex = state.mediaList
-                .indexOfFirst { it.id == initialMediaId }
-                .coerceAtLeast(0)
-            MediaDetailContent(
-                mediaList = state.mediaList,
-                initialIndex = initialIndex,
-                onNavigateBack = { viewModel.onNavigateBack() }
-            )
-        }
-    }
+    val initialIndex = mediaList
+        .indexOfFirst { it.id == initialMediaId }
+        .coerceAtLeast(0)
+    MediaDetailContent(
+        mediaList = mediaList,
+        initialIndex = initialIndex,
+        onNavigateBack = onNavigateBack
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

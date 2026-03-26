@@ -6,6 +6,8 @@ import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -14,6 +16,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.appvoyager.cloudphotos.domain.auth.valueobject.Email
+import com.appvoyager.cloudphotos.domain.media.model.Media
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaId
 import com.appvoyager.cloudphotos.ui.auth.effect.AuthSnackbarMessage
 import com.appvoyager.cloudphotos.ui.auth.screen.ForgotPasswordScreen
@@ -60,6 +63,8 @@ fun NavGraph(
     startDestination: String,
     onSignOut: () -> Unit = {}
 ) {
+    val mediaListState = remember { mutableStateOf<List<Media>>(emptyList()) }
+
     NavHost(
         navController = navController,
         startDestination = startDestination,
@@ -172,7 +177,8 @@ fun NavGraph(
                 onSignOut = {
                     onSignOut()
                 },
-                onMediaClick = { mediaId ->
+                onMediaClick = { mediaId, mediaList ->
+                    mediaListState.value = mediaList
                     navController.navigate(MediaRoute.detail(mediaId))
                 }
             )
@@ -200,9 +206,14 @@ fun NavGraph(
             popEnterTransition = { enterBack() },
             popExitTransition = { exitBack() }
         ) { backStackEntry ->
-            val mediaId = MediaId.of(backStackEntry.arguments?.getString("mediaId").orEmpty())
+            val rawMediaId = backStackEntry.arguments?.getString("mediaId")
+            if (rawMediaId.isNullOrBlank()) {
+                navController.popBackStack()
+                return@composable
+            }
             MediaDetailScreen(
-                initialMediaId = mediaId,
+                mediaList = mediaListState.value,
+                initialMediaId = MediaId.of(rawMediaId),
                 onNavigateBack = { navController.popBackStack() }
             )
         }

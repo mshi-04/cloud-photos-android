@@ -6,6 +6,9 @@ import com.appvoyager.cloudphotos.domain.media.valueobject.MediaUrl
 import com.appvoyager.cloudphotos.ui.media.effect.CameraEffect
 import com.appvoyager.cloudphotos.ui.media.effect.CameraSnackbarMessage
 import com.appvoyager.cloudphotos.ui.media.uistate.CameraUiState
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -24,14 +27,13 @@ import org.junit.jupiter.api.Test
 class CameraViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
-    private lateinit var fakeWriter: FakeCapturedPhotoWriter
+    private val mockWriter = mockk<CapturedPhotoWriter>()
     private lateinit var viewModel: CameraViewModel
 
     @BeforeEach
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        fakeWriter = FakeCapturedPhotoWriter()
-        viewModel = CameraViewModel(fakeWriter)
+        viewModel = CameraViewModel(mockWriter)
     }
 
     @AfterEach
@@ -94,22 +96,34 @@ class CameraViewModelTest {
     }
 
     @Test
-    fun `takePhoto transitions to Ready on success`() = runTest {
-        // Arrange
+    fun `takePhoto calls writer on success`() = runTest {
         viewModel.onPermissionGranted()
-        fakeWriter.result = SavePhotoResult.Success(
+        coEvery { mockWriter.write(any()) } returns SavePhotoResult.Success(
             MediaUrl.of("content://media/external/images/media/123")
         )
 
-        // Act
         viewModel.takePhoto(
             captureJpeg = { byteArrayOf(1, 2, 3) },
             onCaptureAnimTrigger = {}
         )
         advanceUntilIdle()
 
-        // Assert
-        assertEquals(1, fakeWriter.callCount)
+        coVerify(exactly = 1) { mockWriter.write(any()) }
+    }
+
+    @Test
+    fun `takePhoto transitions to Ready on success`() = runTest {
+        viewModel.onPermissionGranted()
+        coEvery { mockWriter.write(any()) } returns SavePhotoResult.Success(
+            MediaUrl.of("content://media/external/images/media/123")
+        )
+
+        viewModel.takePhoto(
+            captureJpeg = { byteArrayOf(1, 2, 3) },
+            onCaptureAnimTrigger = {}
+        )
+        advanceUntilIdle()
+
         assertEquals(CameraUiState.Ready, viewModel.uiState.value)
     }
 
@@ -117,7 +131,7 @@ class CameraViewModelTest {
     fun `takePhoto emits OnPhotoCaptured on success`() = runTest {
         // Arrange
         viewModel.onPermissionGranted()
-        fakeWriter.result = SavePhotoResult.Success(
+        coEvery { mockWriter.write(any()) } returns SavePhotoResult.Success(
             MediaUrl.of("content://media/external/images/media/123")
         )
 
@@ -137,7 +151,7 @@ class CameraViewModelTest {
     fun `takePhoto transitions to Error on SAVE_FAILED`() = runTest {
         // Arrange
         viewModel.onPermissionGranted()
-        fakeWriter.result = SavePhotoResult.Error(SavePhotoResult.ErrorType.SAVE_FAILED)
+        coEvery { mockWriter.write(any()) } returns SavePhotoResult.Error(SavePhotoResult.ErrorType.SAVE_FAILED)
 
         // Act
         viewModel.takePhoto(
@@ -155,20 +169,31 @@ class CameraViewModelTest {
 
     @Test
     fun `takePhoto emits ShowSnackbar on SAVE_FAILED`() = runTest {
-        // Arrange
         viewModel.onPermissionGranted()
-        fakeWriter.result = SavePhotoResult.Error(SavePhotoResult.ErrorType.SAVE_FAILED)
+        coEvery { mockWriter.write(any()) } returns SavePhotoResult.Error(SavePhotoResult.ErrorType.SAVE_FAILED)
 
-        // Act
         viewModel.takePhoto(
             captureJpeg = { byteArrayOf() },
             onCaptureAnimTrigger = {}
         )
         advanceUntilIdle()
 
-        // Assert
         val effect = viewModel.effect.first()
         assertTrue(effect is CameraEffect.ShowSnackbar)
+    }
+
+    @Test
+    fun `takePhoto emits CaptureFailed message on SAVE_FAILED`() = runTest {
+        viewModel.onPermissionGranted()
+        coEvery { mockWriter.write(any()) } returns SavePhotoResult.Error(SavePhotoResult.ErrorType.SAVE_FAILED)
+
+        viewModel.takePhoto(
+            captureJpeg = { byteArrayOf() },
+            onCaptureAnimTrigger = {}
+        )
+        advanceUntilIdle()
+
+        val effect = viewModel.effect.first()
         assertEquals(
             CameraSnackbarMessage.CaptureFailed,
             (effect as CameraEffect.ShowSnackbar).message
@@ -178,7 +203,7 @@ class CameraViewModelTest {
     @Test
     fun `takePhoto transitions to Error on STORAGE_FULL`() = runTest {
         viewModel.onPermissionGranted()
-        fakeWriter.result = SavePhotoResult.Error(SavePhotoResult.ErrorType.STORAGE_FULL)
+        coEvery { mockWriter.write(any()) } returns SavePhotoResult.Error(SavePhotoResult.ErrorType.STORAGE_FULL)
 
         viewModel.takePhoto(
             captureJpeg = { byteArrayOf() },
@@ -195,7 +220,7 @@ class CameraViewModelTest {
     @Test
     fun `takePhoto emits ShowStorageFullDialog on STORAGE_FULL`() = runTest {
         viewModel.onPermissionGranted()
-        fakeWriter.result = SavePhotoResult.Error(SavePhotoResult.ErrorType.STORAGE_FULL)
+        coEvery { mockWriter.write(any()) } returns SavePhotoResult.Error(SavePhotoResult.ErrorType.STORAGE_FULL)
 
         viewModel.takePhoto(
             captureJpeg = { byteArrayOf() },
@@ -208,17 +233,25 @@ class CameraViewModelTest {
     }
 
     @Test
-    fun `takePhoto does nothing when not in Ready state`() = runTest {
-        // Act
+    fun `takePhoto does not change state when not in Ready state`() = runTest {
         viewModel.takePhoto(
             captureJpeg = { byteArrayOf() },
             onCaptureAnimTrigger = {}
         )
         advanceUntilIdle()
 
-        // Assert
         assertEquals(CameraUiState.CheckingPermission, viewModel.uiState.value)
-        assertEquals(0, fakeWriter.callCount)
+    }
+
+    @Test
+    fun `takePhoto does not call writer when not in Ready state`() = runTest {
+        viewModel.takePhoto(
+            captureJpeg = { byteArrayOf() },
+            onCaptureAnimTrigger = {}
+        )
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { mockWriter.write(any()) }
     }
 
     @Test
@@ -245,7 +278,7 @@ class CameraViewModelTest {
         // Arrange
         viewModel.onPermissionGranted()
         var triggered = false
-        fakeWriter.result = SavePhotoResult.Success(
+        coEvery { mockWriter.write(any()) } returns SavePhotoResult.Success(
             MediaUrl.of("content://media/test")
         )
 
@@ -258,15 +291,5 @@ class CameraViewModelTest {
 
         // Assert
         assertTrue(triggered)
-    }
-
-    private class FakeCapturedPhotoWriter : CapturedPhotoWriter {
-        var result: SavePhotoResult = SavePhotoResult.Error(SavePhotoResult.ErrorType.SAVE_FAILED)
-        var callCount = 0
-
-        override suspend fun write(jpegData: ByteArray): SavePhotoResult {
-            callCount++
-            return result
-        }
     }
 }
