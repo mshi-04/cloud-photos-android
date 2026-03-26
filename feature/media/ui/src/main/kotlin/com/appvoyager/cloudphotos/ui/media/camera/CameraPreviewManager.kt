@@ -5,8 +5,8 @@ import android.content.Context
 import android.provider.MediaStore
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
-import androidx.camera.core.ImageCapture
 import androidx.camera.core.FocusMeteringAction
+import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
@@ -88,7 +88,17 @@ class CameraPreviewManager(
         val camera = this.camera ?: return
         val currentZoomRatio = camera.cameraInfo.zoomState.value?.zoomRatio ?: 1f
         val newZoomRatio = currentZoomRatio * zoomDelta
-        camera.cameraControl.setZoomRatio(newZoomRatio)
+        val future = camera.cameraControl.setZoomRatio(newZoomRatio)
+        future.addListener(
+            {
+                try {
+                    future.get()
+                } catch (e: Exception) {
+                    onError(e)
+                }
+            },
+            ContextCompat.getMainExecutor(context)
+        )
     }
 
     fun handleTapToFocus(offset: Offset) {
@@ -96,7 +106,17 @@ class CameraPreviewManager(
         val factory = previewView.meteringPointFactory
         val point = factory.createPoint(offset.x, offset.y)
         val action = FocusMeteringAction.Builder(point).build()
-        camera.cameraControl.startFocusAndMetering(action)
+        val future = camera.cameraControl.startFocusAndMetering(action)
+        future.addListener(
+            {
+                try {
+                    future.get()
+                } catch (e: Exception) {
+                    onError(e)
+                }
+            },
+            ContextCompat.getMainExecutor(context)
+        )
     }
 
     fun createCaptureHandle(): PhotoCaptureHandle? {
