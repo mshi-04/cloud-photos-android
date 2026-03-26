@@ -93,6 +93,8 @@ class CameraPreviewManager(
             {
                 try {
                     future.get()
+                } catch (_: java.util.concurrent.CancellationException) {
+                    // Camera unbound or switched — expected, not an error
                 } catch (e: Exception) {
                     onError(e)
                 }
@@ -111,6 +113,8 @@ class CameraPreviewManager(
             {
                 try {
                     future.get()
+                } catch (_: java.util.concurrent.CancellationException) {
+                    // Camera unbound or switched — expected, not an error
                 } catch (e: Exception) {
                     onError(e)
                 }
@@ -152,7 +156,8 @@ class CameraPreviewManager(
                                             SavePhotoResult.Error(SavePhotoResult.ErrorType.SAVE_FAILED)
                                         )
                                     }
-                                } catch (_: Exception) {
+                                } catch (e: Exception) {
+                                    if (e is CancellationException) throw e
                                     runCatching { context.contentResolver.delete(savedUri, null, null) }
                                         .onFailure { if (it is CancellationException) throw it }
                                     continuation.resume(

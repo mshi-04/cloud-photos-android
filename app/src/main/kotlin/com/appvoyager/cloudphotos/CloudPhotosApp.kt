@@ -52,7 +52,6 @@ class CloudPhotosApp : Application(), Configuration.Provider {
 
     private fun createUploadCompleteNotificationChannel() {
         val manager = getSystemService(NotificationManager::class.java)
-        manager.deleteNotificationChannel("upload_complete")
         val channel = NotificationChannel(
             CloudPhotosFirebaseMessagingService.CHANNEL_ID,
             getString(R.string.notification_channel_upload_complete),
