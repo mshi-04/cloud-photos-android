@@ -2,6 +2,7 @@ package com.appvoyager.cloudphotos.ui.media.screen
 
 import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -61,6 +62,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleResumeEffect
@@ -114,6 +116,8 @@ fun CameraScreen(
         }
     }
 
+    var resumeKey by remember { mutableIntStateOf(0) }
+
     LaunchedEffect(Unit) {
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
             viewModel.effect.collect { effect ->
@@ -127,18 +131,24 @@ fun CameraScreen(
                     }
 
                     is CameraEffect.OnPhotoCaptured -> {
-                        lastThumbnailUri = effect.thumbnailUri
+                        lastThumbnailUri = Uri.parse(effect.mediaUrl.value)
                     }
                 }
             }
         }
     }
 
-    var resumeKey by remember { mutableIntStateOf(0) }
-
     LifecycleResumeEffect(Unit) {
         resumeKey++
-        permissionLauncher.launch(Manifest.permission.CAMERA)
+        val alreadyGranted = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.CAMERA
+        ) == PackageManager.PERMISSION_GRANTED
+        if (alreadyGranted) {
+            viewModel.onPermissionGranted()
+        } else {
+            permissionLauncher.launch(Manifest.permission.CAMERA)
+        }
         onPauseOrDispose {
             cameraPreviewManager.stopCamera()
         }
@@ -240,17 +250,15 @@ fun CameraScreen(
                                     contentDescription = takePhotoLabel
                                 }
                                 .clickable(enabled = isCameraReady) {
-                                    cameraPreviewManager.createCaptureHandle()?.let { handle ->
-                                        viewModel.takePhoto(
-                                            handle = handle,
-                                            onCaptureAnimTrigger = {
-                                                coroutineScope.launch {
-                                                    flashAlpha.animateTo(0.6f, tween(50))
-                                                    flashAlpha.animateTo(0f, tween(150))
-                                                }
+                                    viewModel.takePhoto(
+                                        captureJpeg = { cameraPreviewManager.captureToJpeg() },
+                                        onCaptureAnimTrigger = {
+                                            coroutineScope.launch {
+                                                flashAlpha.animateTo(0.6f, tween(50))
+                                                flashAlpha.animateTo(0f, tween(150))
                                             }
-                                        )
-                                    }
+                                        }
+                                    )
                                 }
                         )
 

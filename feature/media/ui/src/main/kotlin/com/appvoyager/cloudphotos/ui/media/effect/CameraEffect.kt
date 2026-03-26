@@ -1,9 +1,9 @@
 package com.appvoyager.cloudphotos.ui.media.effect
 
-import android.net.Uri
+import com.appvoyager.cloudphotos.domain.media.valueobject.MediaUrl
 
 sealed class CameraEffect {
     data object ShowStorageFullDialog : CameraEffect()
     data class ShowSnackbar(val message: CameraSnackbarMessage) : CameraEffect()
-    data class OnPhotoCaptured(val thumbnailUri: Uri) : CameraEffect()
+    data class OnPhotoCaptured(val mediaUrl: MediaUrl) : CameraEffect()
 }

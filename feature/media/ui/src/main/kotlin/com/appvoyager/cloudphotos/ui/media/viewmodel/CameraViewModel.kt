@@ -1,10 +1,9 @@
 package com.appvoyager.cloudphotos.ui.media.viewmodel
 
-import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.appvoyager.cloudphotos.domain.media.model.PhotoCaptureHandle
 import com.appvoyager.cloudphotos.domain.media.model.SavePhotoResult
+import com.appvoyager.cloudphotos.domain.media.repository.CapturedPhotoWriter
 import com.appvoyager.cloudphotos.ui.media.effect.CameraEffect
 import com.appvoyager.cloudphotos.ui.media.effect.CameraSnackbarMessage
 import com.appvoyager.cloudphotos.ui.media.uistate.CameraUiState
@@ -21,7 +20,9 @@ import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
 
 @HiltViewModel
-class CameraViewModel @Inject constructor() : ViewModel() {
+class CameraViewModel @Inject constructor(
+    val capturedPhotoWriter: CapturedPhotoWriter
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow<CameraUiState>(CameraUiState.CheckingPermission)
     val uiState: StateFlow<CameraUiState> = _uiState.asStateFlow()
@@ -51,7 +52,10 @@ class CameraViewModel @Inject constructor() : ViewModel() {
         _uiState.update { CameraUiState.Ready }
     }
 
-    fun takePhoto(handle: PhotoCaptureHandle, onCaptureAnimTrigger: () -> Unit) {
+    fun takePhoto(
+        captureJpeg: suspend () -> ByteArray,
+        onCaptureAnimTrigger: () -> Unit
+    ) {
         if (_uiState.value !is CameraUiState.Ready) return
         _uiState.update { CameraUiState.Capturing }
 
@@ -59,10 +63,11 @@ class CameraViewModel @Inject constructor() : ViewModel() {
 
         viewModelScope.launch {
             try {
-                when (val result = handle.capture()) {
+                val jpegData = captureJpeg()
+                when (val result = capturedPhotoWriter.write(jpegData)) {
                     is SavePhotoResult.Success -> {
                         _uiState.update { CameraUiState.Ready }
-                        _effect.send(CameraEffect.OnPhotoCaptured(result.url.value.toUri()))
+                        _effect.send(CameraEffect.OnPhotoCaptured(result.url))
                     }
 
                     is SavePhotoResult.Error -> handleSaveError(result.type)

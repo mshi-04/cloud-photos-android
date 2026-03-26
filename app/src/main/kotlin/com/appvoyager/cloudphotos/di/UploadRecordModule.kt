@@ -2,6 +2,7 @@ package com.appvoyager.cloudphotos.di
 
 import android.content.Context
 import com.appvoyager.cloudphotos.R
+import com.appvoyager.cloudphotos.data.media.datasource.MediaStoreCapturedPhotoWriter
 import com.appvoyager.cloudphotos.data.media.datasource.UploadRecordLocalDataSource
 import com.appvoyager.cloudphotos.data.media.datasource.UploadRecordLocalDataSourceImpl
 import com.appvoyager.cloudphotos.data.media.datasource.UploadRecordRemoteDataSource
@@ -14,6 +15,7 @@ import com.appvoyager.cloudphotos.data.media.worker.DeleteSchedulerImpl
 import com.appvoyager.cloudphotos.data.media.worker.UploadNotificationHelper
 import com.appvoyager.cloudphotos.data.media.worker.UploadSchedulerImpl
 import com.appvoyager.cloudphotos.domain.media.repository.DeleteScheduler
+import com.appvoyager.cloudphotos.domain.media.repository.CapturedPhotoWriter
 import com.appvoyager.cloudphotos.domain.media.repository.LocalUploadRecordsRepository
 import com.appvoyager.cloudphotos.domain.media.repository.RemoteUploadRecordsRepository
 import com.appvoyager.cloudphotos.domain.media.repository.UploadScheduler
@@ -66,6 +68,12 @@ abstract class UploadRecordModule {
     abstract fun bindContentTypeResolver(
         contentTypeResolverImpl: ContentTypeResolverImpl
     ): ContentTypeResolver
+
+    @Binds
+    @Singleton
+    abstract fun bindCapturedPhotoWriter(
+        mediaStoreCapturedPhotoWriter: MediaStoreCapturedPhotoWriter
+    ): CapturedPhotoWriter
 
     companion object {
         @Provides

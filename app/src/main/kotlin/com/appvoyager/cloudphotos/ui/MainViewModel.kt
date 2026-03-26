@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.appvoyager.cloudphotos.domain.auth.model.AuthResult
 import com.appvoyager.cloudphotos.domain.auth.usecase.GetSessionUseCase
 import com.appvoyager.cloudphotos.domain.auth.usecase.SignOutUseCase
+import com.appvoyager.cloudphotos.fcm.FcmTokenRegistrar
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -19,7 +20,8 @@ import kotlin.coroutines.cancellation.CancellationException
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val getSessionUseCase: GetSessionUseCase,
-    private val signOutUseCase: SignOutUseCase
+    private val signOutUseCase: SignOutUseCase,
+    private val fcmTokenRegistrar: FcmTokenRegistrar
 ) : ViewModel() {
 
     var uiState by mutableStateOf<MainUiState>(MainUiState.None)
@@ -64,6 +66,8 @@ class MainViewModel @Inject constructor(
             }
         }
     }
+
+    fun registerFcmToken() = fcmTokenRegistrar.register()
 
     fun signOut() {
         if (signOutJob?.isActive == true) return
