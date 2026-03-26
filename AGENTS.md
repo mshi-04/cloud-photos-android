@@ -31,6 +31,7 @@ If guidance appears to conflict, prefer the higher item in this list and keep th
 - `build-logic` = shared Gradle convention plugins; avoid touching unless the task is about build structure
 
 Current features include `auth`, `media`, and `settings`.
+Note: `settings` has `domain` and `data` submodules only — there is no `:feature:settings:ui` module.
 
 ## Layer placement rules
 
@@ -230,6 +231,7 @@ For narrower changes, run the smallest relevant test scope, such as:
 ./gradlew :feature:media:data:test
 ./gradlew :feature:media:ui:test
 ./gradlew :feature:settings:domain:test
+./gradlew :feature:settings:data:test
 ```
 
 Guidance:

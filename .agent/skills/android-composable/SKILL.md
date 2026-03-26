@@ -55,7 +55,7 @@ If the UI is very small, keep it simple, but still preserve clear separation of 
 
 ## ViewModel interaction rules
 
-- Acquire ViewModel using the established pattern in the target feature.
+- Acquire ViewModel using `hiltViewModel()` from `androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel`. Do **not** use the deprecated `androidx.hilt.navigation.compose.hiltViewModel`.
 - Keep state/effect collection in the screen layer.
 - Do not move domain logic into composables.
 - Do not add provider/framework translation logic to UI.
