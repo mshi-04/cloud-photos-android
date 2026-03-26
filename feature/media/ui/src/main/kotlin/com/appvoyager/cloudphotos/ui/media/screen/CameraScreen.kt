@@ -257,6 +257,7 @@ fun CameraScreen(
                                     CameraSelector.LENS_FACING_BACK
                                 }
                             },
+                            enabled = !isCapturing,
                             modifier = Modifier
                                 .size(48.dp)
                                 .background(Color.Black.copy(alpha = 0.3f), CircleShape)

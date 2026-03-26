@@ -17,6 +17,7 @@ import androidx.lifecycle.LifecycleOwner
 import com.appvoyager.cloudphotos.domain.media.model.PhotoCaptureHandle
 import com.appvoyager.cloudphotos.domain.media.model.SavePhotoResult
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaUrl
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.suspendCancellableCoroutine
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -33,17 +34,17 @@ class CameraPreviewManager(
     private var cameraProvider: ProcessCameraProvider? = null
     private var imageCapture: ImageCapture? = null
     private var camera: Camera? = null
+    private var preview: Preview? = null
 
     suspend fun startCamera(lensFacing: Int = CameraSelector.LENS_FACING_BACK) {
         try {
             cameraProvider = getCameraProvider()
             val cameraProvider = this.cameraProvider ?: return
 
-            val preview = Preview.Builder().build().also {
+            val previewUseCase = Preview.Builder().build().also {
                 it.surfaceProvider = previewView.surfaceProvider
             }
-
-            imageCapture = ImageCapture.Builder()
+            val imageCaptureUseCase = ImageCapture.Builder()
                 .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
                 .build()
 
@@ -56,9 +57,13 @@ class CameraPreviewManager(
             camera = cameraProvider.bindToLifecycle(
                 lifecycleOwner,
                 cameraSelector,
-                preview,
-                imageCapture
+                previewUseCase,
+                imageCaptureUseCase
             )
+            preview = previewUseCase
+            imageCapture = imageCaptureUseCase
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             onError(e)
         }
@@ -66,6 +71,9 @@ class CameraPreviewManager(
 
     fun stopCamera() {
         cameraProvider?.unbindAll()
+        camera = null
+        imageCapture = null
+        preview = null
     }
 
     fun handlePinchToZoom(zoomDelta: Float) {
@@ -110,11 +118,13 @@ class CameraPreviewManager(
                                             SavePhotoResult.Success(MediaUrl.of(savedUri.toString()))
                                         )
                                     } else {
+                                        runCatching { context.contentResolver.delete(savedUri, null, null) }
                                         continuation.resume(
                                             SavePhotoResult.Error(SavePhotoResult.ErrorType.SAVE_FAILED)
                                         )
                                     }
                                 } catch (_: Exception) {
+                                    runCatching { context.contentResolver.delete(savedUri, null, null) }
                                     continuation.resume(
                                         SavePhotoResult.Error(SavePhotoResult.ErrorType.SAVE_FAILED)
                                     )
@@ -128,7 +138,7 @@ class CameraPreviewManager(
 
                         override fun onError(exception: ImageCaptureException) {
                             val errorType =
-                                if (exception.imageCaptureError == ImageCapture.ERROR_FILE_IO) {
+                                if (exception.imageCaptureError == ImageCapture.ERROR_FILE_IO && isStorageFull(exception)) {
                                     SavePhotoResult.ErrorType.STORAGE_FULL
                                 } else {
                                     SavePhotoResult.ErrorType.SAVE_FAILED
@@ -139,6 +149,18 @@ class CameraPreviewManager(
                 )
             }
         }
+    }
+
+    private fun isStorageFull(exception: ImageCaptureException): Boolean {
+        var cause: Throwable? = exception
+        while (cause != null) {
+            val message = cause.message ?: ""
+            if (message.contains("ENOSPC") || message.contains("No space left on device")) {
+                return true
+            }
+            cause = cause.cause
+        }
+        return false
     }
 
     private fun createContentValues(): ContentValues {
