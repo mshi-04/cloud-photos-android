@@ -59,6 +59,10 @@ class CameraPreviewManager(
                 .build()
 
             cameraProvider.unbindAll()
+            camera = null
+            preview = null
+            imageCapture = null
+            isCameraBound = false
 
             camera = cameraProvider.bindToLifecycle(
                 lifecycleOwner,
@@ -72,6 +76,10 @@ class CameraPreviewManager(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
+            camera = null
+            preview = null
+            imageCapture = null
+            isCameraBound = false
             onError(e)
         }
     }
