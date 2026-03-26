@@ -60,4 +60,16 @@
     <string name="error_permission_required">すべての写真・動画へのアクセスが必要です</string>
     <string name="error_permission_partial_access">「一部のアクセスのみ許可」を選択した場合も、権限なしと同様に扱われます</string>
     <string name="permission_open_settings">設定を開く</string>
+
+    <!-- カメラ画面 -->
+    <string name="camera_permission_required">カメラのアクセス権限が必要です</string>
+    <string name="camera_error_camera_unavailable">カメラを起動できません</string>
+    <string name="camera_error_capture_failed">写真の撮影に失敗しました</string>
+    <string name="camera_error_storage_full_title">空き容量が不足しています</string>
+    <string name="camera_error_storage_full_message">端末のストレージ容量がいっぱいのため、写真を保存できません。不要なデータを削除してから再度お試しください。</string>
+    <string name="camera_cd_take_photo">写真撮影</string>
+    <string name="camera_cd_switch_camera">カメラを切り替える</string>
+    <string name="camera_cd_last_photo">最後に撮影した写真</string>
+    <string name="camera_cd_close">カメラを閉じる</string>
+
 </resources>

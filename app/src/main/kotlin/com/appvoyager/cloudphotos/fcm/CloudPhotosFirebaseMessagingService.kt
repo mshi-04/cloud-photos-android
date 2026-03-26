@@ -53,6 +53,7 @@ class CloudPhotosFirebaseMessagingService : FirebaseMessagingService() {
             .setContentTitle(title)
             .setContentText(body)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setSilent(true)
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
             .build()
