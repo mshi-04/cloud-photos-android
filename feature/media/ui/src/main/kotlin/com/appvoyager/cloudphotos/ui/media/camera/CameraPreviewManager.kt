@@ -185,6 +185,7 @@ class CameraPreviewManager(
         }
     }
 
+    @Suppress("BlockingMethodInNonBlockingContext")
     private suspend fun getCameraProvider(): ProcessCameraProvider =
         suspendCancellableCoroutine { continuation ->
             val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
@@ -192,6 +193,8 @@ class CameraPreviewManager(
                 {
                     try {
                         continuation.resume(cameraProviderFuture.get())
+                    } catch (e: java.util.concurrent.CancellationException) {
+                        continuation.cancel(e)
                     } catch (e: Exception) {
                         continuation.resumeWithException(e)
                     }
