@@ -1,6 +1,8 @@
 package com.appvoyager.cloudphotos.ui.media.screen
 
 import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -37,6 +39,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.appvoyager.cloudphotos.core.ui.R
 import com.appvoyager.cloudphotos.domain.media.model.Media
 import com.appvoyager.cloudphotos.domain.media.model.MediaType
+import com.appvoyager.cloudphotos.domain.media.valueobject.MediaId
 import com.appvoyager.cloudphotos.ui.media.component.ImageDetailContent
 import com.appvoyager.cloudphotos.ui.media.component.VideoDetailContent
 import com.appvoyager.cloudphotos.ui.media.effect.MediaDetailEffect
@@ -45,7 +48,7 @@ import com.appvoyager.cloudphotos.ui.media.viewmodel.MediaDetailViewModel
 
 @Composable
 fun MediaDetailScreen(
-    initialIndex: Int,
+    initialMediaId: MediaId,
     viewModel: MediaDetailViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit
 ) {
@@ -76,6 +79,9 @@ fun MediaDetailScreen(
             )
         }
         is MediaDetailUiState.ScreenState.Success -> {
+            val initialIndex = state.mediaList
+                .indexOfFirst { it.id == initialMediaId }
+                .coerceAtLeast(0)
             MediaDetailContent(
                 mediaList = state.mediaList,
                 initialIndex = initialIndex,
@@ -109,7 +115,8 @@ private fun MediaDetailContent(
     val view = LocalView.current
     LaunchedEffect(isFullscreen) {
         if (view.isInEditMode) return@LaunchedEffect
-        val window = (view.context as Activity).window
+        val activity = view.context.findActivity() ?: return@LaunchedEffect
+        val window = activity.window
         val controller = WindowCompat.getInsetsController(window, view)
         if (isFullscreen) {
             controller.hide(WindowInsetsCompat.Type.systemBars())
@@ -121,7 +128,8 @@ private fun MediaDetailContent(
     DisposableEffect(Unit) {
         onDispose {
             if (!view.isInEditMode) {
-                val window = (view.context as Activity).window
+                val activity = view.context.findActivity() ?: return@onDispose
+                val window = activity.window
                 WindowCompat.getInsetsController(window, view)
                     .show(WindowInsetsCompat.Type.systemBars())
             }
@@ -179,4 +187,13 @@ private fun MediaDetailContent(
             )
         }
     }
+}
+
+private fun Context.findActivity(): Activity? {
+    var ctx = this
+    while (ctx is ContextWrapper) {
+        if (ctx is Activity) return ctx
+        ctx = ctx.baseContext
+    }
+    return null
 }

@@ -4,7 +4,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import coil3.compose.AsyncImage
+import com.appvoyager.cloudphotos.core.ui.R
 import com.appvoyager.cloudphotos.domain.media.model.Media
 
 @Composable
@@ -21,7 +23,7 @@ internal fun ImageDetailContent(
     ) {
         AsyncImage(
             model = media.url.value,
-            contentDescription = null,
+            contentDescription = stringResource(R.string.media_content_description_image),
             contentScale = ContentScale.Fit,
             modifier = Modifier.fillMaxSize()
         )

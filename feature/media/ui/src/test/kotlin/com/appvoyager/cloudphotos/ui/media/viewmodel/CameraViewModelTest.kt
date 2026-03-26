@@ -176,23 +176,33 @@ class CameraViewModelTest {
     }
 
     @Test
-    fun `takePhoto emits ShowStorageFullDialog on STORAGE_FULL`() = runTest {
-        // Arrange
+    fun `takePhoto transitions to Error on STORAGE_FULL`() = runTest {
         viewModel.onPermissionGranted()
         fakeWriter.result = SavePhotoResult.Error(SavePhotoResult.ErrorType.STORAGE_FULL)
 
-        // Act
         viewModel.takePhoto(
             captureJpeg = { byteArrayOf() },
             onCaptureAnimTrigger = {}
         )
         advanceUntilIdle()
 
-        // Assert
         assertEquals(
             CameraUiState.Error(CameraUiState.ErrorType.STORAGE_FULL),
             viewModel.uiState.value
         )
+    }
+
+    @Test
+    fun `takePhoto emits ShowStorageFullDialog on STORAGE_FULL`() = runTest {
+        viewModel.onPermissionGranted()
+        fakeWriter.result = SavePhotoResult.Error(SavePhotoResult.ErrorType.STORAGE_FULL)
+
+        viewModel.takePhoto(
+            captureJpeg = { byteArrayOf() },
+            onCaptureAnimTrigger = {}
+        )
+        advanceUntilIdle()
+
         val effect = viewModel.effect.first()
         assertTrue(effect is CameraEffect.ShowStorageFullDialog)
     }

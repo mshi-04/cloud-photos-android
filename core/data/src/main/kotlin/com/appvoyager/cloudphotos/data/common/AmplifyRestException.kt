@@ -5,7 +5,7 @@ import com.amplifyframework.api.rest.RestResponse
 class AmplifyRestException(
     val code: RestResponse.Code,
     val responseBody: String
-) : Exception("Unexpected response code $code: $responseBody") {
+) : Exception("Unexpected response code $code") {
 
     val isClientError: Boolean
         get() = !code.isSuccessful && !code.isServiceFailure

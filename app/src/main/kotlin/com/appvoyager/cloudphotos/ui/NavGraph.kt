@@ -14,6 +14,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.appvoyager.cloudphotos.domain.auth.valueobject.Email
+import com.appvoyager.cloudphotos.domain.media.valueobject.MediaId
 import com.appvoyager.cloudphotos.ui.auth.effect.AuthSnackbarMessage
 import com.appvoyager.cloudphotos.ui.auth.screen.ForgotPasswordScreen
 import com.appvoyager.cloudphotos.ui.auth.screen.LoginScreen
@@ -26,9 +27,9 @@ import com.appvoyager.cloudphotos.ui.media.screen.MediaScreen
 private const val TRANSITION_DURATION_MS = 300
 
 object MediaRoute {
-    internal const val URI_DETAIL = "media_detail/{initialIndex}"
+    internal const val URI_DETAIL = "media_detail/{mediaId}"
 
-    fun detail(initialIndex: Int): String = "media_detail/$initialIndex"
+    fun detail(mediaId: MediaId): String = "media_detail/${Uri.encode(mediaId.value)}"
 }
 
 object AuthRoute {
@@ -171,8 +172,8 @@ fun NavGraph(
                 onSignOut = {
                     onSignOut()
                 },
-                onMediaClick = { index ->
-                    navController.navigate(MediaRoute.detail(index))
+                onMediaClick = { mediaId ->
+                    navController.navigate(MediaRoute.detail(mediaId))
                 }
             )
         }
@@ -193,15 +194,15 @@ fun NavGraph(
 
         composable(
             route = MediaRoute.URI_DETAIL,
-            arguments = listOf(navArgument("initialIndex") { type = NavType.IntType }),
+            arguments = listOf(navArgument("mediaId") { type = NavType.StringType }),
             enterTransition = { enterForward() },
             exitTransition = { exitForward() },
             popEnterTransition = { enterBack() },
             popExitTransition = { exitBack() }
         ) { backStackEntry ->
-            val initialIndex = backStackEntry.arguments?.getInt("initialIndex") ?: 0
+            val mediaId = MediaId.of(backStackEntry.arguments?.getString("mediaId").orEmpty())
             MediaDetailScreen(
-                initialIndex = initialIndex,
+                initialMediaId = mediaId,
                 onNavigateBack = { navController.popBackStack() }
             )
         }

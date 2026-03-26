@@ -106,7 +106,7 @@ fun MediaScreen(
     viewModel: MediaViewModel = hiltViewModel(),
     onNavigateToCamera: () -> Unit,
     onSignOut: () -> Unit,
-    onMediaClick: (index: Int) -> Unit
+    onMediaClick: (mediaId: MediaId) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -193,7 +193,7 @@ private fun MediaContent(
     gridColumnCount: GridColumnCount,
     onGridSettingsClick: () -> Unit,
     onSignOut: () -> Unit,
-    onMediaClick: (index: Int) -> Unit,
+    onMediaClick: (mediaId: MediaId) -> Unit,
     onRetry: () -> Unit,
     onRetryPermissions: () -> Unit
 ) {
@@ -321,7 +321,7 @@ private fun MediaGrid(
     gridState: LazyGridState,
     topPadding: androidx.compose.ui.unit.Dp,
     bottomPadding: androidx.compose.ui.unit.Dp,
-    onMediaClick: (index: Int) -> Unit
+    onMediaClick: (mediaId: MediaId) -> Unit
 ) {
     LazyVerticalGrid(
         state = gridState,
@@ -339,10 +339,10 @@ private fun MediaGrid(
         itemsIndexed(
             items = mediaList,
             key = { _, media -> media.id.value }
-        ) { index, media ->
+        ) { _, media ->
             MediaGridItem(
                 media = media,
-                onClick = { onMediaClick(index) }
+                onClick = { onMediaClick(media.id) }
             )
         }
     }

@@ -41,14 +41,14 @@ internal fun VideoDetailContent(
 ) {
     val context = LocalContext.current
     var isPlaying by remember { mutableStateOf(false) }
-    val player = remember {
+    val player = remember(media.url.value) {
         ExoPlayer.Builder(context).build().also { player ->
             player.setMediaItem(MediaItem.fromUri(media.url.value))
             player.prepare()
         }
     }
 
-    DisposableEffect(Unit) {
+    DisposableEffect(player) {
         val listener = object : Player.Listener {
             override fun onIsPlayingChanged(isPlayingNow: Boolean) {
                 isPlaying = isPlayingNow

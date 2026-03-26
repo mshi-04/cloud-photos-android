@@ -21,7 +21,7 @@ import kotlin.coroutines.cancellation.CancellationException
 
 @HiltViewModel
 class CameraViewModel @Inject constructor(
-    val capturedPhotoWriter: CapturedPhotoWriter
+    private val capturedPhotoWriter: CapturedPhotoWriter
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<CameraUiState>(CameraUiState.CheckingPermission)
