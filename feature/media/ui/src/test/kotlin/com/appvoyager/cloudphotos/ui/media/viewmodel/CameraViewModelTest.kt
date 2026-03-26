@@ -80,11 +80,7 @@ class CameraViewModelTest {
         viewModel.onCameraError()
         advanceUntilIdle()
         val effect = viewModel.effect.first()
-        assertTrue(effect is CameraEffect.ShowSnackbar)
-        assertEquals(
-            CameraSnackbarMessage.CameraUnavailable,
-            (effect as CameraEffect.ShowSnackbar).message
-        )
+        assertEquals(CameraEffect.ShowSnackbar(CameraSnackbarMessage.CameraUnavailable), effect)
     }
 
     @Test

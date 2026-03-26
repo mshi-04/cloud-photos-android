@@ -47,17 +47,15 @@ fun MediaDetailScreen(
     onNavigateBack: () -> Unit
 ) {
     if (mediaList.isEmpty()) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black)
-        )
+        onNavigateBack()
         return
     }
 
-    val initialIndex = mediaList
-        .indexOfFirst { it.id == initialMediaId }
-        .coerceAtLeast(0)
+    val initialIndex = mediaList.indexOfFirst { it.id == initialMediaId }
+    if (initialIndex == -1) {
+        onNavigateBack()
+        return
+    }
     MediaDetailContent(
         mediaList = mediaList,
         initialIndex = initialIndex,
