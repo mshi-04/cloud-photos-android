@@ -21,6 +21,9 @@ import com.appvoyager.cloudphotos.domain.media.model.PhotoCaptureHandle
 import com.appvoyager.cloudphotos.domain.media.model.SavePhotoResult
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaUrl
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -94,8 +97,11 @@ class CameraPreviewManager(
 
     fun handlePinchToZoom(zoomDelta: Float) {
         val camera = this.camera ?: return
-        val currentZoomRatio = camera.cameraInfo.zoomState.value?.zoomRatio ?: 1f
-        val newZoomRatio = currentZoomRatio * zoomDelta
+        val zoomState = camera.cameraInfo.zoomState.value ?: return
+        val newZoomRatio = (zoomState.zoomRatio * zoomDelta).coerceIn(
+            zoomState.minZoomRatio,
+            zoomState.maxZoomRatio
+        )
         val future = camera.cameraControl.setZoomRatio(newZoomRatio)
         future.addListener(
             {
@@ -148,29 +154,31 @@ class CameraPreviewManager(
                         override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
                             val savedUri = outputFileResults.savedUri
                             if (savedUri != null) {
-                                try {
-                                    val pending = ContentValues().apply {
-                                        put(MediaStore.Images.Media.IS_PENDING, 0)
-                                    }
-                                    val rowCount = context.contentResolver.update(savedUri, pending, null, null)
-                                    if (rowCount > 0) {
-                                        continuation.resume(
-                                            SavePhotoResult.Success(MediaUrl.of(savedUri.toString()))
-                                        )
-                                    } else {
+                                CoroutineScope(continuation.context).launch(Dispatchers.IO) {
+                                    try {
+                                        val pending = ContentValues().apply {
+                                            put(MediaStore.Images.Media.IS_PENDING, 0)
+                                        }
+                                        val rowCount = context.contentResolver.update(savedUri, pending, null, null)
+                                        if (rowCount > 0) {
+                                            continuation.resume(
+                                                SavePhotoResult.Success(MediaUrl.of(savedUri.toString()))
+                                            )
+                                        } else {
+                                            runCatching { context.contentResolver.delete(savedUri, null, null) }
+                                                .onFailure { if (it is CancellationException) throw it }
+                                            continuation.resume(
+                                                SavePhotoResult.Error(SavePhotoResult.ErrorType.SAVE_FAILED)
+                                            )
+                                        }
+                                    } catch (e: Exception) {
+                                        if (e is CancellationException) throw e
                                         runCatching { context.contentResolver.delete(savedUri, null, null) }
                                             .onFailure { if (it is CancellationException) throw it }
                                         continuation.resume(
                                             SavePhotoResult.Error(SavePhotoResult.ErrorType.SAVE_FAILED)
                                         )
                                     }
-                                } catch (e: Exception) {
-                                    if (e is CancellationException) throw e
-                                    runCatching { context.contentResolver.delete(savedUri, null, null) }
-                                        .onFailure { if (it is CancellationException) throw it }
-                                    continuation.resume(
-                                        SavePhotoResult.Error(SavePhotoResult.ErrorType.SAVE_FAILED)
-                                    )
                                 }
                             } else {
                                 continuation.resume(
@@ -197,8 +205,7 @@ class CameraPreviewManager(
     private fun isStorageFull(exception: ImageCaptureException): Boolean {
         var cause: Throwable? = exception
         while (cause != null) {
-            val message = cause.message ?: ""
-            if (message.contains("ENOSPC") || message.contains("No space left on device")) {
+            if (cause is android.system.ErrnoException && cause.errno == android.system.OsConstants.ENOSPC) {
                 return true
             }
             cause = cause.cause
