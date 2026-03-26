@@ -154,6 +154,10 @@ fun CameraScreen(
                 .background(Color.Black)
         ) {
             when (val state = uiState) {
+                is CameraUiState.CheckingPermission -> {
+
+                }
+
                 is CameraUiState.PermissionRequired -> {
                     PermissionRequiredContent()
                 }

@@ -9,6 +9,7 @@ import androidx.activity.viewModels
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import com.appvoyager.cloudphotos.CloudPhotosApp
 import com.appvoyager.cloudphotos.R
 import com.appvoyager.cloudphotos.ui.theme.CloudPhotosTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -35,6 +36,11 @@ class MainActivity : ComponentActivity() {
                             Toast.LENGTH_SHORT
                         ).show()
                     }
+                }
+            }
+            LaunchedEffect(mainViewModel.uiState) {
+                if (mainViewModel.uiState is MainUiState.Authenticated) {
+                    (context.applicationContext as CloudPhotosApp).registerFcmToken()
                 }
             }
             CloudPhotosTheme(

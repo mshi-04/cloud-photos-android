@@ -52,7 +52,7 @@ class CloudPhotosFirebaseMessagingService : FirebaseMessagingService() {
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle(title)
             .setContentText(body)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setSilent(true)
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)

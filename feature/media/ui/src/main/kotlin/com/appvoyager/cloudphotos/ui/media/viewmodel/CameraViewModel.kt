@@ -23,14 +23,15 @@ import kotlin.coroutines.cancellation.CancellationException
 @HiltViewModel
 class CameraViewModel @Inject constructor() : ViewModel() {
 
-    private val _uiState = MutableStateFlow<CameraUiState>(CameraUiState.PermissionRequired)
+    private val _uiState = MutableStateFlow<CameraUiState>(CameraUiState.CheckingPermission)
     val uiState: StateFlow<CameraUiState> = _uiState.asStateFlow()
 
     private val _effect = Channel<CameraEffect>(Channel.BUFFERED)
     val effect: Flow<CameraEffect> = _effect.receiveAsFlow()
 
     fun onPermissionGranted() {
-        if (_uiState.value is CameraUiState.PermissionRequired) {
+        val current = _uiState.value
+        if (current is CameraUiState.CheckingPermission || current is CameraUiState.PermissionRequired) {
             _uiState.update { CameraUiState.Ready }
         }
     }

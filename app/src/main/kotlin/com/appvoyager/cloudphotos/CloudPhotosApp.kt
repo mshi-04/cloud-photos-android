@@ -51,17 +51,18 @@ class CloudPhotosApp : Application(), Configuration.Provider {
     }
 
     private fun createUploadCompleteNotificationChannel() {
+        val manager = getSystemService(NotificationManager::class.java)
+        manager.deleteNotificationChannel("upload_complete")
         val channel = NotificationChannel(
             CloudPhotosFirebaseMessagingService.CHANNEL_ID,
             getString(R.string.notification_channel_upload_complete),
-            NotificationManager.IMPORTANCE_LOW
+            NotificationManager.IMPORTANCE_DEFAULT
         )
         channel.description = getString(R.string.notification_channel_upload_complete_description)
-        val manager = getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(channel)
     }
 
-    private fun registerFcmToken() {
+    internal fun registerFcmToken() {
         FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
             if (!task.isSuccessful) {
                 return@addOnCompleteListener
