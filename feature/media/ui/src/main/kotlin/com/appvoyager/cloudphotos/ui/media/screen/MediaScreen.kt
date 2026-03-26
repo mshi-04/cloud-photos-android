@@ -150,13 +150,11 @@ fun MediaScreen(
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         floatingActionButton = {
-            if (uiState.screenState is MediaUiState.ScreenState.Success) {
-                FloatingActionButton(onClick = onNavigateToCamera) {
-                    Icon(
-                        imageVector = Icons.Default.CameraAlt,
-                        contentDescription = stringResource(R.string.camera_cd_take_photo)
-                    )
-                }
+            FloatingActionButton(onClick = onNavigateToCamera) {
+                Icon(
+                    imageVector = Icons.Default.CameraAlt,
+                    contentDescription = stringResource(R.string.camera_cd_take_photo)
+                )
             }
         },
         contentWindowInsets = WindowInsets(0)

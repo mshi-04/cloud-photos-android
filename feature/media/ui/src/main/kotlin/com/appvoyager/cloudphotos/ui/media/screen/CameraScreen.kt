@@ -134,7 +134,10 @@ fun CameraScreen(
         }
     }
 
+    var resumeKey by remember { mutableIntStateOf(0) }
+
     LifecycleResumeEffect(Unit) {
+        resumeKey++
         permissionLauncher.launch(Manifest.permission.CAMERA)
         onPauseOrDispose {
             cameraPreviewManager.stopCamera()
@@ -156,7 +159,7 @@ fun CameraScreen(
                 }
 
                 is CameraUiState.Ready, is CameraUiState.Capturing -> {
-                    LaunchedEffect(lensFacing) {
+                    LaunchedEffect(lensFacing, resumeKey) {
                         cameraPreviewManager.startCamera(lensFacing)
                     }
 
@@ -280,12 +283,14 @@ fun CameraScreen(
     if (showStorageDialog) {
         AlertDialog(
             onDismissRequest = {
+                showStorageDialog = false
                 viewModel.retryCamera()
             },
             title = { Text(stringResource(R.string.camera_error_storage_full_title)) },
             text = { Text(stringResource(R.string.camera_error_storage_full_message)) },
             confirmButton = {
                 TextButton(onClick = {
+                    showStorageDialog = false
                     viewModel.retryCamera()
                 }) {
                     Text(stringResource(R.string.settings_confirm))

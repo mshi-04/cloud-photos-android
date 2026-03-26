@@ -100,13 +100,25 @@ class CameraPreviewManager(
                         override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
                             val savedUri = outputFileResults.savedUri
                             if (savedUri != null) {
-                                val pending = ContentValues().apply {
-                                    put(MediaStore.Images.Media.IS_PENDING, 0)
+                                try {
+                                    val pending = ContentValues().apply {
+                                        put(MediaStore.Images.Media.IS_PENDING, 0)
+                                    }
+                                    val rowCount = context.contentResolver.update(savedUri, pending, null, null)
+                                    if (rowCount > 0) {
+                                        continuation.resume(
+                                            SavePhotoResult.Success(MediaUrl.of(savedUri.toString()))
+                                        )
+                                    } else {
+                                        continuation.resume(
+                                            SavePhotoResult.Error(SavePhotoResult.ErrorType.SAVE_FAILED)
+                                        )
+                                    }
+                                } catch (_: Exception) {
+                                    continuation.resume(
+                                        SavePhotoResult.Error(SavePhotoResult.ErrorType.SAVE_FAILED)
+                                    )
                                 }
-                                context.contentResolver.update(savedUri, pending, null, null)
-                                continuation.resume(
-                                    SavePhotoResult.Success(MediaUrl.of(savedUri.toString()))
-                                )
                             } else {
                                 continuation.resume(
                                     SavePhotoResult.Error(SavePhotoResult.ErrorType.SAVE_FAILED)
