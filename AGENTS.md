@@ -3,6 +3,12 @@
 This repository uses AI-assisted development under explicit architectural constraints.
 Follow these rules when proposing or making changes.
 
+Supplementary documents in `docs/`:
+- `docs/ai-playbook.md` — how to work in this repo (workflow guide)
+- `docs/architecture-decisions.md` — why the structure is what it is
+- `docs/verification-policy.md` — when and how much to verify
+- `docs/forbidden-patterns.md` — anti-patterns with reasoning
+
 ## Objective
 
 Make small, correct, testable changes that preserve the repository's modular Android architecture.
