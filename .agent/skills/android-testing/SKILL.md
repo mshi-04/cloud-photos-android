@@ -36,7 +36,7 @@ If it conflicts with repository guidance, prefer the repository guidance.
 
 All test function names must use exactly this format:
 
-```
+```text
 `[tested function name] [expected outcome] when [condition]`
 ```
 

@@ -16,7 +16,7 @@ Misunderstanding the flow leads to broken retry behavior, inconsistent sync stat
 
 ### Trigger (UI → Domain)
 
-```
+```text
 MediaViewModel.onScreenResumed()
   ├─ syncRemote()         → SyncUploadRecordsUseCase
   ├─ prepareUploadQueue() → PrepareUploadQueueUseCase
@@ -27,7 +27,7 @@ MediaViewModel.onScreenResumed()
 
 ### Worker execution (Data — background)
 
-```
+```text
 UploadMediaWorker.doWork()
   ↓
   LocalUploadRecordsRepository.getPendingUploadRecords()   [Room]
@@ -44,7 +44,7 @@ UploadMediaWorker.doWork()
 
 ### SyncStatus transitions
 
-```
+```text
 (new local media)
   PENDING_UPLOAD
       ↓ upload success + remote registration success
@@ -65,7 +65,7 @@ UploadMediaWorker.doWork()
 
 ### Trigger (UI → Domain)
 
-```
+```text
 MediaViewModel.scheduleDelete()
   └─ ScheduleDeleteUseCase
        └─ DeleteScheduler.scheduleDelete()
@@ -74,7 +74,7 @@ MediaViewModel.scheduleDelete()
 
 ### Worker execution (Data — background)
 
-```
+```text
 DeleteMediaWorker.doWork()
   ↓
   LocalUploadRecordsRepository.getPendingDeleteRecords()   [Room]
@@ -94,7 +94,7 @@ the worker continues rather than retrying, accepting the orphan.
 
 ## Remote sync flow
 
-```
+```text
 SyncUploadRecordsUseCase
   └─ RemoteUploadRecordsRepository.getUploadRecords()      [GET /media/uploads]
        └─ LocalUploadRecordsRepository.saveUploadRecords() [upsert into Room]

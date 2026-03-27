@@ -153,7 +153,7 @@ Rules:
 
 All test function names must use exactly this format:
 
-```
+```text
 `[tested function name] [expected outcome] when [condition]`
 ```
 
