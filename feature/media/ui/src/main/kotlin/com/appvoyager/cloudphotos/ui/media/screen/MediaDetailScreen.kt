@@ -169,7 +169,7 @@ private fun MediaDetailContent(mediaList: List<Media>, initialIndex: Int, onNavi
 
 @Preview(showBackground = true)
 @Composable
-private fun MediaDetailContentPreview() {
+private fun MediaDetailContentPreviewImage() {
     CloudPhotosTheme {
         MediaDetailContent(
             mediaList = listOf(
@@ -188,26 +188,7 @@ private fun MediaDetailContentPreview() {
 
 @Preview(showBackground = true)
 @Composable
-private fun MediaDetailContentLoadingPreview() {
-    CloudPhotosTheme {
-        MediaDetailContent(
-            mediaList = listOf(
-                Media(
-                    id = MediaId.of("2"),
-                    url = MediaUrl.of("content://media/external/video/2"),
-                    type = MediaType.VIDEO,
-                    createdAt = MediaCreatedAt.of(1700000001L)
-                )
-            ),
-            initialIndex = 0,
-            onNavigateBack = {}
-        )
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun MediaDetailContentErrorPreview() {
+private fun MediaDetailContentMultiplePreview() {
     CloudPhotosTheme {
         MediaDetailContent(
             mediaList = listOf(

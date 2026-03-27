@@ -56,8 +56,8 @@ class LocalMediaDataSourceImplTest {
         val mockVideoUri = mockk<Uri>(relaxed = true)
         every { mockVideoUri.toString() } returns "content://media/external_primary/file/456"
 
-        every { ContentUris.withAppendedId(any(), 123L) } returns mockImageUri
-        every { ContentUris.withAppendedId(any(), 456L) } returns mockVideoUri
+        every { ContentUris.withAppendedId(mockImageBaseUri, 123L) } returns mockImageUri
+        every { ContentUris.withAppendedId(mockVideoBaseUri, 456L) } returns mockVideoUri
 
         dataSource = LocalMediaDataSourceImpl(mockContext)
     }
