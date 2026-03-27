@@ -135,7 +135,7 @@ private fun MediaDetailContent(mediaList: List<Media>, initialIndex: Int, onNavi
             userScrollEnabled = isPagerScrollEnabled,
             modifier = Modifier.fillMaxSize()
         ) { page ->
-            val media = mediaList[page]
+            val media = mediaList.getOrNull(page) ?: return@HorizontalPager
             when (media.type) {
                 MediaType.IMAGE -> ImageDetailContent(
                     media = media,
