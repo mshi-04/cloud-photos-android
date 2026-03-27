@@ -70,8 +70,7 @@ Allowed here:
 - framework integration details
 
 Rules:
-- Repository implementations delegate to data sources and mapping logic.
-- Business rules should stay in domain unless they are purely framework/data translation concerns.
+- Business rules belong in domain; this layer handles data translation and framework integration.
 - Error mapping belongs here via mapper objects.
 
 ### `feature:<name>:ui`
@@ -138,6 +137,10 @@ Rules:
 - Do not use raw primitives for validated domain concepts when an established value object pattern exists.
 - Follow the existing value object placement under `domain/<feature>/valueobject/`.
 
+### Tests
+- Use JUnit 5, MockK, and `kotlinx-coroutines-test`.
+- Match naming, structure, and assertion style already present in the same module.
+
 ## Android-specific rules
 
 ### Compose
@@ -157,6 +160,11 @@ Rules:
 - Keep Hilt wiring in appropriate DI/bootstrap locations.
 - Prefer feature-local implementation binding patterns that already exist.
 - Avoid placing unrelated bindings into one large catch-all module.
+
+### Logging
+- Do not use `android.util.Log` directly in production code.
+- Temporary debug log statements must not be committed.
+- If a logging abstraction does not exist in this repository, prefer omitting the log over using `android.util.Log` directly.
 
 ### Navigation
 - Keep navigation changes centralized and minimal.
@@ -210,29 +218,32 @@ Rules:
 
 A change is not complete unless all relevant checks pass.
 
-### Preferred CI-aligned verification
+### Verification timing
 
-When appropriate, prefer the repository's existing CI-aligned entrypoints:
+Follow this three-stage approach based on change scope:
 
+**During development** — run the smallest scope covering what you changed:
+- Single module: `./gradlew :feature:<name>:<layer>:test`
+- Quick lint: `./gradlew ktlintCheck`
+
+**Before opening a PR** — run lint and tests for all changed modules:
 ```bash
-bundle exec fastlane lint
-bundle exec fastlane test
-```
-
-### Lint verification
-
-```bash
-./gradlew ktlintCheck   # format check
-./gradlew ktlintFormat  # auto-fix formatting
-./gradlew detekt        # code quality check
-```
-
-### Focused verification
-
-For narrower changes, run the smallest relevant test scope, such as:
-
-```bash
+./gradlew ktlintFormat  # auto-fix formatting first
+./gradlew ktlintCheck detekt
+# single module change:
+./gradlew :feature:<name>:<layer>:test
+# shared (core/*), app wiring, navigation, or Gradle changes:
 ./gradlew test
+```
+
+**Before merging** — CI is the final gate. Do not merge if CI is red.
+CI runs `bundle exec fastlane lint` and `bundle exec fastlane test`.
+
+If tests are not run, explicitly state that they were not run.
+
+### Module test targets
+
+```bash
 ./gradlew :feature:auth:domain:test
 ./gradlew :feature:auth:data:test
 ./gradlew :feature:auth:ui:test
@@ -242,11 +253,6 @@ For narrower changes, run the smallest relevant test scope, such as:
 ./gradlew :feature:settings:domain:test
 ./gradlew :feature:settings:data:test
 ```
-
-Guidance:
-- If changing app wiring, shared modules, Gradle logic, or navigation, prefer broader verification.
-- If changing only one module, prefer that module's targeted test task first.
-- If tests are not run, explicitly state that they were not run.
 
 ## Pull request and branch workflow
 
@@ -276,13 +282,15 @@ When asked to implement something:
 - Hardcoding environment-specific values
 - Swallowing `CancellationException`
 - Returning data-layer models to UI
+- Using `android.util.Log` directly in production code
+- Committing temporary debug log statements
 
 ## Required reporting format for AI-generated changes
 
 When making a code change in this repository, report back with:
 - touched modules
 - architectural reason for file placement
-- summary of behavior change
+- summary of what changed and why
 - tests run
 - tests not run, if any
 - known limitations or follow-up items
