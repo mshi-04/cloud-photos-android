@@ -1,6 +1,5 @@
 package com.appvoyager.cloudphotos.data.auth.datasource
 
-import android.util.Log
 import com.amplifyframework.auth.AuthUserAttributeKey
 import com.amplifyframework.auth.cognito.result.AWSCognitoAuthSignOutResult
 import com.amplifyframework.auth.options.AuthSignUpOptions
@@ -120,7 +119,6 @@ class AuthDataSourceImpl @Inject constructor(private val deviceTokenDataSource: 
         return when (result) {
             is AWSCognitoAuthSignOutResult.CompleteSignOut -> AuthResult.Success(Unit)
             is AWSCognitoAuthSignOutResult.PartialSignOut -> {
-                Log.w(TAG, "Sign-out partially failed; remote sign-out did not complete", result.exception)
                 AuthResult.Success(Unit)
             }
             is AWSCognitoAuthSignOutResult.FailedSignOut ->
@@ -215,10 +213,6 @@ class AuthDataSourceImpl @Inject constructor(private val deviceTokenDataSource: 
         onSuccess = { AuthResult.Success(Unit) },
         onFailure = { AuthResult.Error(AuthErrorMapper.map(it)) }
     )
-
-    companion object {
-        private const val TAG = "AuthDataSourceImpl"
-    }
 
     private suspend fun cleanUpFcmToken() {
         try {
