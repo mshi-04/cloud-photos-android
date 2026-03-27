@@ -140,7 +140,10 @@ class CameraViewModelTest {
 
         // Assert
         val effect = viewModel.effect.first()
-        assertTrue(effect is CameraEffect.OnPhotoCaptured)
+        assertEquals(
+            CameraEffect.OnPhotoCaptured(MediaUrl.of("content://media/external/images/media/123")),
+            effect
+        )
     }
 
     @Test
@@ -190,10 +193,7 @@ class CameraViewModelTest {
         advanceUntilIdle()
 
         val effect = viewModel.effect.first()
-        assertEquals(
-            CameraSnackbarMessage.CaptureFailed,
-            (effect as CameraEffect.ShowSnackbar).message
-        )
+        assertEquals(CameraEffect.ShowSnackbar(CameraSnackbarMessage.CaptureFailed), effect)
     }
 
     @Test
