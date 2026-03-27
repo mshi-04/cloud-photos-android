@@ -1,6 +1,27 @@
 default_platform(:android)
 
 platform :android do
+  # Remove the iOS-specific Xcode command line tools section that fastlane's
+  # built-in README template unconditionally emits. This hook runs after every
+  # lane so that `fastlane/README.md` stays Android-only regardless of when it
+  # was last regenerated.
+  after_all do
+    readme_path = File.join(File.dirname(__FILE__), "README.md")
+    next unless File.exist?(readme_path)
+
+    content = File.read(readme_path)
+    xcode_section = <<~XCODE
+      Make sure you have the latest version of the Xcode command line tools installed:
+
+      ```sh
+      xcode-select --install
+      ```
+
+    XCODE
+    content.gsub!(xcode_section, "")
+    File.write(readme_path, content)
+  end
+
   def env_properties(prefix)
     {
       "#{prefix}_API_BASE_URL" => ENV.fetch("#{prefix}_API_BASE_URL"),

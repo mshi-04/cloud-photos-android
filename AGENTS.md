@@ -8,6 +8,8 @@ Supplementary documents in `docs/`:
 - `docs/architecture-decisions.md` — why the structure is what it is
 - `docs/verification-policy.md` — when and how much to verify
 - `docs/forbidden-patterns.md` — anti-patterns with reasoning
+- `docs/media-upload-flow.md` — upload/delete flow sequence and SyncStatus transitions
+- `docs/error-handling-guide.md` — CancellationException and error mapping patterns
 
 ## Objective
 

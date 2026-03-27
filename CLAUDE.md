@@ -27,6 +27,7 @@ Do not duplicate detailed architectural policy here unless there is a Claude-spe
 - `.agent/skills/android-composable/SKILL.md`
 - `.agent/skills/android-auth-error/SKILL.md`
 - `.agent/skills/android-testing/SKILL.md`
+- `.agent/skills/android-media-upload/SKILL.md`
 
 ## Claude quick-start
 

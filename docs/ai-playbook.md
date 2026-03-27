@@ -66,7 +66,7 @@ Gradle sync is not required after every source-only change.
 
 Report every change with:
 
-```
+```text
 touched modules: <list>
 placement reason: <why each file lives in its layer>
 summary: <what changed and why>
@@ -77,7 +77,17 @@ follow-up items: <known limitations or next steps>
 
 If you did not run tests, say so explicitly.
 
-## 8. Things not to do
+## 8. Supplementary references
+
+Consult these when relevant:
+
+| Document | When to read |
+|---|---|
+| `docs/media-upload-flow.md` | Before changing workers, schedulers, SyncStatus, or upload/delete use cases |
+| `docs/error-handling-guide.md` | Before writing any `catch` block or `runCatching` in this repo |
+| `docs/architecture-decisions.md` | When uncertain why the structure is as it is |
+
+## 9. Things not to do
 
 Avoid these — see `docs/forbidden-patterns.md` for the full list with reasoning:
 
