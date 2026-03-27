@@ -147,7 +147,50 @@ Rules:
 
 ### Tests
 - Use JUnit 5, MockK, and `kotlinx-coroutines-test`.
-- Match naming, structure, and assertion style already present in the same module.
+- Follow Arrange / Act / Assert structure.
+
+#### Test function naming
+
+All test function names must use exactly this format:
+
+```
+`[tested function name] [expected outcome] when [condition]`
+```
+
+- `tested function name`: the exact function, property, or event handler under test — always placed first.
+- `expected outcome`: one observable verb phrase. Allowed verbs: `returns`, `throws`, `sets`, `emits`, `calls`, `rethrows`, `ignores`.
+- `when [condition]`: the scenario or input state — never omit.
+
+This format applies to all layers: value objects, use cases, repositories, mappers, workers, and ViewModels.
+
+#### Examples
+
+```kotlin
+fun `of returns Email when input is valid`()
+fun `of throws when email is blank after trim`()
+fun `invoke returns Success when repository succeeds`()
+fun `invoke returns Error when network is unavailable`()
+fun `onSignIn emits NavigateToHome when credentials are valid`()
+fun `onSignIn sets passwordError when credentials are invalid`()
+```
+
+#### Forbidden naming patterns
+
+- Starting with `test`, `should`, `verify`, or similar prefixes
+- Using `success case`, `failure case`, `happy path`, `error case`, or other categorical labels
+- Omitting `when [condition]`
+- Using `success` or `failure` as the outcome — write `returns Success` / `returns Error` instead
+- Describing multiple behaviors in one function name
+- Using `works`, `handles`, `correctly`, `properly`, or other vague outcome words
+- Using snake_case or camelCase inside backticks
+- Using Japanese characters
+- Using any naming style other than the required format
+
+#### Annotations
+
+Allowed: `@Test`, `@BeforeEach`, `@AfterEach`, `@OptIn(ExperimentalCoroutinesApi::class)`, `@ParameterizedTest` (with `@ValueSource` / `@CsvSource` / `@MethodSource`), `@ExtendWith`.
+
+Forbidden: `@DisplayName` (backtick name is sufficient), `@Disabled` (fix or delete — do not commit disabled tests), `@Nested`, `@Tag`, `@Timeout`, `@RepeatedTest`.
 
 ## Android-specific rules
 
