@@ -281,7 +281,7 @@ Follow this three-stage approach based on change scope:
 
 **Before opening a PR** — run lint and tests for all changed modules:
 ```bash
-./gradlew ktlintFormat  # auto-fix formatting first
+./gradlew ktlintFormat  # local auto-fix (not executed by CI)
 ./gradlew ktlintCheck detekt
 # single module change:
 ./gradlew :feature:<name>:<layer>:test
@@ -335,8 +335,7 @@ When asked to implement something:
 - Hardcoding environment-specific values
 - Swallowing `CancellationException`
 - Returning data-layer models to UI
-- Using `android.util.Log` directly in production code
-- Committing temporary debug log statements
+- Violating the [Logging](#logging) rules
 
 ## Required reporting format for AI-generated changes
 
