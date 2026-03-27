@@ -7,54 +7,52 @@ import com.appvoyager.cloudphotos.domain.media.model.SavePhotoResult
 import com.appvoyager.cloudphotos.domain.media.repository.CapturedPhotoWriter
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaUrl
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Locale
 import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
-class MediaStoreCapturedPhotoWriter @Inject constructor(
-    @param:ApplicationContext private val context: Context
-) : CapturedPhotoWriter {
+class MediaStoreCapturedPhotoWriter @Inject constructor(@param:ApplicationContext private val context: Context) :
+    CapturedPhotoWriter {
 
-    override suspend fun write(jpegData: ByteArray): SavePhotoResult =
-        withContext(Dispatchers.IO) {
-            val contentValues = createContentValues()
-            val uri = context.contentResolver.insert(
-                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                contentValues
-            ) ?: return@withContext SavePhotoResult.Error(SavePhotoResult.ErrorType.SAVE_FAILED)
+    override suspend fun write(jpegData: ByteArray): SavePhotoResult = withContext(Dispatchers.IO) {
+        val contentValues = createContentValues()
+        val uri = context.contentResolver.insert(
+            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+            contentValues
+        ) ?: return@withContext SavePhotoResult.Error(SavePhotoResult.ErrorType.SAVE_FAILED)
 
-            try {
-                context.contentResolver.openOutputStream(uri)?.use { output ->
-                    output.write(jpegData)
-                } ?: throw IOException("Failed to open output stream")
+        try {
+            context.contentResolver.openOutputStream(uri)?.use { output ->
+                output.write(jpegData)
+            } ?: throw IOException("Failed to open output stream")
 
-                val pending = ContentValues().apply {
-                    put(MediaStore.Images.Media.IS_PENDING, 0)
-                }
-                val rowCount = context.contentResolver.update(uri, pending, null, null)
-                if (rowCount > 0) {
-                    SavePhotoResult.Success(MediaUrl.of(uri.toString()))
-                } else {
-                    runCatching { context.contentResolver.delete(uri, null, null) }
-                        .onFailure { if (it is CancellationException) throw it }
-                    SavePhotoResult.Error(SavePhotoResult.ErrorType.SAVE_FAILED)
-                }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
+            val pending = ContentValues().apply {
+                put(MediaStore.Images.Media.IS_PENDING, 0)
+            }
+            val rowCount = context.contentResolver.update(uri, pending, null, null)
+            if (rowCount > 0) {
+                SavePhotoResult.Success(MediaUrl.of(uri.toString()))
+            } else {
                 runCatching { context.contentResolver.delete(uri, null, null) }
                     .onFailure { if (it is CancellationException) throw it }
-                val errorType = if (isStorageFull(e)) {
-                    SavePhotoResult.ErrorType.STORAGE_FULL
-                } else {
-                    SavePhotoResult.ErrorType.SAVE_FAILED
-                }
-                SavePhotoResult.Error(errorType)
+                SavePhotoResult.Error(SavePhotoResult.ErrorType.SAVE_FAILED)
             }
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            runCatching { context.contentResolver.delete(uri, null, null) }
+                .onFailure { if (it is CancellationException) throw it }
+            val errorType = if (isStorageFull(e)) {
+                SavePhotoResult.ErrorType.STORAGE_FULL
+            } else {
+                SavePhotoResult.ErrorType.SAVE_FAILED
+            }
+            SavePhotoResult.Error(errorType)
         }
+    }
 
     private fun isStorageFull(exception: Throwable): Boolean {
         var cause: Throwable? = exception
