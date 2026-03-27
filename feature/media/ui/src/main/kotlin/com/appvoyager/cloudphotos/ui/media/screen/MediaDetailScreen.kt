@@ -51,7 +51,7 @@ import com.appvoyager.cloudphotos.ui.theme.CloudPhotosTheme
 @Composable
 fun MediaDetailScreen(mediaList: List<Media>, initialMediaId: MediaId, onNavigateBack: () -> Unit) {
     val currentOnNavigateBack by rememberUpdatedState(onNavigateBack)
-    val initialIndex = mediaList.indexOfFirst { it.id == initialMediaId }
+    val initialIndex = remember(initialMediaId) { mediaList.indexOfFirst { it.id == initialMediaId } }
     val shouldNavigateBack = mediaList.isEmpty() || initialIndex == -1
 
     LaunchedEffect(shouldNavigateBack) {
@@ -80,6 +80,22 @@ private fun MediaDetailContent(mediaList: List<Media>, initialIndex: Int, onNavi
 
     val safeInitialPage = initialIndex.coerceIn(0, (mediaList.size - 1).coerceAtLeast(0))
     val pagerState = rememberPagerState(initialPage = safeInitialPage) { mediaList.size }
+
+    val currentId = mediaList.getOrNull(pagerState.currentPage)?.id
+    val currentOnNavigateBack by rememberUpdatedState(onNavigateBack)
+
+    LaunchedEffect(mediaList, currentId) {
+        if (currentId == null) {
+            currentOnNavigateBack()
+            return@LaunchedEffect
+        }
+        val newIndex = mediaList.indexOfFirst { it.id == currentId }
+        if (newIndex == -1) {
+            currentOnNavigateBack()
+        } else {
+            pagerState.scrollToPage(newIndex)
+        }
+    }
 
     LaunchedEffect(pagerState.currentPage) {
         isPagerScrollEnabled = true
