@@ -17,7 +17,7 @@ class AuthSignInStepMapperTest {
             AuthSignInStep.CONTINUE_SIGN_IN_WITH_MFA_SELECTION to SignInStep.CONTINUE_SIGN_IN_WITH_MFA_SELECTION,
             AuthSignInStep.CONTINUE_SIGN_IN_WITH_TOTP_SETUP to SignInStep.CONTINUE_SIGN_IN_WITH_TOTP_SETUP,
             AuthSignInStep.CONFIRM_SIGN_IN_WITH_NEW_PASSWORD to SignInStep.CONFIRM_SIGN_IN_WITH_NEW_PASSWORD,
-            AuthSignInStep.DONE to SignInStep.DONE,
+            AuthSignInStep.DONE to SignInStep.DONE
         )
 
         // Act & Assert

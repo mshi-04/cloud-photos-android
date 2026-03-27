@@ -174,7 +174,6 @@ private fun VerificationContent(
 
         Spacer(modifier = Modifier.height(32.dp))
 
-
         CodeInputRow(
             codes = codes,
             isError = codeError != null,
@@ -192,7 +191,6 @@ private fun VerificationContent(
         }
 
         Spacer(modifier = Modifier.height(32.dp))
-
 
         Row(
             modifier = Modifier.fillMaxWidth(),

@@ -45,5 +45,4 @@ class SignOutUseCaseTest {
         assertEquals(expected, actual)
         coVerify(exactly = 1) { repository.signOut() }
     }
-
 }

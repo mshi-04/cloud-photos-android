@@ -7,5 +7,4 @@ interface ContentTypeResolver {
 
     fun resolve(mediaId: MediaId): String?
     fun resolveUri(mediaId: MediaId): MediaUrl?
-
 }

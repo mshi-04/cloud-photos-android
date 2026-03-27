@@ -65,9 +65,7 @@ abstract class UploadRecordModule {
 
     @Binds
     @Singleton
-    abstract fun bindContentTypeResolver(
-        contentTypeResolverImpl: ContentTypeResolverImpl
-    ): ContentTypeResolver
+    abstract fun bindContentTypeResolver(contentTypeResolverImpl: ContentTypeResolverImpl): ContentTypeResolver
 
     @Binds
     @Singleton
@@ -78,18 +76,16 @@ abstract class UploadRecordModule {
     companion object {
         @Provides
         @Singleton
-        fun provideUploadNotificationHelper(
-            @ApplicationContext context: Context
-        ): UploadNotificationHelper = UploadNotificationHelper(
-            context = context,
-            channelName = context.getString(R.string.notification_channel_upload),
-            uploadingMessage = { count ->
-                context.getString(
-                    R.string.notification_uploading,
-                    count
-                )
-            }
-        )
+        fun provideUploadNotificationHelper(@ApplicationContext context: Context): UploadNotificationHelper =
+            UploadNotificationHelper(
+                context = context,
+                channelName = context.getString(R.string.notification_channel_upload),
+                uploadingMessage = { count ->
+                    context.getString(
+                        R.string.notification_uploading,
+                        count
+                    )
+                }
+            )
     }
-
 }

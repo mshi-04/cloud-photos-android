@@ -14,27 +14,20 @@ import com.appvoyager.cloudphotos.domain.auth.request.SignInRequest
 import com.appvoyager.cloudphotos.domain.auth.request.SignUpRequest
 import javax.inject.Inject
 
-class AuthRepositoryImpl @Inject constructor(
-    private val dataSource: AuthDataSource
-) : AuthRepository {
+class AuthRepositoryImpl @Inject constructor(private val dataSource: AuthDataSource) : AuthRepository {
 
-    override suspend fun signUp(request: SignUpRequest): AuthResult<Unit> =
-        dataSource.signUp(request)
+    override suspend fun signUp(request: SignUpRequest): AuthResult<Unit> = dataSource.signUp(request)
 
     override suspend fun confirmSignUp(request: ConfirmSignUpRequest): AuthResult<Unit> =
         dataSource.confirmSignUp(request)
 
-    override suspend fun signIn(request: SignInRequest): AuthResult<SignInState> =
-        dataSource.signIn(request)
+    override suspend fun signIn(request: SignInRequest): AuthResult<SignInState> = dataSource.signIn(request)
 
-    override suspend fun signOut(): AuthResult<Unit> =
-        dataSource.signOut()
+    override suspend fun signOut(): AuthResult<Unit> = dataSource.signOut()
 
-    override suspend fun fetchCurrentUser(): AuthResult<AuthUser> =
-        dataSource.fetchCurrentUser()
+    override suspend fun fetchCurrentUser(): AuthResult<AuthUser> = dataSource.fetchCurrentUser()
 
-    override suspend fun getSession(): AuthResult<AuthSession> =
-        dataSource.getSession()
+    override suspend fun getSession(): AuthResult<AuthSession> = dataSource.getSession()
 
     override suspend fun resendSignUpCode(request: ResendSignUpCodeRequest): AuthResult<Unit> =
         dataSource.resendSignUpCode(request)
@@ -44,5 +37,4 @@ class AuthRepositoryImpl @Inject constructor(
 
     override suspend fun confirmResetPassword(request: ConfirmResetPasswordRequest): AuthResult<Unit> =
         dataSource.confirmResetPassword(request)
-
 }

@@ -17,16 +17,13 @@ object DatabaseModule {
 
     @Provides
     @Singleton
-    fun provideDatabase(@ApplicationContext context: Context): CloudPhotosDatabase =
-        Room.databaseBuilder(
-            context,
-            CloudPhotosDatabase::class.java,
-            "cloud_photos.db"
-        ).build()
+    fun provideDatabase(@ApplicationContext context: Context): CloudPhotosDatabase = Room.databaseBuilder(
+        context,
+        CloudPhotosDatabase::class.java,
+        "cloud_photos.db"
+    ).build()
 
     @Provides
     @Singleton
-    fun provideUploadRecordDao(database: CloudPhotosDatabase): UploadRecordDao =
-        database.uploadRecordDao()
-
+    fun provideUploadRecordDao(database: CloudPhotosDatabase): UploadRecordDao = database.uploadRecordDao()
 }

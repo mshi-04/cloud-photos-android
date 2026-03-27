@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.hilt)
     alias(libs.plugins.google.services)
     alias(libs.plugins.ksp)
+    id("cloudphotos.lint")
 }
 
 android {
@@ -134,14 +135,9 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
-
 }
 
-enum class BuildFlavor(
-    val flavorName: String,
-    val propertyPrefix: String,
-    val appIdSuffix: String? = null
-) {
+enum class BuildFlavor(val flavorName: String, val propertyPrefix: String, val appIdSuffix: String? = null) {
     DEV("dev", "DEV", ".dev"),
     PROD("prod", "PROD", null)
 }
@@ -152,8 +148,8 @@ private fun requireEnvProperty(flavor: BuildFlavor, baseName: String): String {
 
     if (value != null) return value
 
-    val isCodeQlAnalysis = System.getenv("CODEQL_ACTION_VERSION") != null
-            || System.getenv("CODEQL_DIST") != null
+    val isCodeQlAnalysis = System.getenv("CODEQL_ACTION_VERSION") != null ||
+        System.getenv("CODEQL_DIST") != null
     if (isCodeQlAnalysis) return ""
 
     if (!isFlavorValidationRequired(flavor)) return ""

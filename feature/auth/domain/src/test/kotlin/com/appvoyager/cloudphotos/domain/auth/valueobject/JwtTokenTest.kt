@@ -29,5 +29,4 @@ class JwtTokenTest {
         }
         assertEquals("Token must not be blank.", ex.message)
     }
-
 }

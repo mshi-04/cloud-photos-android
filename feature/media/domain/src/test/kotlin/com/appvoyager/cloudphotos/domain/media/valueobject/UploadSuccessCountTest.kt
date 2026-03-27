@@ -39,5 +39,4 @@ class UploadSuccessCountTest {
         // Assert
         assertEquals("UploadSuccessCount must be positive.", exception.message)
     }
-
 }

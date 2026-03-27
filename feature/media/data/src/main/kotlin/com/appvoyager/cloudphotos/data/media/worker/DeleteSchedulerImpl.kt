@@ -10,9 +10,8 @@ import com.appvoyager.cloudphotos.domain.media.repository.DeleteScheduler
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 
-class DeleteSchedulerImpl @Inject constructor(
-    @param:ApplicationContext private val context: Context
-) : DeleteScheduler {
+class DeleteSchedulerImpl @Inject constructor(@param:ApplicationContext private val context: Context) :
+    DeleteScheduler {
 
     override fun scheduleDelete() {
         val request = OneTimeWorkRequestBuilder<DeleteMediaWorker>()
@@ -29,5 +28,4 @@ class DeleteSchedulerImpl @Inject constructor(
                 request
             )
     }
-
 }

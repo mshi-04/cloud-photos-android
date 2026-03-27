@@ -8,6 +8,8 @@ import com.appvoyager.cloudphotos.ui.media.effect.CameraEffect
 import com.appvoyager.cloudphotos.ui.media.effect.CameraSnackbarMessage
 import com.appvoyager.cloudphotos.ui.media.uistate.CameraUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,8 +18,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
-import kotlin.coroutines.cancellation.CancellationException
 
 @HiltViewModel
 class CameraViewModel @Inject constructor(
@@ -91,5 +91,4 @@ class CameraViewModel @Inject constructor(
             _effect.send(CameraEffect.ShowSnackbar(CameraSnackbarMessage.CaptureFailed))
         }
     }
-
 }

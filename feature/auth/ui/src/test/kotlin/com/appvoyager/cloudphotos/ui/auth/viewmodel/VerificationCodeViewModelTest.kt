@@ -33,9 +33,7 @@ class VerificationCodeViewModelTest {
 
     private lateinit var viewModel: VerificationCodeViewModel
 
-    private fun createViewModel(
-        email: String = "test@example.com"
-    ): VerificationCodeViewModel {
+    private fun createViewModel(email: String = "test@example.com"): VerificationCodeViewModel {
         val savedStateHandle = SavedStateHandle(
             mapOf("email" to email)
         )
@@ -130,25 +128,24 @@ class VerificationCodeViewModelTest {
     }
 
     @Test
-    fun `onVerify with CodeExpired sets codeError with resend prompt`() =
-        runTest(testDispatcher) {
-            // Arrange
-            coEvery { confirmSignUpUseCase(any()) } returns AuthResult.Error(
-                AuthError.CodeExpired("expired")
-            )
+    fun `onVerify with CodeExpired sets codeError with resend prompt`() = runTest(testDispatcher) {
+        // Arrange
+        coEvery { confirmSignUpUseCase(any()) } returns AuthResult.Error(
+            AuthError.CodeExpired("expired")
+        )
 
-            fillCode("12345")
+        fillCode("12345")
 
-            // Act
-            viewModel.onCodeChanged(5, "6")
-            advanceUntilIdle()
+        // Act
+        viewModel.onCodeChanged(5, "6")
+        advanceUntilIdle()
 
-            // Assert
-            Assertions.assertEquals(
-                AuthFieldError.CodeExpired,
-                viewModel.uiState.value.codeError
-            )
-        }
+        // Assert
+        Assertions.assertEquals(
+            AuthFieldError.CodeExpired,
+            viewModel.uiState.value.codeError
+        )
+    }
 
     @Test
     fun `onVerify with Network error emits ShowSnackbar`() = runTest(testDispatcher) {

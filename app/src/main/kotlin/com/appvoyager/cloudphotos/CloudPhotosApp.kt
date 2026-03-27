@@ -17,7 +17,9 @@ import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 
 @HiltAndroidApp
-class CloudPhotosApp : Application(), Configuration.Provider {
+class CloudPhotosApp :
+    Application(),
+    Configuration.Provider {
 
     @Inject
     lateinit var workerFactory: HiltWorkerFactory
@@ -62,4 +64,21 @@ class CloudPhotosApp : Application(), Configuration.Provider {
         manager.createNotificationChannel(channel)
     }
 
+    internal fun registerFcmToken() {
+        FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+            if (!task.isSuccessful) {
+                return@addOnCompleteListener
+            }
+            val rawToken = task.result
+            if (rawToken.isNullOrBlank()) {
+                return@addOnCompleteListener
+            }
+            val deviceToken = try {
+                DeviceToken.of(rawToken)
+            } catch (_: IllegalArgumentException) {
+                return@addOnCompleteListener
+            }
+            RegisterDeviceTokenWorker.enqueue(this, deviceToken)
+        }
+    }
 }

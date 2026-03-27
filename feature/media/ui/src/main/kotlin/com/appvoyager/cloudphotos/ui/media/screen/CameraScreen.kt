@@ -79,10 +79,7 @@ import com.appvoyager.cloudphotos.ui.media.viewmodel.CameraViewModel
 import kotlinx.coroutines.launch
 
 @Composable
-fun CameraScreen(
-    viewModel: CameraViewModel = hiltViewModel(),
-    onNavigateBack: () -> Unit
-) {
+fun CameraScreen(viewModel: CameraViewModel = hiltViewModel(), onNavigateBack: () -> Unit) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
@@ -165,7 +162,6 @@ fun CameraScreen(
         ) {
             when (val state = uiState) {
                 is CameraUiState.CheckingPermission -> {
-
                 }
 
                 is CameraUiState.PermissionRequired -> {
@@ -342,11 +338,7 @@ private fun PermissionRequiredContent(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun ErrorContent(
-    errorType: CameraUiState.ErrorType,
-    onRetry: () -> Unit,
-    modifier: Modifier = Modifier
-) {
+private fun ErrorContent(errorType: CameraUiState.ErrorType, onRetry: () -> Unit, modifier: Modifier = Modifier) {
     val message = when (errorType) {
         CameraUiState.ErrorType.CAMERA_UNAVAILABLE -> stringResource(R.string.camera_error_camera_unavailable)
         CameraUiState.ErrorType.CAPTURE_FAILED -> stringResource(R.string.camera_error_capture_failed)

@@ -49,12 +49,9 @@ object AuthRoute {
     fun login(message: AuthSnackbarMessage? = null): String =
         if (message != null) "login?message=${message.key}" else LOGIN
 
-    fun verification(email: Email): String =
-        URI_VERIFICATION.replace("{email}", Uri.encode(email.value))
+    fun verification(email: Email): String = URI_VERIFICATION.replace("{email}", Uri.encode(email.value))
 
-    fun resetPassword(email: Email): String =
-        URI_RESET_PASSWORD.replace("{email}", Uri.encode(email.value))
-
+    fun resetPassword(email: Email): String = URI_RESET_PASSWORD.replace("{email}", Uri.encode(email.value))
 }
 
 @Composable
@@ -72,11 +69,13 @@ fun NavGraph(
     ) {
         composable(
             route = AuthRoute.URI_LOGIN,
-            arguments = listOf(navArgument("message") {
-                type = NavType.StringType
-                nullable = true
-                defaultValue = null
-            }),
+            arguments = listOf(
+                navArgument("message") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            ),
             enterTransition = { enterForward() },
             exitTransition = { exitForward() },
             popEnterTransition = { enterBack() },
@@ -220,26 +219,22 @@ fun NavGraph(
     }
 }
 
-private fun AnimatedContentTransitionScope<*>.enterForward() =
-    slideIntoContainer(
-        towards = AnimatedContentTransitionScope.SlideDirection.Left,
-        animationSpec = tween(TRANSITION_DURATION_MS)
-    )
+private fun AnimatedContentTransitionScope<*>.enterForward() = slideIntoContainer(
+    towards = AnimatedContentTransitionScope.SlideDirection.Left,
+    animationSpec = tween(TRANSITION_DURATION_MS)
+)
 
-private fun AnimatedContentTransitionScope<*>.exitForward() =
-    slideOutOfContainer(
-        towards = AnimatedContentTransitionScope.SlideDirection.Left,
-        animationSpec = tween(TRANSITION_DURATION_MS)
-    )
+private fun AnimatedContentTransitionScope<*>.exitForward() = slideOutOfContainer(
+    towards = AnimatedContentTransitionScope.SlideDirection.Left,
+    animationSpec = tween(TRANSITION_DURATION_MS)
+)
 
-private fun AnimatedContentTransitionScope<*>.enterBack() =
-    slideIntoContainer(
-        towards = AnimatedContentTransitionScope.SlideDirection.Right,
-        animationSpec = tween(TRANSITION_DURATION_MS)
-    )
+private fun AnimatedContentTransitionScope<*>.enterBack() = slideIntoContainer(
+    towards = AnimatedContentTransitionScope.SlideDirection.Right,
+    animationSpec = tween(TRANSITION_DURATION_MS)
+)
 
-private fun AnimatedContentTransitionScope<*>.exitBack() =
-    slideOutOfContainer(
-        towards = AnimatedContentTransitionScope.SlideDirection.Right,
-        animationSpec = tween(TRANSITION_DURATION_MS)
-    )
+private fun AnimatedContentTransitionScope<*>.exitBack() = slideOutOfContainer(
+    towards = AnimatedContentTransitionScope.SlideDirection.Right,
+    animationSpec = tween(TRANSITION_DURATION_MS)
+)

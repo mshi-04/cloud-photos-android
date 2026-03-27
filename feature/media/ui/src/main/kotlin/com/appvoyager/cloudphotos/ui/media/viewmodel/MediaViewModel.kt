@@ -14,6 +14,8 @@ import com.appvoyager.cloudphotos.ui.media.effect.MediaEffect
 import com.appvoyager.cloudphotos.ui.media.effect.MediaSnackbarMessage
 import com.appvoyager.cloudphotos.ui.media.uistate.MediaUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.Channel
@@ -25,8 +27,6 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
-import kotlin.coroutines.cancellation.CancellationException
 
 @HiltViewModel
 class MediaViewModel @Inject constructor(
@@ -109,14 +109,11 @@ class MediaViewModel @Inject constructor(
         }
     }
 
-    fun onShowSettingsDialog() =
-        _uiState.update { it.copy(isSettingsDialogVisible = true) }
+    fun onShowSettingsDialog() = _uiState.update { it.copy(isSettingsDialogVisible = true) }
 
-    fun onDismissSettingsDialog() =
-        _uiState.update { it.copy(isSettingsDialogVisible = false) }
+    fun onDismissSettingsDialog() = _uiState.update { it.copy(isSettingsDialogVisible = false) }
 
-    fun onPermissionDenied() =
-        _uiState.update { it.copy(screenState = MediaUiState.ScreenState.PermissionRequired) }
+    fun onPermissionDenied() = _uiState.update { it.copy(screenState = MediaUiState.ScreenState.PermissionRequired) }
 
     private suspend fun syncRemote() {
         runCatching { syncUploadRecordsUseCase() }
@@ -139,5 +136,4 @@ class MediaViewModel @Inject constructor(
     companion object {
         internal const val MIN_RESUME_INTERVAL_MS = 3_000L
     }
-
 }

@@ -5,8 +5,8 @@ import com.amplifyframework.api.rest.RestOptions
 import com.amplifyframework.api.rest.RestResponse
 import com.amplifyframework.core.Consumer
 import com.amplifyframework.core.async.Cancelable
-import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resumeWithException
+import kotlinx.coroutines.suspendCancellableCoroutine
 
 suspend fun awaitAmplifyRestCall(
     options: RestOptions,

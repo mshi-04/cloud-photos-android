@@ -14,5 +14,4 @@ interface RemoteUploadRecordsRepository {
     suspend fun deleteUploadRecord(mediaId: MediaId)
 
     suspend fun completeUpload(successCount: UploadSuccessCount)
-
 }

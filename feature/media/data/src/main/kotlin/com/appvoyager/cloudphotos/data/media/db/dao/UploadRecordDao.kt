@@ -30,5 +30,4 @@ interface UploadRecordDao {
 
     @Upsert
     suspend fun upsertAll(records: List<UploadRecordEntity>)
-
 }

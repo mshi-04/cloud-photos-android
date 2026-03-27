@@ -61,7 +61,7 @@ fun CodeInputBox(
                     .border(
                         width = if (value.isNotEmpty() || isError) 2.dp else 1.dp,
                         color = borderColor,
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RoundedCornerShape(8.dp)
                     )
                     .background(
                         color = MaterialTheme.colorScheme.surface,

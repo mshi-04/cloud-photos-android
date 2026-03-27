@@ -17,25 +17,17 @@ fun validEmail(raw: String = "user@example.com"): Email = Email.of(raw)
 fun validPassword(raw: String = "password1"): Password = Password.of(raw)
 fun validCode(raw: String = "123456"): ConfirmationCode = ConfirmationCode.of(raw)
 
-fun signInRequest(
-    email: Email = validEmail(),
-    password: Password = validPassword()
-): SignInRequest = SignInRequest(email = email, password = password)
+fun signInRequest(email: Email = validEmail(), password: Password = validPassword()): SignInRequest =
+    SignInRequest(email = email, password = password)
 
-fun signUpRequest(
-    email: Email = validEmail(),
-    password: Password = validPassword()
-): SignUpRequest = SignUpRequest(email = email, password = password)
+fun signUpRequest(email: Email = validEmail(), password: Password = validPassword()): SignUpRequest =
+    SignUpRequest(email = email, password = password)
 
-fun confirmSignUpRequest(
-    email: Email = validEmail(),
-    code: ConfirmationCode = validCode()
-): ConfirmSignUpRequest = ConfirmSignUpRequest(email = email, code = code)
+fun confirmSignUpRequest(email: Email = validEmail(), code: ConfirmationCode = validCode()): ConfirmSignUpRequest =
+    ConfirmSignUpRequest(email = email, code = code)
 
-fun authUser(
-    userId: UserId = UserId.of("user-1"),
-    email: Email? = validEmail()
-): AuthUser = AuthUser(userId = userId, email = email)
+fun authUser(userId: UserId = UserId.of("user-1"), email: Email? = validEmail()): AuthUser =
+    AuthUser(userId = userId, email = email)
 
 fun signedInSession(): AuthSession = AuthSession(state = AuthState.SignedIn)
 fun guestSession(): AuthSession = AuthSession(state = AuthState.Guest)
