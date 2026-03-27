@@ -34,15 +34,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import com.appvoyager.cloudphotos.core.ui.R
 import com.appvoyager.cloudphotos.domain.media.model.Media
 import com.appvoyager.cloudphotos.domain.media.model.MediaType
+import com.appvoyager.cloudphotos.domain.media.valueobject.MediaCreatedAt
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaId
+import com.appvoyager.cloudphotos.domain.media.valueobject.MediaUrl
 import com.appvoyager.cloudphotos.ui.media.component.ImageDetailContent
 import com.appvoyager.cloudphotos.ui.media.component.VideoDetailContent
+import com.appvoyager.cloudphotos.ui.theme.CloudPhotosTheme
 
 @Composable
 fun MediaDetailScreen(mediaList: List<Media>, initialMediaId: MediaId, onNavigateBack: () -> Unit) {
@@ -160,6 +164,69 @@ private fun MediaDetailContent(mediaList: List<Media>, initialIndex: Int, onNavi
                 )
             )
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun MediaDetailContentPreview() {
+    CloudPhotosTheme {
+        MediaDetailContent(
+            mediaList = listOf(
+                Media(
+                    id = MediaId.of("1"),
+                    url = MediaUrl.of("content://media/external/images/1"),
+                    type = MediaType.IMAGE,
+                    createdAt = MediaCreatedAt.of(1700000000L)
+                )
+            ),
+            initialIndex = 0,
+            onNavigateBack = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun MediaDetailContentLoadingPreview() {
+    CloudPhotosTheme {
+        MediaDetailContent(
+            mediaList = listOf(
+                Media(
+                    id = MediaId.of("2"),
+                    url = MediaUrl.of("content://media/external/video/2"),
+                    type = MediaType.VIDEO,
+                    createdAt = MediaCreatedAt.of(1700000001L)
+                )
+            ),
+            initialIndex = 0,
+            onNavigateBack = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun MediaDetailContentErrorPreview() {
+    CloudPhotosTheme {
+        MediaDetailContent(
+            mediaList = listOf(
+                Media(
+                    id = MediaId.of("3"),
+                    url = MediaUrl.of("content://media/external/images/3"),
+                    type = MediaType.IMAGE,
+                    createdAt = MediaCreatedAt.of(1700000002L)
+                ),
+                Media(
+                    id = MediaId.of("4"),
+                    url = MediaUrl.of("content://media/external/video/4"),
+                    type = MediaType.VIDEO,
+                    createdAt = MediaCreatedAt.of(1700000003L)
+                )
+            ),
+            initialIndex = 0,
+            onNavigateBack = {}
+        )
     }
 }
 

@@ -135,13 +135,17 @@ class CameraPreviewManager(
             imageCapture.takePicture(
                 ContextCompat.getMainExecutor(context),
                 object : ImageCapture.OnImageCapturedCallback() {
-                    @Suppress("ThrowsCount")
                     override fun onCaptureSuccess(image: ImageProxy) {
-                        val buffer = image.planes[0].buffer
-                        val bytes = ByteArray(buffer.remaining())
-                        buffer.get(bytes)
-                        image.close()
-                        continuation.resume(bytes)
+                        try {
+                            val buffer = image.planes[0].buffer
+                            val bytes = ByteArray(buffer.remaining())
+                            buffer.get(bytes)
+                            continuation.resume(bytes)
+                        } catch (e: Exception) {
+                            continuation.resumeWithException(e)
+                        } finally {
+                            image.close()
+                        }
                     }
 
                     override fun onError(exception: ImageCaptureException) {
