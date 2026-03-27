@@ -81,15 +81,16 @@ private fun MediaDetailContent(mediaList: List<Media>, initialIndex: Int, onNavi
     val safeInitialPage = initialIndex.coerceIn(0, (mediaList.size - 1).coerceAtLeast(0))
     val pagerState = rememberPagerState(initialPage = safeInitialPage) { mediaList.size }
 
-    val currentId = mediaList.getOrNull(pagerState.currentPage)?.id
+    var currentDisplayedId by remember { mutableStateOf(mediaList.getOrNull(safeInitialPage)?.id) }
     val currentOnNavigateBack by rememberUpdatedState(onNavigateBack)
 
-    LaunchedEffect(mediaList, currentId) {
-        if (currentId == null) {
+    LaunchedEffect(mediaList) {
+        val id = currentDisplayedId
+        if (id == null) {
             currentOnNavigateBack()
             return@LaunchedEffect
         }
-        val newIndex = mediaList.indexOfFirst { it.id == currentId }
+        val newIndex = mediaList.indexOfFirst { it.id == id }
         if (newIndex == -1) {
             currentOnNavigateBack()
         } else if (newIndex != pagerState.currentPage) {
@@ -99,6 +100,7 @@ private fun MediaDetailContent(mediaList: List<Media>, initialIndex: Int, onNavi
 
     LaunchedEffect(pagerState.currentPage) {
         isPagerScrollEnabled = true
+        currentDisplayedId = mediaList.getOrNull(pagerState.currentPage)?.id
     }
 
     val view = LocalView.current
