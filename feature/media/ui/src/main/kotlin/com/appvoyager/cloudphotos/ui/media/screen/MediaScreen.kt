@@ -101,11 +101,7 @@ private fun MediaSnackbarMessage.toMessage(context: android.content.Context): St
 }
 
 @Composable
-fun MediaScreen(
-    viewModel: MediaViewModel = hiltViewModel(),
-    onNavigateToCamera: () -> Unit,
-    onSignOut: () -> Unit
-) {
+fun MediaScreen(viewModel: MediaViewModel = hiltViewModel(), onNavigateToCamera: () -> Unit, onSignOut: () -> Unit) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
@@ -132,8 +128,8 @@ fun MediaScreen(
     LifecycleResumeEffect(Unit) {
         permissionCheckKey++
         viewModel.onScreenResumed()
-        if (!notificationPermissionRequested
-            && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+        if (!notificationPermissionRequested &&
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
         ) {
             notificationPermissionRequested = true
             notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -272,7 +268,10 @@ private fun rememberScrollButtonVisibility(gridState: LazyGridState): State<Bool
             gridState.firstVisibleItemIndex to gridState.firstVisibleItemScrollOffset
         }.collect { (currentIndex, currentOffset) ->
             val isScrollingUp = currentIndex < previousFirstVisibleItemIndex ||
-                    (currentIndex == previousFirstVisibleItemIndex && currentOffset < previousFirstVisibleItemScrollOffset)
+                (
+                    currentIndex == previousFirstVisibleItemIndex &&
+                        currentOffset < previousFirstVisibleItemScrollOffset
+                    )
             val isAtTop = currentIndex == 0 && currentOffset == 0
 
             previousFirstVisibleItemIndex = currentIndex
@@ -466,11 +465,7 @@ private fun ErrorContent(onRetry: () -> Unit) {
 }
 
 @Composable
-private fun RequestMediaPermissions(
-    key: Int,
-    onGranted: () -> Unit,
-    onDenied: () -> Unit
-) {
+private fun RequestMediaPermissions(key: Int, onGranted: () -> Unit, onDenied: () -> Unit) {
     val context = LocalContext.current
     val latestOnGranted = rememberUpdatedState(onGranted)
     val latestOnDenied = rememberUpdatedState(onDenied)

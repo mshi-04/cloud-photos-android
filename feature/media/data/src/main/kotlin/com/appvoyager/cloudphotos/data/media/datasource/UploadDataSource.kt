@@ -8,5 +8,4 @@ interface UploadDataSource {
 
     suspend fun uploadMedia(request: UploadMediaRequest): UploadResult<CloudStoragePath>
     suspend fun deleteUploadedObject(cloudStoragePath: CloudStoragePath)
-
 }

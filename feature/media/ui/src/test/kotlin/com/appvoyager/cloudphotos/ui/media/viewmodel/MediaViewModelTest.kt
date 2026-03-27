@@ -65,16 +65,14 @@ class MediaViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun createViewModel(): MediaViewModel {
-        return MediaViewModel(
-            getMediaListUseCase = getMediaListUseCase,
-            getGridColumnCountUseCase = getGridColumnCountUseCase,
-            setGridColumnCountUseCase = setGridColumnCountUseCase,
-            syncUploadRecordsUseCase = syncUploadRecordsUseCase,
-            prepareUploadQueueUseCase = prepareUploadQueueUseCase,
-            scheduleDeleteUseCase = scheduleDeleteUseCase
-        )
-    }
+    private fun createViewModel(): MediaViewModel = MediaViewModel(
+        getMediaListUseCase = getMediaListUseCase,
+        getGridColumnCountUseCase = getGridColumnCountUseCase,
+        setGridColumnCountUseCase = setGridColumnCountUseCase,
+        syncUploadRecordsUseCase = syncUploadRecordsUseCase,
+        prepareUploadQueueUseCase = prepareUploadQueueUseCase,
+        scheduleDeleteUseCase = scheduleDeleteUseCase
+    )
 
     @Test
     fun `initial state has default values`() = runTest {
@@ -433,5 +431,4 @@ class MediaViewModelTest {
         val effect = viewModel.effect.first()
         assertEquals(MediaSnackbarMessage.Unknown, (effect as MediaEffect.ShowSnackbar).message)
     }
-
 }

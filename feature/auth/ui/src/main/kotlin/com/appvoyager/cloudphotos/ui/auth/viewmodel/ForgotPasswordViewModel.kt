@@ -12,6 +12,7 @@ import com.appvoyager.cloudphotos.ui.auth.effect.ForgotPasswordEffect
 import com.appvoyager.cloudphotos.ui.auth.uistate.AuthFieldError
 import com.appvoyager.cloudphotos.ui.auth.uistate.ForgotPasswordUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -20,12 +21,10 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 @HiltViewModel
-class ForgotPasswordViewModel @Inject constructor(
-    private val resetPasswordUseCase: ResetPasswordUseCase
-) : ViewModel() {
+class ForgotPasswordViewModel @Inject constructor(private val resetPasswordUseCase: ResetPasswordUseCase) :
+    ViewModel() {
 
     private val _uiState = MutableStateFlow(ForgotPasswordUiState())
     val uiState: StateFlow<ForgotPasswordUiState> = _uiState.asStateFlow()
@@ -33,11 +32,9 @@ class ForgotPasswordViewModel @Inject constructor(
     private val _effect = MutableSharedFlow<ForgotPasswordEffect>(extraBufferCapacity = 1)
     val effect: SharedFlow<ForgotPasswordEffect> = _effect.asSharedFlow()
 
-    fun onEmailChanged(value: String) =
-        _uiState.update { it.copy(email = value, emailError = null) }
+    fun onEmailChanged(value: String) = _uiState.update { it.copy(email = value, emailError = null) }
 
-    fun onClearEmail() =
-        _uiState.update { it.copy(email = "", emailError = null) }
+    fun onClearEmail() = _uiState.update { it.copy(email = "", emailError = null) }
 
     fun onSubmit() {
         if (_uiState.value.isLoading || !validateForm()) return
@@ -103,5 +100,4 @@ class ForgotPasswordViewModel @Inject constructor(
             _effect.emit(ForgotPasswordEffect.ShowSnackbar(AuthSnackbarMessage.Unknown))
         }
     }
-
 }

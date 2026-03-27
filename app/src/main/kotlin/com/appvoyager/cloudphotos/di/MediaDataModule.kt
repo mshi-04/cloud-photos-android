@@ -16,14 +16,9 @@ abstract class MediaDataModule {
 
     @Binds
     @Singleton
-    abstract fun bindMediaRepository(
-        impl: LocalMediaRepositoryImpl
-    ): LocalMediaRepository
+    abstract fun bindMediaRepository(impl: LocalMediaRepositoryImpl): LocalMediaRepository
 
     @Binds
     @Singleton
-    abstract fun bindLocalMediaDataSource(
-        impl: LocalMediaDataSourceImpl
-    ): LocalMediaDataSource
-
+    abstract fun bindLocalMediaDataSource(impl: LocalMediaDataSourceImpl): LocalMediaDataSource
 }

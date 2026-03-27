@@ -15,5 +15,4 @@ abstract class UploadDataSourceModule {
     @Binds
     @Singleton
     abstract fun bindUploadDataSource(uploadDataSourceImpl: UploadDataSourceImpl): UploadDataSource
-
 }

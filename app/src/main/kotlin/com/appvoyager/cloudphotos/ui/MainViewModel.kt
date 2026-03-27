@@ -9,12 +9,12 @@ import com.appvoyager.cloudphotos.domain.auth.model.AuthResult
 import com.appvoyager.cloudphotos.domain.auth.usecase.GetSessionUseCase
 import com.appvoyager.cloudphotos.domain.auth.usecase.SignOutUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
-import javax.inject.Inject
-import kotlin.coroutines.cancellation.CancellationException
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
@@ -84,5 +84,4 @@ class MainViewModel @Inject constructor(
             }
         }
     }
-
 }

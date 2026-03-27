@@ -18,6 +18,7 @@ import com.appvoyager.cloudphotos.ui.auth.uistate.AuthFieldError
 import com.appvoyager.cloudphotos.ui.auth.uistate.ResetPasswordUiState
 import com.appvoyager.cloudphotos.ui.util.ResendTimer
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -26,7 +27,6 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 @HiltViewModel
 class ResetPasswordViewModel @Inject constructor(
@@ -79,11 +79,9 @@ class ResetPasswordViewModel @Inject constructor(
         _uiState.update { it.copy(codes = currentCodes) }
     }
 
-    fun onNewPasswordChanged(value: String) =
-        _uiState.update { it.copy(newPassword = value, passwordError = null) }
+    fun onNewPasswordChanged(value: String) = _uiState.update { it.copy(newPassword = value, passwordError = null) }
 
-    fun onToggleNewPasswordVisibility() =
-        _uiState.update { it.copy(isNewPasswordVisible = !it.isNewPasswordVisible) }
+    fun onToggleNewPasswordVisibility() = _uiState.update { it.copy(isNewPasswordVisible = !it.isNewPasswordVisible) }
 
     fun onConfirm() {
         if (_uiState.value.isLoading || !validateForm()) return
@@ -201,5 +199,4 @@ class ResetPasswordViewModel @Inject constructor(
         private const val ARG_EMAIL = "email"
         private const val MIN_PASSWORD_LENGTH = 8
     }
-
 }

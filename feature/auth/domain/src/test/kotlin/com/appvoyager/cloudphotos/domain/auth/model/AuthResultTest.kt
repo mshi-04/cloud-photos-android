@@ -104,5 +104,4 @@ class AuthResultTest {
         // Assert
         assertNull(actual)
     }
-
 }

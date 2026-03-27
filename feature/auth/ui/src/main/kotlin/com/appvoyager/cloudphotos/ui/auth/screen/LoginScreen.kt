@@ -132,7 +132,6 @@ fun LoginScreen(
                 onForgotPassword = { viewModel.onForgotPassword() }
             )
 
-
             if (uiState.isLoading) {
                 LoadingOverlay()
             }
@@ -201,7 +200,6 @@ private fun LoginContent(
     ) {
         Spacer(modifier = Modifier.height(80.dp))
 
-
         OutlinedTextField(
             value = email,
             onValueChange = onEmailChanged,
@@ -227,7 +225,6 @@ private fun LoginContent(
         )
 
         Spacer(modifier = Modifier.height(16.dp))
-
 
         OutlinedTextField(
             value = password,
@@ -275,7 +272,6 @@ private fun LoginContent(
 
         Spacer(modifier = Modifier.height(4.dp))
 
-
         TextButton(
             onClick = onForgotPassword
         ) {
@@ -287,7 +283,6 @@ private fun LoginContent(
         }
 
         Spacer(modifier = Modifier.height(24.dp))
-
 
         Row(
             modifier = Modifier.fillMaxWidth(),

@@ -57,5 +57,4 @@ class UserIdTest {
         // Assert
         assertEquals("UserId must not be blank.", ex.message)
     }
-
 }

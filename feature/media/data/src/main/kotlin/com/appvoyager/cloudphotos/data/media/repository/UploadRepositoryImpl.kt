@@ -7,11 +7,8 @@ import com.appvoyager.cloudphotos.domain.media.request.UploadMediaRequest
 import com.appvoyager.cloudphotos.domain.media.valueobject.CloudStoragePath
 import javax.inject.Inject
 
-class UploadRepositoryImpl @Inject constructor(
-    private val dataSource: UploadDataSource
-) : UploadRepository {
+class UploadRepositoryImpl @Inject constructor(private val dataSource: UploadDataSource) : UploadRepository {
 
     override suspend fun uploadMedia(request: UploadMediaRequest): UploadResult<CloudStoragePath> =
         dataSource.uploadMedia(request)
-
 }

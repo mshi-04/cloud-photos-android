@@ -212,10 +212,19 @@ A change is not complete unless all relevant checks pass.
 
 ### Preferred CI-aligned verification
 
-When appropriate, prefer the repository's existing CI-aligned entrypoint:
+When appropriate, prefer the repository's existing CI-aligned entrypoints:
 
 ```bash
+bundle exec fastlane lint
 bundle exec fastlane test
+```
+
+### Lint verification
+
+```bash
+./gradlew ktlintCheck   # format check
+./gradlew ktlintFormat  # auto-fix formatting
+./gradlew detekt        # code quality check
 ```
 
 ### Focused verification

@@ -25,5 +25,4 @@ class ScheduleUploadUseCaseTest {
         // Assert
         verify { uploadScheduler.scheduleUpload() }
     }
-
 }

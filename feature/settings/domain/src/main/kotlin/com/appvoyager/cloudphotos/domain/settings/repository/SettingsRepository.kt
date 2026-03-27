@@ -7,5 +7,4 @@ interface SettingsRepository {
 
     val gridColumnCount: Flow<GridColumnCount>
     suspend fun setGridColumnCount(count: GridColumnCount)
-
 }

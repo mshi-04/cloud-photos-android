@@ -16,14 +16,9 @@ abstract class SettingsDataModule {
 
     @Binds
     @Singleton
-    abstract fun bindSettingsRepository(
-        impl: SettingsRepositoryImpl
-    ): SettingsRepository
+    abstract fun bindSettingsRepository(impl: SettingsRepositoryImpl): SettingsRepository
 
     @Binds
     @Singleton
-    abstract fun bindSettingsDataSource(
-        impl: SettingsDataSourceImpl
-    ): SettingsDataSource
-
+    abstract fun bindSettingsDataSource(impl: SettingsDataSourceImpl): SettingsDataSource
 }

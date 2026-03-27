@@ -17,6 +17,7 @@ import com.appvoyager.cloudphotos.ui.auth.uistate.AuthFieldError
 import com.appvoyager.cloudphotos.ui.auth.uistate.VerificationCodeUiState
 import com.appvoyager.cloudphotos.ui.util.ResendTimer
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -25,7 +26,6 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 @HiltViewModel
 class VerificationCodeViewModel @Inject constructor(
@@ -100,8 +100,10 @@ class VerificationCodeViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val codeValue = ConfirmationCode.of(fullCode)
-                when (val confirmResult =
-                    confirmSignUpUseCase(ConfirmSignUpRequest(emailValue, codeValue))) {
+                when (
+                    val confirmResult =
+                        confirmSignUpUseCase(ConfirmSignUpRequest(emailValue, codeValue))
+                ) {
                     is AuthResult.Success -> _effect.emit(VerificationEffect.NavigateToHome)
                     is AuthResult.Error -> handleConfirmError(confirmResult.error)
                 }
@@ -185,5 +187,4 @@ class VerificationCodeViewModel @Inject constructor(
     companion object {
         private const val ARG_EMAIL = "email"
     }
-
 }

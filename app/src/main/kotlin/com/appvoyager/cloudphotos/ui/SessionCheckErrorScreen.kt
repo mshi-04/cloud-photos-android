@@ -24,18 +24,12 @@ import com.appvoyager.cloudphotos.ui.auth.component.LoadingOverlay
 import com.appvoyager.cloudphotos.ui.theme.CloudPhotosTheme
 
 @Composable
-fun SessionCheckErrorScreen(
-    isRetrying: Boolean,
-    onRetry: () -> Unit
-) {
+fun SessionCheckErrorScreen(isRetrying: Boolean, onRetry: () -> Unit) {
     SessionCheckErrorContent(isRetrying = isRetrying, onRetry = onRetry)
 }
 
 @Composable
-private fun SessionCheckErrorContent(
-    isRetrying: Boolean,
-    onRetry: () -> Unit
-) {
+private fun SessionCheckErrorContent(isRetrying: Boolean, onRetry: () -> Unit) {
     BackHandler(enabled = isRetrying) {}
     Scaffold { innerPadding ->
         Box(modifier = Modifier.fillMaxSize()) {

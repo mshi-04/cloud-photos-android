@@ -22,5 +22,4 @@ sealed class AuthError(open val message: String?) {
     data class UserNotConfirmed(override val message: String? = null) : AuthError(message)
 
     data class UsernameAlreadyExists(override val message: String? = null) : AuthError(message)
-
 }

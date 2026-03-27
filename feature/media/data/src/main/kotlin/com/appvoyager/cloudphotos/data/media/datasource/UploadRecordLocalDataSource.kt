@@ -16,5 +16,4 @@ interface UploadRecordLocalDataSource {
     suspend fun saveUploadRecords(records: List<UploadRecord>)
 
     suspend fun deleteUploadRecord(mediaId: MediaId)
-
 }

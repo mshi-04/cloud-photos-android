@@ -12,16 +12,13 @@ class RemoteUploadRecordsRepositoryImpl @Inject constructor(
     private val remoteDataSource: UploadRecordRemoteDataSource
 ) : RemoteUploadRecordsRepository {
 
-    override suspend fun fetchUploadRecords(): List<UploadRecord> =
-        remoteDataSource.fetchUploadRecords()
+    override suspend fun fetchUploadRecords(): List<UploadRecord> = remoteDataSource.fetchUploadRecords()
 
     override suspend fun createUploadRecord(request: CreateUploadRecordRequest): UploadRecord =
         remoteDataSource.createUploadRecord(request)
 
-    override suspend fun deleteUploadRecord(mediaId: MediaId) =
-        remoteDataSource.deleteUploadRecord(mediaId)
+    override suspend fun deleteUploadRecord(mediaId: MediaId) = remoteDataSource.deleteUploadRecord(mediaId)
 
     override suspend fun completeUpload(successCount: UploadSuccessCount) =
         remoteDataSource.completeUpload(successCount)
-
 }

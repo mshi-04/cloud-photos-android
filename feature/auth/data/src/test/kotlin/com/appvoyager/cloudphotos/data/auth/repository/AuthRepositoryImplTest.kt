@@ -33,36 +33,34 @@ class AuthRepositoryImplTest {
     }
 
     @Test
-    fun `signUp calls dataSource once and returns success as is`() =
-        runTest(StandardTestDispatcher()) {
-            // Arrange
-            val request = signUpRequestFixture()
-            val expected = AuthResult.Success(Unit)
-            coEvery { dataSource.signUp(request) } returns expected
+    fun `signUp calls dataSource once and returns success as is`() = runTest(StandardTestDispatcher()) {
+        // Arrange
+        val request = signUpRequestFixture()
+        val expected = AuthResult.Success(Unit)
+        coEvery { dataSource.signUp(request) } returns expected
 
-            // Act
-            val actual = repository.signUp(request)
+        // Act
+        val actual = repository.signUp(request)
 
-            // Assert
-            assertEquals(expected, actual)
-            coVerify(exactly = 1) { dataSource.signUp(request) }
-        }
+        // Assert
+        assertEquals(expected, actual)
+        coVerify(exactly = 1) { dataSource.signUp(request) }
+    }
 
     @Test
-    fun `confirmSignUp calls dataSource once and returns error as is`() =
-        runTest(StandardTestDispatcher()) {
-            // Arrange
-            val request = confirmSignUpRequestFixture()
-            val expected = AuthResult.Error(AuthError.CodeMismatch("invalid code"))
-            coEvery { dataSource.confirmSignUp(request) } returns expected
+    fun `confirmSignUp calls dataSource once and returns error as is`() = runTest(StandardTestDispatcher()) {
+        // Arrange
+        val request = confirmSignUpRequestFixture()
+        val expected = AuthResult.Error(AuthError.CodeMismatch("invalid code"))
+        coEvery { dataSource.confirmSignUp(request) } returns expected
 
-            // Act
-            val actual = repository.confirmSignUp(request)
+        // Act
+        val actual = repository.confirmSignUp(request)
 
-            // Assert
-            assertEquals(expected, actual)
-            coVerify(exactly = 1) { dataSource.confirmSignUp(request) }
-        }
+        // Assert
+        assertEquals(expected, actual)
+        coVerify(exactly = 1) { dataSource.confirmSignUp(request) }
+    }
 
     @Test
     fun `signIn delegates only to dataSource signIn and returns mapped state from dataSource`() =
@@ -84,34 +82,32 @@ class AuthRepositoryImplTest {
         }
 
     @Test
-    fun `signOut returns error from dataSource without fallback`() =
-        runTest(StandardTestDispatcher()) {
-            // Arrange
-            val expected = AuthResult.Error(AuthError.Network("network down"))
-            coEvery { dataSource.signOut() } returns expected
+    fun `signOut returns error from dataSource without fallback`() = runTest(StandardTestDispatcher()) {
+        // Arrange
+        val expected = AuthResult.Error(AuthError.Network("network down"))
+        coEvery { dataSource.signOut() } returns expected
 
-            // Act
-            val actual = repository.signOut()
+        // Act
+        val actual = repository.signOut()
 
-            // Assert
-            assertEquals(expected, actual)
-            coVerify(exactly = 1) { dataSource.signOut() }
-        }
+        // Assert
+        assertEquals(expected, actual)
+        coVerify(exactly = 1) { dataSource.signOut() }
+    }
 
     @Test
-    fun `fetchCurrentUser returns domain user from dataSource as is`() =
-        runTest(StandardTestDispatcher()) {
-            // Arrange
-            val expected = AuthResult.Success(authUserFixture())
-            coEvery { dataSource.fetchCurrentUser() } returns expected
+    fun `fetchCurrentUser returns domain user from dataSource as is`() = runTest(StandardTestDispatcher()) {
+        // Arrange
+        val expected = AuthResult.Success(authUserFixture())
+        coEvery { dataSource.fetchCurrentUser() } returns expected
 
-            // Act
-            val actual = repository.fetchCurrentUser()
+        // Act
+        val actual = repository.fetchCurrentUser()
 
-            // Assert
-            assertEquals(expected, actual)
-            coVerify(exactly = 1) { dataSource.fetchCurrentUser() }
-        }
+        // Assert
+        assertEquals(expected, actual)
+        coVerify(exactly = 1) { dataSource.fetchCurrentUser() }
+    }
 
     @Test
     fun `getSession returns session from dataSource as is`() = runTest(StandardTestDispatcher()) {

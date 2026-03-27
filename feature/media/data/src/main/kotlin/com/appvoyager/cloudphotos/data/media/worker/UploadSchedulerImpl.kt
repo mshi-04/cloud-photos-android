@@ -10,9 +10,8 @@ import com.appvoyager.cloudphotos.domain.media.repository.UploadScheduler
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 
-class UploadSchedulerImpl @Inject constructor(
-    @param:ApplicationContext private val context: Context
-) : UploadScheduler {
+class UploadSchedulerImpl @Inject constructor(@param:ApplicationContext private val context: Context) :
+    UploadScheduler {
 
     override fun scheduleUpload() {
         val request = OneTimeWorkRequestBuilder<UploadMediaWorker>()
@@ -29,5 +28,4 @@ class UploadSchedulerImpl @Inject constructor(
                 request
             )
     }
-
 }

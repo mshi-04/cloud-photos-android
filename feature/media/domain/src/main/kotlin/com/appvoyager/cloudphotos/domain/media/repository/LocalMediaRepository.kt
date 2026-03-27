@@ -8,5 +8,4 @@ interface LocalMediaRepository {
     fun getMediaListFlow(): Flow<List<Media>>
 
     suspend fun getMediaList(): List<Media>
-
 }

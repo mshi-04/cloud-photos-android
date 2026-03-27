@@ -13,5 +13,4 @@ import com.appvoyager.cloudphotos.data.media.db.entity.UploadRecordEntity
 abstract class CloudPhotosDatabase : RoomDatabase() {
 
     abstract fun uploadRecordDao(): UploadRecordDao
-
 }

@@ -6,26 +6,19 @@ import com.appvoyager.cloudphotos.domain.media.repository.LocalUploadRecordsRepo
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaId
 import javax.inject.Inject
 
-class LocalUploadRecordsRepositoryImpl @Inject constructor(
-    private val localDataSource: UploadRecordLocalDataSource
-) : LocalUploadRecordsRepository {
+class LocalUploadRecordsRepositoryImpl @Inject constructor(private val localDataSource: UploadRecordLocalDataSource) :
+    LocalUploadRecordsRepository {
 
     override suspend fun getUploadRecords(mediaIds: List<MediaId>): List<UploadRecord> =
         localDataSource.getUploadRecords(mediaIds)
 
-    override suspend fun getPendingRecordMediaIds(): Set<MediaId> =
-        localDataSource.getPendingRecordMediaIds()
+    override suspend fun getPendingRecordMediaIds(): Set<MediaId> = localDataSource.getPendingRecordMediaIds()
 
-    override suspend fun getPendingUploadRecords(): List<UploadRecord> =
-        localDataSource.getPendingUploadRecords()
+    override suspend fun getPendingUploadRecords(): List<UploadRecord> = localDataSource.getPendingUploadRecords()
 
-    override suspend fun getPendingDeleteRecords(): List<UploadRecord> =
-        localDataSource.getPendingDeleteRecords()
+    override suspend fun getPendingDeleteRecords(): List<UploadRecord> = localDataSource.getPendingDeleteRecords()
 
-    override suspend fun saveUploadRecords(records: List<UploadRecord>) =
-        localDataSource.saveUploadRecords(records)
+    override suspend fun saveUploadRecords(records: List<UploadRecord>) = localDataSource.saveUploadRecords(records)
 
-    override suspend fun deleteUploadRecord(mediaId: MediaId) =
-        localDataSource.deleteUploadRecord(mediaId)
-
+    override suspend fun deleteUploadRecord(mediaId: MediaId) = localDataSource.deleteUploadRecord(mediaId)
 }

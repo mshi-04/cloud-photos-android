@@ -11,42 +11,27 @@ import com.appvoyager.cloudphotos.domain.auth.valueobject.Email
 import com.appvoyager.cloudphotos.domain.auth.valueobject.Password
 import com.appvoyager.cloudphotos.domain.auth.valueobject.UserId
 
-fun signUpRequestFixture(
-    email: String = "fixture@example.com",
-    password: String = "password123"
-): SignUpRequest =
+fun signUpRequestFixture(email: String = "fixture@example.com", password: String = "password123"): SignUpRequest =
     SignUpRequest(
         email = Email.of(email),
         password = Password.of(password)
     )
 
-fun signInRequestFixture(
-    email: String = "fixture@example.com",
-    password: String = "password123"
-): SignInRequest =
+fun signInRequestFixture(email: String = "fixture@example.com", password: String = "password123"): SignInRequest =
     SignInRequest(
         email = Email.of(email),
         password = Password.of(password)
     )
 
-fun confirmSignUpRequestFixture(
-    email: String = "fixture@example.com",
-    code: String = "123456"
-): ConfirmSignUpRequest =
+fun confirmSignUpRequestFixture(email: String = "fixture@example.com", code: String = "123456"): ConfirmSignUpRequest =
     ConfirmSignUpRequest(
         email = Email.of(email),
         code = ConfirmationCode.of(code)
     )
 
-fun authUserFixture(
-    userId: String = "user-123",
-    email: String = "fixture@example.com"
-): AuthUser =
-    AuthUser(
-        userId = UserId.of(userId),
-        email = Email.of(email)
-    )
+fun authUserFixture(userId: String = "user-123", email: String = "fixture@example.com"): AuthUser = AuthUser(
+    userId = UserId.of(userId),
+    email = Email.of(email)
+)
 
-fun authSessionFixture(
-    state: AuthState = AuthState.SignedIn
-): AuthSession = AuthSession(state)
+fun authSessionFixture(state: AuthState = AuthState.SignedIn): AuthSession = AuthSession(state)

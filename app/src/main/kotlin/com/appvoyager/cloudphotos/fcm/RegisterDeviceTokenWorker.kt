@@ -65,5 +65,4 @@ class RegisterDeviceTokenWorker @AssistedInject constructor(
                 )
         }
     }
-
 }

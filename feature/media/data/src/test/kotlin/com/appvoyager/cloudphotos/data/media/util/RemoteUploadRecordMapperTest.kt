@@ -97,5 +97,4 @@ class RemoteUploadRecordMapperTest {
         // Assert
         assertEquals(IsDeleted.of(false), result.isDeleted)
     }
-
 }

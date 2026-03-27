@@ -80,5 +80,8 @@ jobs:
           DEV_COGNITO_CLIENT_ID: ${{ secrets.DEV_COGNITO_CLIENT_ID }}
           DEV_S3_BUCKET_NAME: ${{ secrets.DEV_S3_BUCKET_NAME }}
 
+      - name: Run Lint Checks
+        run: bundle exec fastlane lint
+
       - name: Execute Unit Tests
         run: bundle exec fastlane test

@@ -17,6 +17,11 @@ platform :android do
     env_properties("PROD")
   end
 
+  desc "Run ktlint and detekt (used in CI)"
+  lane :lint do
+    gradle(task: "ktlintCheck detekt", properties: dev_properties, print_command: false)
+  end
+
   desc "Run Unit Tests (used in CI)"
   lane :test do
     gradle(task: "testDevDebugUnitTest", properties: dev_properties, print_command: false)
