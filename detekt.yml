@@ -2,7 +2,8 @@ complexity:
   TooManyFunctions:
     active: false
   CyclomaticComplexMethod:
-    active: false
+    active: true
+    allowedComplexity: 30
   LongMethod:
     active: false
 
@@ -20,8 +21,6 @@ style:
   MaxLineLength:
     maxLineLength: 120
   ReturnCount:
-    active: false
-  LoopWithTooManyJumpStatements:
     active: false
 
 naming:

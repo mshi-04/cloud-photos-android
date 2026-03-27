@@ -30,7 +30,7 @@ class UploadMediaWorker @AssistedInject constructor(
     private val notificationHelper: UploadNotificationHelper
 ) : CoroutineWorker(context, workerParams) {
 
-    @Suppress("ThrowsCount")
+    @Suppress("ThrowsCount", "LoopWithTooManyJumpStatements")
     override suspend fun doWork(): Result {
         val pendingRecords = localRepository.getPendingUploadRecords()
         if (pendingRecords.isEmpty()) return Result.success()
