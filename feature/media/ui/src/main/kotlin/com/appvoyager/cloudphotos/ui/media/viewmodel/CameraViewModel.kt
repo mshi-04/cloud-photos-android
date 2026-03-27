@@ -20,9 +20,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 @HiltViewModel
-class CameraViewModel @Inject constructor(
-    private val capturedPhotoWriter: CapturedPhotoWriter
-) : ViewModel() {
+class CameraViewModel @Inject constructor(private val capturedPhotoWriter: CapturedPhotoWriter) : ViewModel() {
 
     private val _uiState = MutableStateFlow<CameraUiState>(CameraUiState.CheckingPermission)
     val uiState: StateFlow<CameraUiState> = _uiState.asStateFlow()
@@ -52,10 +50,7 @@ class CameraViewModel @Inject constructor(
         _uiState.update { CameraUiState.Ready }
     }
 
-    fun takePhoto(
-        captureJpeg: suspend () -> ByteArray,
-        onCaptureAnimTrigger: () -> Unit
-    ) {
+    fun takePhoto(captureJpeg: suspend () -> ByteArray, onCaptureAnimTrigger: () -> Unit) {
         if (_uiState.value !is CameraUiState.Ready) return
         _uiState.update { CameraUiState.Capturing }
 

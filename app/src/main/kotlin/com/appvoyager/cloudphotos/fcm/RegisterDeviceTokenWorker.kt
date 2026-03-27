@@ -32,10 +32,10 @@ class RegisterDeviceTokenWorker @AssistedInject constructor(
         }.fold(
             onSuccess = { Result.success() },
             onFailure = { e ->
-                when {
-                    e is CancellationException -> throw e
-                    e is IllegalArgumentException -> Result.failure()
-                    e is AmplifyRestException && e.isClientError -> Result.failure()
+                when (e) {
+                    is CancellationException -> throw e
+                    is IllegalArgumentException -> Result.failure()
+                    is AmplifyRestException if e.isClientError -> Result.failure()
                     else -> Result.retry()
                 }
             }

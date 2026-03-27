@@ -21,8 +21,7 @@ suspend fun awaitAmplifyRestCall(
             } else {
                 coroutine.resumeWithException(
                     AmplifyRestException(
-                        code = apiResponse.code,
-                        responseBody = apiResponse.data.asString()
+                        code = apiResponse.code
                     )
                 )
             }

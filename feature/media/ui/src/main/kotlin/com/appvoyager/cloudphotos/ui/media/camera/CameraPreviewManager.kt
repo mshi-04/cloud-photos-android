@@ -16,10 +16,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.suspendCancellableCoroutine
 
 class CameraPreviewManager(
     private val context: Context,
@@ -136,7 +136,7 @@ class CameraPreviewManager(
                 ContextCompat.getMainExecutor(context),
                 object : ImageCapture.OnImageCapturedCallback() {
                     @Suppress("ThrowsCount")
-                        override fun onCaptureSuccess(image: ImageProxy) {
+                    override fun onCaptureSuccess(image: ImageProxy) {
                         val buffer = image.planes[0].buffer
                         val bytes = ByteArray(buffer.remaining())
                         buffer.get(bytes)
@@ -153,20 +153,19 @@ class CameraPreviewManager(
     }
 
     @Suppress("BlockingMethodInNonBlockingContext")
-    private suspend fun getCameraProvider(): ProcessCameraProvider =
-        suspendCancellableCoroutine { continuation ->
-            val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
-            cameraProviderFuture.addListener(
-                {
-                    try {
-                        continuation.resume(cameraProviderFuture.get())
-                    } catch (e: java.util.concurrent.CancellationException) {
-                        continuation.cancel(e)
-                    } catch (e: Exception) {
-                        continuation.resumeWithException(e)
-                    }
-                },
-                ContextCompat.getMainExecutor(context)
-            )
-        }
+    private suspend fun getCameraProvider(): ProcessCameraProvider = suspendCancellableCoroutine { continuation ->
+        val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
+        cameraProviderFuture.addListener(
+            {
+                try {
+                    continuation.resume(cameraProviderFuture.get())
+                } catch (e: java.util.concurrent.CancellationException) {
+                    continuation.cancel(e)
+                } catch (e: Exception) {
+                    continuation.resumeWithException(e)
+                }
+            },
+            ContextCompat.getMainExecutor(context)
+        )
+    }
 }

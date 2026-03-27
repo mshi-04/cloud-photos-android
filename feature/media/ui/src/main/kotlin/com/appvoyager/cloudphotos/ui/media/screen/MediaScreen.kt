@@ -352,10 +352,7 @@ private fun MediaGrid(
 }
 
 @Composable
-private fun MediaGridItem(
-    media: Media,
-    onClick: () -> Unit
-) {
+private fun MediaGridItem(media: Media, onClick: () -> Unit) {
     val mediaTypeLabel = if (media.type == MediaType.VIDEO) {
         stringResource(R.string.media_content_description_video)
     } else {

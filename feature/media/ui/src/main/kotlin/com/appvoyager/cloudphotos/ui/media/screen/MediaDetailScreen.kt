@@ -10,8 +10,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -25,12 +27,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import com.appvoyager.cloudphotos.core.ui.R
@@ -41,21 +45,19 @@ import com.appvoyager.cloudphotos.ui.media.component.ImageDetailContent
 import com.appvoyager.cloudphotos.ui.media.component.VideoDetailContent
 
 @Composable
-fun MediaDetailScreen(
-    mediaList: List<Media>,
-    initialMediaId: MediaId,
-    onNavigateBack: () -> Unit
-) {
-    if (mediaList.isEmpty()) {
-        onNavigateBack()
-        return
+fun MediaDetailScreen(mediaList: List<Media>, initialMediaId: MediaId, onNavigateBack: () -> Unit) {
+    val currentOnNavigateBack by rememberUpdatedState(onNavigateBack)
+    val initialIndex = mediaList.indexOfFirst { it.id == initialMediaId }
+    val shouldNavigateBack = mediaList.isEmpty() || initialIndex == -1
+
+    LaunchedEffect(Unit) {
+        if (shouldNavigateBack) {
+            currentOnNavigateBack()
+        }
     }
 
-    val initialIndex = mediaList.indexOfFirst { it.id == initialMediaId }
-    if (initialIndex == -1) {
-        onNavigateBack()
-        return
-    }
+    if (shouldNavigateBack) return
+
     MediaDetailContent(
         mediaList = mediaList,
         initialIndex = initialIndex,
@@ -65,14 +67,9 @@ fun MediaDetailScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MediaDetailContent(
-    mediaList: List<Media>,
-    initialIndex: Int,
-    onNavigateBack: () -> Unit
-) {
+private fun MediaDetailContent(mediaList: List<Media>, initialIndex: Int, onNavigateBack: () -> Unit) {
     val isDarkTheme = isSystemInDarkTheme()
     val backgroundColor = if (isDarkTheme) Color.Black else Color.White
-    val contentColor = if (isDarkTheme) Color.White else Color.Black
 
     var isFullscreen by remember { mutableStateOf(false) }
     var isPagerScrollEnabled by remember { mutableStateOf(true) }
@@ -144,17 +141,22 @@ private fun MediaDetailContent(
             TopAppBar(
                 title = {},
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.media_detail_back),
-                            tint = contentColor
-                        )
+                    Box(
+                        modifier = Modifier
+                            .padding(4.dp)
+                            .background(Color.Black.copy(alpha = 0.3f), shape = CircleShape)
+                    ) {
+                        IconButton(onClick = onNavigateBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringResource(R.string.media_detail_back),
+                                tint = Color.White
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent,
-                    navigationIconContentColor = contentColor
+                    containerColor = Color.Transparent
                 )
             )
         }
