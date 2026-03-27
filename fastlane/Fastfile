@@ -9,9 +9,9 @@ platform :android do
     readme_path = File.join(File.dirname(__FILE__), "README.md")
     next unless File.exist?(readme_path)
 
-    content = File.read(readme_path)
-    content.gsub!(/Make sure you have the latest version of the Xcode command line tools installed:\s*\n\s*```sh\s*\n\s*xcode-select --install\s*\n\s*```\s*\n/, "")
-    File.write(readme_path, content)
+    original = File.read(readme_path)
+    updated = original.gsub(/Make sure you have the latest version of the Xcode command line tools installed:\s*\n\s*```sh\s*\n\s*xcode-select --install\s*\n\s*```\s*\n/, "")
+    File.write(readme_path, updated) if updated != original
   end
 
   def env_properties(prefix)

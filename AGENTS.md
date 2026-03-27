@@ -188,9 +188,11 @@ fun `onSignIn sets passwordError when credentials are invalid`()
 
 #### Annotations
 
-Allowed: `@Test`, `@BeforeEach`, `@AfterEach`, `@OptIn(ExperimentalCoroutinesApi::class)`, `@ParameterizedTest` (with `@ValueSource` / `@CsvSource` / `@MethodSource`), `@ExtendWith`.
+Allowed: `@Test`, `@BeforeEach`, `@AfterEach`, `@OptIn(ExperimentalCoroutinesApi::class)`, `@ParameterizedTest` (with `@ValueSource` / `@CsvSource` / `@MethodSource`), `@ExtendWith` (only when a JUnit extension from an external library or a custom extension is required — see note below).
 
 Forbidden: `@DisplayName` (backtick name is sufficient), `@Disabled` (fix or delete — do not commit disabled tests), `@Nested`, `@Tag`, `@Timeout`, `@RepeatedTest`.
+
+Note on `@ExtendWith` and MockK: In standard `*Test.kt` files that use MockK, call `mockk<>()` directly — no `@ExtendWith(MockKExtension::class)` is needed or recommended. Reserve `@ExtendWith` for cases where a JUnit extension is genuinely required (e.g., a custom test lifecycle extension or a third-party library extension that has no MockK equivalent).
 
 ## Android-specific rules
 
