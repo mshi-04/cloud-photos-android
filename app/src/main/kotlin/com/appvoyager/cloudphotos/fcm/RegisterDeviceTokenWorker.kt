@@ -35,7 +35,7 @@ class RegisterDeviceTokenWorker @AssistedInject constructor(
                 when (e) {
                     is CancellationException -> throw e
                     is IllegalArgumentException -> Result.failure()
-                    is AmplifyRestException if e.isClientError -> Result.failure()
+                    is AmplifyRestException if e.isNonServerError -> Result.failure()
                     else -> Result.retry()
                 }
             }

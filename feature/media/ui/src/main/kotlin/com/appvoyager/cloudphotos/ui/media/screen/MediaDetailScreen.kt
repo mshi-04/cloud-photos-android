@@ -81,16 +81,15 @@ private fun MediaDetailContent(mediaList: List<Media>, initialIndex: Int, onNavi
     val safeInitialPage = initialIndex.coerceIn(0, (mediaList.size - 1).coerceAtLeast(0))
     val pagerState = rememberPagerState(initialPage = safeInitialPage) { mediaList.size }
 
-    var currentDisplayedId by remember { mutableStateOf(mediaList.getOrNull(safeInitialPage)?.id) }
     val currentOnNavigateBack by rememberUpdatedState(onNavigateBack)
 
-    LaunchedEffect(mediaList) {
-        val id = currentDisplayedId
-        if (id == null) {
-            currentOnNavigateBack()
-            return@LaunchedEffect
-        }
-        val newIndex = mediaList.indexOfFirst { it.id == id }
+    var visibleMediaId by remember { mutableStateOf<MediaId?>(null) }
+
+    val view = LocalView.current
+
+    LaunchedEffect(mediaList, visibleMediaId) {
+        val targetId = visibleMediaId ?: return@LaunchedEffect
+        val newIndex = mediaList.indexOfFirst { it.id == targetId }
         if (newIndex == -1) {
             currentOnNavigateBack()
         } else if (newIndex != pagerState.currentPage) {
@@ -99,11 +98,10 @@ private fun MediaDetailContent(mediaList: List<Media>, initialIndex: Int, onNavi
     }
 
     LaunchedEffect(pagerState.currentPage) {
+        visibleMediaId = mediaList.getOrNull(pagerState.currentPage)?.id
         isPagerScrollEnabled = true
-        currentDisplayedId = mediaList.getOrNull(pagerState.currentPage)?.id
     }
 
-    val view = LocalView.current
     LaunchedEffect(isFullscreen) {
         if (view.isInEditMode) return@LaunchedEffect
         val activity = view.context.findActivity() ?: return@LaunchedEffect
