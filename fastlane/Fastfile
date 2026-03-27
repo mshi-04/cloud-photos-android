@@ -19,7 +19,7 @@ platform :android do
 
   desc "Run ktlint and detekt (used in CI)"
   lane :lint do
-    gradle(task: "ktlintCheck detekt", properties: dev_properties, print_command: false)
+    gradle(task: "ktlintCheck detekt", print_command: false)
   end
 
   desc "Run Unit Tests (used in CI)"
