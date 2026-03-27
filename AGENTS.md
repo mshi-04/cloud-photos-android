@@ -3,6 +3,14 @@
 This repository uses AI-assisted development under explicit architectural constraints.
 Follow these rules when proposing or making changes.
 
+Supplementary documents in `docs/`:
+- `docs/ai-playbook.md` — how to work in this repo (workflow guide)
+- `docs/architecture-decisions.md` — why the structure is what it is
+- `docs/verification-policy.md` — when and how much to verify
+- `docs/forbidden-patterns.md` — anti-patterns with reasoning
+- `docs/media-upload-flow.md` — upload/delete flow sequence and SyncStatus transitions
+- `docs/error-handling-guide.md` — CancellationException and error mapping patterns
+
 ## Objective
 
 Make small, correct, testable changes that preserve the repository's modular Android architecture.
@@ -70,8 +78,7 @@ Allowed here:
 - framework integration details
 
 Rules:
-- Repository implementations delegate to data sources and mapping logic.
-- Business rules should stay in domain unless they are purely framework/data translation concerns.
+- Business rules belong in domain; this layer handles data translation and framework integration.
 - Error mapping belongs here via mapper objects.
 
 ### `feature:<name>:ui`
@@ -138,6 +145,55 @@ Rules:
 - Do not use raw primitives for validated domain concepts when an established value object pattern exists.
 - Follow the existing value object placement under `domain/<feature>/valueobject/`.
 
+### Tests
+- Use JUnit 5, MockK, and `kotlinx-coroutines-test`.
+- Follow Arrange / Act / Assert structure.
+
+#### Test function naming
+
+All test function names must use exactly this format:
+
+```text
+`[tested function name] [expected outcome] when [condition]`
+```
+
+- `tested function name`: the exact function, property, or event handler under test — always placed first.
+- `expected outcome`: one observable verb phrase. Allowed verbs: `returns`, `throws`, `sets`, `emits`, `calls`, `rethrows`, `ignores`.
+- `when [condition]`: the scenario or input state — never omit.
+
+This format applies to all layers: value objects, use cases, repositories, mappers, workers, and ViewModels.
+
+#### Examples
+
+```kotlin
+fun `of returns Email when input is valid`()
+fun `of throws when email is blank after trim`()
+fun `invoke returns Success when repository succeeds`()
+fun `invoke returns Error when network is unavailable`()
+fun `onSignIn emits NavigateToHome when credentials are valid`()
+fun `onSignIn sets passwordError when credentials are invalid`()
+```
+
+#### Forbidden naming patterns
+
+- Starting with `test`, `should`, `verify`, or similar prefixes
+- Using `success case`, `failure case`, `happy path`, `error case`, or other categorical labels
+- Omitting `when [condition]`
+- Using `success` or `failure` as the outcome — write `returns Success` / `returns Error` instead
+- Describing multiple behaviors in one function name
+- Using `works`, `handles`, `correctly`, `properly`, or other vague outcome words
+- Using snake_case or camelCase inside backticks
+- Using Japanese characters
+- Using any naming style other than the required format
+
+#### Annotations
+
+Allowed: `@Test`, `@BeforeEach`, `@AfterEach`, `@OptIn(ExperimentalCoroutinesApi::class)`, `@ParameterizedTest` (with `@ValueSource` / `@CsvSource` / `@MethodSource`), `@ExtendWith` (only when a JUnit extension from an external library or a custom extension is required — see note below).
+
+Forbidden: `@DisplayName` (backtick name is sufficient), `@Disabled` (fix or delete — do not commit disabled tests), `@Nested`, `@Tag`, `@Timeout`, `@RepeatedTest`.
+
+Note on `@ExtendWith` and MockK: In standard `*Test.kt` files that use MockK, call `mockk<>()` directly — no `@ExtendWith(MockKExtension::class)` is needed or recommended. Reserve `@ExtendWith` for cases where a JUnit extension is genuinely required (e.g., a custom test lifecycle extension or a third-party library extension that has no MockK equivalent).
+
 ## Android-specific rules
 
 ### Compose
@@ -157,6 +213,11 @@ Rules:
 - Keep Hilt wiring in appropriate DI/bootstrap locations.
 - Prefer feature-local implementation binding patterns that already exist.
 - Avoid placing unrelated bindings into one large catch-all module.
+
+### Logging
+- Do not use `android.util.Log` directly in production code.
+- Temporary debug log statements must not be committed.
+- If a logging abstraction does not exist in this repository, prefer omitting the log over using `android.util.Log` directly.
 
 ### Navigation
 - Keep navigation changes centralized and minimal.
@@ -210,29 +271,32 @@ Rules:
 
 A change is not complete unless all relevant checks pass.
 
-### Preferred CI-aligned verification
+### Verification timing
 
-When appropriate, prefer the repository's existing CI-aligned entrypoints:
+Follow this three-stage approach based on change scope:
 
+**During development** — run the smallest scope covering what you changed:
+- Single module: `./gradlew :feature:<name>:<layer>:test`
+- Quick lint: `./gradlew ktlintCheck`
+
+**Before opening a PR** — run lint and tests for all changed modules:
 ```bash
-bundle exec fastlane lint
-bundle exec fastlane test
-```
-
-### Lint verification
-
-```bash
-./gradlew ktlintCheck   # format check
-./gradlew ktlintFormat  # auto-fix formatting
-./gradlew detekt        # code quality check
-```
-
-### Focused verification
-
-For narrower changes, run the smallest relevant test scope, such as:
-
-```bash
+./gradlew ktlintFormat  # local auto-fix (not executed by CI)
+./gradlew ktlintCheck detekt
+# single module change:
+./gradlew :feature:<name>:<layer>:test
+# shared (core/*), app wiring, navigation, or Gradle changes:
 ./gradlew test
+```
+
+**Before merging** — CI is the final gate. Do not merge if CI is red.
+CI runs `bundle exec fastlane lint` and `bundle exec fastlane test`.
+
+If tests are not run, explicitly state that they were not run.
+
+### Module test targets
+
+```bash
 ./gradlew :feature:auth:domain:test
 ./gradlew :feature:auth:data:test
 ./gradlew :feature:auth:ui:test
@@ -242,11 +306,6 @@ For narrower changes, run the smallest relevant test scope, such as:
 ./gradlew :feature:settings:domain:test
 ./gradlew :feature:settings:data:test
 ```
-
-Guidance:
-- If changing app wiring, shared modules, Gradle logic, or navigation, prefer broader verification.
-- If changing only one module, prefer that module's targeted test task first.
-- If tests are not run, explicitly state that they were not run.
 
 ## Pull request and branch workflow
 
@@ -276,13 +335,14 @@ When asked to implement something:
 - Hardcoding environment-specific values
 - Swallowing `CancellationException`
 - Returning data-layer models to UI
+- Violating the [Logging](#logging) rules
 
 ## Required reporting format for AI-generated changes
 
 When making a code change in this repository, report back with:
 - touched modules
 - architectural reason for file placement
-- summary of behavior change
+- summary of what changed and why
 - tests run
 - tests not run, if any
 - known limitations or follow-up items
