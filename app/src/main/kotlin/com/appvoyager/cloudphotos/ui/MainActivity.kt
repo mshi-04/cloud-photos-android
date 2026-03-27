@@ -13,7 +13,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.appvoyager.cloudphotos.R
 import com.appvoyager.cloudphotos.ui.theme.CloudPhotosTheme
@@ -31,13 +31,13 @@ class MainActivity : ComponentActivity() {
         splashScreen.setKeepOnScreenCondition { mainViewModel.isCheckingSession }
         enableEdgeToEdge()
         setContent {
-            val context = LocalContext.current
             val snackbarHostState = remember { SnackbarHostState() }
+            val signOutErrorMessage = stringResource(R.string.error_sign_out)
             LaunchedEffect(Unit) {
                 mainViewModel.uiEvent.collect { event ->
                     when (event) {
                         is MainUiEvent.SignOutFailed -> snackbarHostState.showSnackbar(
-                            context.getString(R.string.error_sign_out)
+                            signOutErrorMessage
                         )
                     }
                 }

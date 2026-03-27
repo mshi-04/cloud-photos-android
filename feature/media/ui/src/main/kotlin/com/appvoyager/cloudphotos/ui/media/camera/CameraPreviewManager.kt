@@ -16,13 +16,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
-import com.appvoyager.cloudphotos.domain.media.model.PhotoCaptureHandle
-import com.appvoyager.cloudphotos.domain.media.model.SavePhotoResult
-import com.appvoyager.cloudphotos.domain.media.valueobject.MediaUrl
-import java.text.SimpleDateFormat
-import java.util.Locale
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume

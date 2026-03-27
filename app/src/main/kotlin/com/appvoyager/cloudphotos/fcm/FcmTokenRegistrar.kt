@@ -6,9 +6,7 @@ import com.google.firebase.messaging.FirebaseMessaging
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 
-class FcmTokenRegistrar @Inject constructor(
-    @param:ApplicationContext private val context: Context
-) {
+class FcmTokenRegistrar @Inject constructor(@param:ApplicationContext private val context: Context) {
 
     fun register() {
         FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
@@ -27,5 +25,4 @@ class FcmTokenRegistrar @Inject constructor(
             RegisterDeviceTokenWorker.enqueue(context, deviceToken)
         }
     }
-
 }
