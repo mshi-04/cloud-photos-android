@@ -54,7 +54,7 @@ fun MediaDetailScreen(mediaList: List<Media>, initialMediaId: MediaId, onNavigat
     val initialIndex = mediaList.indexOfFirst { it.id == initialMediaId }
     val shouldNavigateBack = mediaList.isEmpty() || initialIndex == -1
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(shouldNavigateBack) {
         if (shouldNavigateBack) {
             currentOnNavigateBack()
         }
