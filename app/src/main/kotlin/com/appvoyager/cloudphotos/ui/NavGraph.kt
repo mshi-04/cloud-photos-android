@@ -6,7 +6,11 @@ import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -14,15 +18,25 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.appvoyager.cloudphotos.domain.auth.valueobject.Email
+import com.appvoyager.cloudphotos.domain.media.valueobject.MediaId
 import com.appvoyager.cloudphotos.ui.auth.effect.AuthSnackbarMessage
 import com.appvoyager.cloudphotos.ui.auth.screen.ForgotPasswordScreen
 import com.appvoyager.cloudphotos.ui.auth.screen.LoginScreen
 import com.appvoyager.cloudphotos.ui.auth.screen.ResetPasswordScreen
 import com.appvoyager.cloudphotos.ui.auth.screen.VerificationCodeScreen
 import com.appvoyager.cloudphotos.ui.media.screen.CameraScreen
+import com.appvoyager.cloudphotos.ui.media.screen.MediaDetailScreen
 import com.appvoyager.cloudphotos.ui.media.screen.MediaScreen
+import com.appvoyager.cloudphotos.ui.media.uistate.MediaUiState
+import com.appvoyager.cloudphotos.ui.media.viewmodel.MediaViewModel
 
 private const val TRANSITION_DURATION_MS = 300
+
+object MediaRoute {
+    internal const val URI_DETAIL = "media_detail/{mediaId}"
+
+    fun detail(mediaId: MediaId): String = "media_detail/${Uri.encode(mediaId.value)}"
+}
 
 object AuthRoute {
 
@@ -162,6 +176,9 @@ fun NavGraph(
                 },
                 onSignOut = {
                     onSignOut()
+                },
+                onMediaClick = { mediaId, _ ->
+                    navController.navigate(MediaRoute.detail(mediaId))
                 }
             )
         }
@@ -177,6 +194,33 @@ fun NavGraph(
                 onNavigateBack = {
                     navController.popBackStack()
                 }
+            )
+        }
+
+        composable(
+            route = MediaRoute.URI_DETAIL,
+            arguments = listOf(navArgument("mediaId") { type = NavType.StringType }),
+            enterTransition = { enterForward() },
+            exitTransition = { exitForward() },
+            popEnterTransition = { enterBack() },
+            popExitTransition = { exitBack() }
+        ) { backStackEntry ->
+            val rawMediaId = backStackEntry.arguments?.getString("mediaId")
+            val homeEntry = remember(navController) {
+                navController.getBackStackEntry(AuthRoute.HOME)
+            }
+            val mediaViewModel: MediaViewModel = hiltViewModel(homeEntry)
+            val uiState by mediaViewModel.uiState.collectAsStateWithLifecycle()
+            if (rawMediaId.isNullOrBlank()) {
+                navController.popBackStack()
+                return@composable
+            }
+            val mediaList = (uiState.screenState as? MediaUiState.ScreenState.Success)
+                ?.mediaList ?: emptyList()
+            MediaDetailScreen(
+                mediaList = mediaList,
+                initialMediaId = MediaId.of(rawMediaId),
+                onNavigateBack = { navController.popBackStack() }
             )
         }
     }

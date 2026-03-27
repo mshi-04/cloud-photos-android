@@ -116,10 +116,16 @@ class AuthDataSourceImpl @Inject constructor(private val deviceTokenDataSource: 
             Amplify.Auth.signOut { coroutine.resume(it) { _, _, _ -> } }
         }
 
-        return if (result is AWSCognitoAuthSignOutResult.FailedSignOut) {
-            AuthResult.Error(AuthErrorMapper.map(result.exception))
-        } else {
-            AuthResult.Success(Unit)
+        return when (result) {
+            is AWSCognitoAuthSignOutResult.CompleteSignOut -> AuthResult.Success(Unit)
+            is AWSCognitoAuthSignOutResult.PartialSignOut -> {
+                AuthResult.Success(Unit)
+            }
+            is AWSCognitoAuthSignOutResult.FailedSignOut ->
+                AuthResult.Error(AuthErrorMapper.map(result.exception))
+            else -> AuthResult.Error(
+                AuthErrorMapper.map(IllegalStateException("Unknown sign-out result: ${result::class}"))
+            )
         }
     }
 

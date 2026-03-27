@@ -1,13 +1,12 @@
 package com.appvoyager.cloudphotos.ui.media.camera
 
-import android.content.ContentValues
 import android.content.Context
-import android.provider.MediaStore
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.FocusMeteringAction
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
+import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
@@ -17,17 +16,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
-import com.appvoyager.cloudphotos.domain.media.model.PhotoCaptureHandle
-import com.appvoyager.cloudphotos.domain.media.model.SavePhotoResult
-import com.appvoyager.cloudphotos.domain.media.valueobject.MediaUrl
-import java.text.SimpleDateFormat
-import java.util.Locale
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 
 class CameraPreviewManager(
@@ -137,94 +128,31 @@ class CameraPreviewManager(
         )
     }
 
-    fun createCaptureHandle(): PhotoCaptureHandle? {
-        val imageCapture = this.imageCapture ?: return null
-        return PhotoCaptureHandle {
-            suspendCancellableCoroutine { continuation ->
-                val outputOptions = ImageCapture.OutputFileOptions.Builder(
-                    context.contentResolver,
-                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                    createContentValues()
-                ).build()
-
-                imageCapture.takePicture(
-                    outputOptions,
-                    ContextCompat.getMainExecutor(context),
-                    object : ImageCapture.OnImageSavedCallback {
-                        @Suppress("ThrowsCount")
-                        override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
-                            val savedUri = outputFileResults.savedUri
-                            if (savedUri != null) {
-                                CoroutineScope(continuation.context).launch(Dispatchers.IO) {
-                                    try {
-                                        val pending = ContentValues().apply {
-                                            put(MediaStore.Images.Media.IS_PENDING, 0)
-                                        }
-                                        val rowCount = context.contentResolver.update(savedUri, pending, null, null)
-                                        if (rowCount > 0) {
-                                            continuation.resume(
-                                                SavePhotoResult.Success(MediaUrl.of(savedUri.toString()))
-                                            )
-                                        } else {
-                                            runCatching { context.contentResolver.delete(savedUri, null, null) }
-                                                .onFailure { if (it is CancellationException) throw it }
-                                            continuation.resume(
-                                                SavePhotoResult.Error(SavePhotoResult.ErrorType.SAVE_FAILED)
-                                            )
-                                        }
-                                    } catch (e: Exception) {
-                                        if (e is CancellationException) throw e
-                                        runCatching { context.contentResolver.delete(savedUri, null, null) }
-                                            .onFailure { if (it is CancellationException) throw it }
-                                        continuation.resume(
-                                            SavePhotoResult.Error(SavePhotoResult.ErrorType.SAVE_FAILED)
-                                        )
-                                    }
-                                }
-                            } else {
-                                continuation.resume(
-                                    SavePhotoResult.Error(SavePhotoResult.ErrorType.SAVE_FAILED)
-                                )
-                            }
-                        }
-
-                        override fun onError(exception: ImageCaptureException) {
-                            val errorType =
-                                if (exception.imageCaptureError == ImageCapture.ERROR_FILE_IO &&
-                                    isStorageFull(exception)
-                                ) {
-                                    SavePhotoResult.ErrorType.STORAGE_FULL
-                                } else {
-                                    SavePhotoResult.ErrorType.SAVE_FAILED
-                                }
-                            continuation.resume(SavePhotoResult.Error(errorType))
+    suspend fun captureToJpeg(): ByteArray {
+        val imageCapture = this.imageCapture
+            ?: throw IllegalStateException("Camera is not bound")
+        return suspendCancellableCoroutine { continuation ->
+            imageCapture.takePicture(
+                ContextCompat.getMainExecutor(context),
+                object : ImageCapture.OnImageCapturedCallback() {
+                    override fun onCaptureSuccess(image: ImageProxy) {
+                        try {
+                            val buffer = image.planes[0].buffer
+                            val bytes = ByteArray(buffer.remaining())
+                            buffer.get(bytes)
+                            continuation.resume(bytes)
+                        } catch (e: Exception) {
+                            continuation.resumeWithException(e)
+                        } finally {
+                            image.close()
                         }
                     }
-                )
-            }
-        }
-    }
 
-    private fun isStorageFull(exception: ImageCaptureException): Boolean {
-        var cause: Throwable? = exception
-        while (cause != null) {
-            if (cause is android.system.ErrnoException && cause.errno == android.system.OsConstants.ENOSPC) {
-                return true
-            }
-            cause = cause.cause
-        }
-        return false
-    }
-
-    private fun createContentValues(): ContentValues {
-        val name = SimpleDateFormat(FILENAME_FORMAT, Locale.US)
-            .format(System.currentTimeMillis())
-
-        return ContentValues().apply {
-            put(MediaStore.MediaColumns.DISPLAY_NAME, name)
-            put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
-            put(MediaStore.Images.Media.RELATIVE_PATH, RELATIVE_PATH)
-            put(MediaStore.Images.Media.IS_PENDING, 1)
+                    override fun onError(exception: ImageCaptureException) {
+                        continuation.resumeWithException(exception)
+                    }
+                }
+            )
         }
     }
 
@@ -243,10 +171,5 @@ class CameraPreviewManager(
             },
             ContextCompat.getMainExecutor(context)
         )
-    }
-
-    companion object {
-        private const val FILENAME_FORMAT = "yyyy-MM-dd-HH-mm-ss-SSS"
-        private const val RELATIVE_PATH = "DCIM/Camera"
     }
 }

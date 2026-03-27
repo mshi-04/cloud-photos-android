@@ -9,6 +9,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
+import com.appvoyager.cloudphotos.data.common.AmplifyRestException
 import com.appvoyager.cloudphotos.data.fcm.DeviceToken
 import com.appvoyager.cloudphotos.data.fcm.DeviceTokenDataSource
 import dagger.assisted.Assisted
@@ -31,21 +32,14 @@ class RegisterDeviceTokenWorker @AssistedInject constructor(
         }.fold(
             onSuccess = { Result.success() },
             onFailure = { e ->
-                when {
-                    e is CancellationException -> throw e
-                    e is IllegalArgumentException -> Result.failure()
-                    isClientError(e) -> Result.failure()
+                when (e) {
+                    is CancellationException -> throw e
+                    is IllegalArgumentException -> Result.failure()
+                    is AmplifyRestException if e.isNonServerError -> Result.failure()
                     else -> Result.retry()
                 }
             }
         )
-    }
-
-    private fun isClientError(e: Throwable): Boolean {
-        val message = e.message ?: return false
-        val match = Regex("Unexpected response code (\\d+)").find(message) ?: return false
-        val code = match.groupValues[1].toIntOrNull() ?: return false
-        return code in 400..499
     }
 
     companion object {

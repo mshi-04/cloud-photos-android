@@ -20,9 +20,8 @@ suspend fun awaitAmplifyRestCall(
                 coroutine.resume(apiResponse) { _, _, _ -> }
             } else {
                 coroutine.resumeWithException(
-                    ApiException(
-                        "Unexpected response code ${apiResponse.code}: ${apiResponse.data.asString()}",
-                        "Check the response code and body for details."
+                    AmplifyRestException(
+                        code = apiResponse.code
                     )
                 )
             }

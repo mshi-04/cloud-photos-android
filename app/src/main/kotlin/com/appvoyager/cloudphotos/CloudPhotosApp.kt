@@ -10,11 +10,9 @@ import com.amplifyframework.api.aws.AWSApiPlugin
 import com.amplifyframework.auth.cognito.AWSCognitoAuthPlugin
 import com.amplifyframework.core.Amplify
 import com.amplifyframework.storage.s3.AWSS3StoragePlugin
-import com.appvoyager.cloudphotos.data.fcm.DeviceToken
 import com.appvoyager.cloudphotos.data.media.worker.UploadNotificationHelper
 import com.appvoyager.cloudphotos.fcm.CloudPhotosFirebaseMessagingService
-import com.appvoyager.cloudphotos.fcm.RegisterDeviceTokenWorker
-import com.google.firebase.messaging.FirebaseMessaging
+import com.appvoyager.cloudphotos.fcm.FcmTokenRegistrar
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 
@@ -28,6 +26,9 @@ class CloudPhotosApp :
 
     @Inject
     lateinit var uploadNotificationHelper: UploadNotificationHelper
+
+    @Inject
+    lateinit var fcmTokenRegistrar: FcmTokenRegistrar
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
@@ -49,7 +50,7 @@ class CloudPhotosApp :
         }
         uploadNotificationHelper.createChannel()
         createUploadCompleteNotificationChannel()
-        registerFcmToken()
+        fcmTokenRegistrar.register()
     }
 
     private fun createUploadCompleteNotificationChannel() {
@@ -61,23 +62,5 @@ class CloudPhotosApp :
         )
         channel.description = getString(R.string.notification_channel_upload_complete_description)
         manager.createNotificationChannel(channel)
-    }
-
-    internal fun registerFcmToken() {
-        FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
-            if (!task.isSuccessful) {
-                return@addOnCompleteListener
-            }
-            val rawToken = task.result
-            if (rawToken.isNullOrBlank()) {
-                return@addOnCompleteListener
-            }
-            val deviceToken = try {
-                DeviceToken.of(rawToken)
-            } catch (_: IllegalArgumentException) {
-                return@addOnCompleteListener
-            }
-            RegisterDeviceTokenWorker.enqueue(this, deviceToken)
-        }
     }
 }

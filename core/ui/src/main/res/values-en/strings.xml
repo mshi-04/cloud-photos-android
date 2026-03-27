@@ -25,6 +25,11 @@
     <string name="message_code_resent">Verification code has been resent</string>
     <string name="message_password_reset">Password has been reset</string>
 
+    <!-- Media Detail Screen -->
+    <string name="media_detail_back">Back</string>
+    <string name="media_detail_play">Play</string>
+    <string name="media_detail_pause">Pause</string>
+
     <!-- Media Screen -->
     <string name="media_grid_settings">Grid settings</string>
     <string name="media_sign_out">Sign out</string>
