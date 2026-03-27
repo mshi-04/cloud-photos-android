@@ -21,6 +21,7 @@ class DeleteMediaWorker @AssistedInject constructor(
     private val uploadDataSource: UploadDataSource
 ) : CoroutineWorker(context, workerParams) {
 
+    @Suppress("ThrowsCount")
     override suspend fun doWork(): Result {
         val pendingRecords = localRepository.getPendingDeleteRecords()
         var hasTemporaryFailure = false

@@ -151,6 +151,7 @@ class CameraPreviewManager(
                     outputOptions,
                     ContextCompat.getMainExecutor(context),
                     object : ImageCapture.OnImageSavedCallback {
+                        @Suppress("ThrowsCount")
                         override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
                             val savedUri = outputFileResults.savedUri
                             if (savedUri != null) {
