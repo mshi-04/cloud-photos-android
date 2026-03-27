@@ -7,8 +7,8 @@ import com.amplifyframework.core.Amplify
 import com.amplifyframework.core.Consumer
 import com.amplifyframework.core.async.Cancelable
 import com.appvoyager.cloudphotos.data.common.awaitAmplifyRestCall
-import org.json.JSONObject
 import javax.inject.Inject
+import org.json.JSONObject
 
 class DeviceTokenDataSource @Inject constructor() {
 
@@ -42,5 +42,4 @@ class DeviceTokenDataSource @Inject constructor() {
             .build()
         awaitAmplifyRestCall(options, apiCall)
     }
-
 }

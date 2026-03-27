@@ -12,7 +12,7 @@ class UploadRecordDaoSyncStatusTest {
         val name = "PENDING_UPLOAD"
         assertTrue(name in enumNames) {
             "'$name' is hard-coded in UploadRecordDao.getPendingMediaIds but does not exist in SyncStatus. " +
-                    "Update the SQL query to match the renamed enum entry."
+                "Update the SQL query to match the renamed enum entry."
         }
     }
 
@@ -22,7 +22,7 @@ class UploadRecordDaoSyncStatusTest {
         val name = "PENDING_DELETE"
         assertTrue(name in enumNames) {
             "'$name' is hard-coded in UploadRecordDao.getPendingMediaIds but does not exist in SyncStatus. " +
-                    "Update the SQL query to match the renamed enum entry."
+                "Update the SQL query to match the renamed enum entry."
         }
     }
 }

@@ -9,9 +9,8 @@ import com.appvoyager.cloudphotos.domain.media.valueobject.MediaUrl
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 
-class ContentTypeResolverImpl @Inject constructor(
-    @param:ApplicationContext private val context: Context
-) : ContentTypeResolver {
+class ContentTypeResolverImpl @Inject constructor(@param:ApplicationContext private val context: Context) :
+    ContentTypeResolver {
 
     override fun resolve(mediaId: MediaId): String? {
         val uri = buildUri(mediaId) ?: return null

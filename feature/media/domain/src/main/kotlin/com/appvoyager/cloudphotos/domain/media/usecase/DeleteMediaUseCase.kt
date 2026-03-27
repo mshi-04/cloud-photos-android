@@ -25,5 +25,4 @@ class DeleteMediaUseCase @Inject constructor(
         localRepository.saveUploadRecords(listOf(deleteRecord))
         deleteScheduler.scheduleDelete()
     }
-
 }

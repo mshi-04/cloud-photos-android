@@ -14,10 +14,7 @@ class RecordMediaUploadUseCase @Inject constructor(
     private val uploadScheduler: UploadScheduler
 ) {
 
-    suspend operator fun invoke(
-        mediaId: MediaId,
-        mediaUploadedAt: MediaUploadedAt
-    ) {
+    suspend operator fun invoke(mediaId: MediaId, mediaUploadedAt: MediaUploadedAt) {
         val uploadRecord = UploadRecord(
             mediaId = mediaId,
             cloudStoragePath = null,
@@ -29,5 +26,4 @@ class RecordMediaUploadUseCase @Inject constructor(
         localRepository.saveUploadRecords(listOf(uploadRecord))
         uploadScheduler.scheduleUpload()
     }
-
 }

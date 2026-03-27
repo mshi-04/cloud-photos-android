@@ -39,5 +39,4 @@ class DeviceTokenTest {
             DeviceToken.of(raw)
         }
     }
-
 }

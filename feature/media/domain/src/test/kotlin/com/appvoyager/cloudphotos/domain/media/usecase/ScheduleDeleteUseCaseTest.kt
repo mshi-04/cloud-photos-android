@@ -25,5 +25,4 @@ class ScheduleDeleteUseCaseTest {
         // Assert
         verify { deleteScheduler.scheduleDelete() }
     }
-
 }

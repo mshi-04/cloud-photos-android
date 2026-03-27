@@ -18,5 +18,4 @@ class SyncUploadRecordsUseCase @Inject constructor(
 
         localRepository.saveUploadRecords(safeRecords)
     }
-
 }

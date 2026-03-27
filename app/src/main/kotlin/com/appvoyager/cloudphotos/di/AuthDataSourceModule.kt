@@ -15,5 +15,4 @@ abstract class AuthDataSourceModule {
     @Binds
     @Singleton
     abstract fun bindAuthDataSource(authDataSourceImpl: AuthDataSourceImpl): AuthDataSource
-
 }

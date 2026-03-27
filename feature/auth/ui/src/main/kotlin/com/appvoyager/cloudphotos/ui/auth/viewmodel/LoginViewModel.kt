@@ -18,6 +18,7 @@ import com.appvoyager.cloudphotos.ui.auth.uistate.AuthFieldError
 import com.appvoyager.cloudphotos.ui.auth.uistate.LoginUiState
 import com.appvoyager.cloudphotos.ui.util.ValidationUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -26,7 +27,6 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 @HiltViewModel
 class LoginViewModel @Inject constructor(
@@ -54,23 +54,20 @@ class LoginViewModel @Inject constructor(
 
     val isFormValid: Boolean
         get() = with(_uiState.value) {
-            email.isNotBlank() && ValidationUtils.isValidEmailFormat(email) && password.trim().length >= MIN_PASSWORD_LENGTH
+            email.isNotBlank() &&
+                ValidationUtils.isValidEmailFormat(email) &&
+                password.trim().length >= MIN_PASSWORD_LENGTH
         }
 
-    fun onEmailChanged(value: String) =
-        _uiState.update { it.copy(email = value, emailError = null) }
+    fun onEmailChanged(value: String) = _uiState.update { it.copy(email = value, emailError = null) }
 
-    fun onPasswordChanged(value: String) =
-        _uiState.update { it.copy(password = value, passwordError = null) }
+    fun onPasswordChanged(value: String) = _uiState.update { it.copy(password = value, passwordError = null) }
 
-    fun onTogglePasswordVisibility() =
-        _uiState.update { it.copy(isPasswordVisible = !it.isPasswordVisible) }
+    fun onTogglePasswordVisibility() = _uiState.update { it.copy(isPasswordVisible = !it.isPasswordVisible) }
 
-    fun onClearEmail() =
-        _uiState.update { it.copy(email = "", emailError = null) }
+    fun onClearEmail() = _uiState.update { it.copy(email = "", emailError = null) }
 
-    fun onClearPassword() =
-        _uiState.update { it.copy(password = "", passwordError = null) }
+    fun onClearPassword() = _uiState.update { it.copy(password = "", passwordError = null) }
 
     fun onForgotPassword() {
         viewModelScope.launch {
@@ -116,10 +113,7 @@ class LoginViewModel @Inject constructor(
         }
     }
 
-    private suspend fun handleSignInResult(
-        result: AuthResult<SignInState>,
-        requestedEmail: Email
-    ) = when (result) {
+    private suspend fun handleSignInResult(result: AuthResult<SignInState>, requestedEmail: Email) = when (result) {
         is AuthResult.Success -> {
             when (result.value) {
                 is SignInState.SignedIn -> _effect.emit(LoginEffect.NavigateToHome)
@@ -135,10 +129,7 @@ class LoginViewModel @Inject constructor(
         is AuthResult.Error -> handleAuthError(result.error, requestedEmail)
     }
 
-    private suspend fun handleSignUpResult(
-        result: AuthResult<Unit>,
-        requestedEmail: Email
-    ) = when (result) {
+    private suspend fun handleSignUpResult(result: AuthResult<Unit>, requestedEmail: Email) = when (result) {
         is AuthResult.Success -> {
             _effect.emit(LoginEffect.NavigateToVerification(requestedEmail))
         }
@@ -146,10 +137,7 @@ class LoginViewModel @Inject constructor(
         is AuthResult.Error -> handleAuthError(result.error, requestedEmail)
     }
 
-    private suspend fun handleAuthError(
-        error: AuthError,
-        requestedEmail: Email
-    ) = when (error) {
+    private suspend fun handleAuthError(error: AuthError, requestedEmail: Email) = when (error) {
         is AuthError.InvalidCredentials -> {
             _uiState.update { it.copy(passwordError = AuthFieldError.InvalidCredentials) }
         }
@@ -198,5 +186,4 @@ class LoginViewModel @Inject constructor(
     companion object {
         private const val MIN_PASSWORD_LENGTH = 8
     }
-
 }

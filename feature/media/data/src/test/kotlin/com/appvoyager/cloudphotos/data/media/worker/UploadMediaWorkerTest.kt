@@ -170,7 +170,7 @@ class UploadMediaWorkerTest {
         val slot = slot<List<UploadRecord>>()
         arrangePendingUploads(record)
         coEvery { uploadDataSource.uploadMedia(any()) } returns
-                UploadResult.Error(UploadError.AccessDenied("denied"))
+            UploadResult.Error(UploadError.AccessDenied("denied"))
         coEvery { localRepository.saveUploadRecords(capture(slot)) } just runs
 
         // Act
@@ -186,7 +186,7 @@ class UploadMediaWorkerTest {
         val record = createPendingRecord()
         arrangePendingUploads(record)
         coEvery { uploadDataSource.uploadMedia(any()) } returns
-                UploadResult.Error(UploadError.Network("timeout"))
+            UploadResult.Error(UploadError.Network("timeout"))
 
         // Act
         val result = worker.doWork()
@@ -202,7 +202,7 @@ class UploadMediaWorkerTest {
         val slot = slot<List<UploadRecord>>()
         arrangePendingUploads(record)
         coEvery { remoteRepository.createUploadRecord(any()) } throws
-                Exception("Unexpected response code 400: Bad Request")
+            Exception("Unexpected response code 400: Bad Request")
         coEvery { uploadDataSource.deleteUploadedObject(any()) } just runs
         coEvery { localRepository.saveUploadRecords(capture(slot)) } just runs
 
@@ -233,7 +233,7 @@ class UploadMediaWorkerTest {
         val record = createUploadRecord()
         arrangePendingUploads(record)
         coEvery { remoteRepository.createUploadRecord(any()) } throws
-                Exception("Unexpected response code 400: Bad Request")
+            Exception("Unexpected response code 400: Bad Request")
         coEvery { uploadDataSource.deleteUploadedObject(any()) } just runs
 
         // Act
@@ -298,7 +298,7 @@ class UploadMediaWorkerTest {
         coEvery { localRepository.getUploadRecords(any()) } returns listOf(record1)
         every { contentTypeResolver.resolve(any()) } returns "image/jpeg"
         coEvery { remoteRepository.createUploadRecord(any()) } throws
-                Exception("Unexpected response code 400: Bad Request")
+            Exception("Unexpected response code 400: Bad Request")
         coEvery { uploadDataSource.deleteUploadedObject(any()) } just runs
         coEvery { localRepository.saveUploadRecords(any()) } just runs
 
@@ -315,7 +315,7 @@ class UploadMediaWorkerTest {
         val record = createUploadRecord()
         arrangePendingUploads(record)
         coEvery { remoteRepository.createUploadRecord(any()) } throws
-                Exception("Unexpected response code 401: Unauthorized")
+            Exception("Unexpected response code 401: Unauthorized")
         coEvery { uploadDataSource.deleteUploadedObject(any()) } just runs
 
         // Act
@@ -349,7 +349,7 @@ class UploadMediaWorkerTest {
         val record = createUploadRecord()
         arrangePendingUploads(record)
         coEvery { remoteRepository.createUploadRecord(any()) } throws
-                Exception("Unexpected response code 401: Unauthorized")
+            Exception("Unexpected response code 401: Unauthorized")
         coEvery { uploadDataSource.deleteUploadedObject(any()) } just runs
 
         // Act
@@ -365,7 +365,7 @@ class UploadMediaWorkerTest {
         val record = createPendingRecord()
         arrangePendingUploads(record)
         coEvery { uploadDataSource.uploadMedia(any()) } returns
-                UploadResult.Error(UploadError.Network("timeout"))
+            UploadResult.Error(UploadError.Network("timeout"))
 
         // Act
         worker.doWork()
@@ -403,9 +403,7 @@ class UploadMediaWorkerTest {
         coEvery { remoteRepository.completeUpload(any()) } just runs
     }
 
-    private fun createUploadRecord(
-        mediaId: String = "external_primary_123"
-    ): UploadRecord = UploadRecord(
+    private fun createUploadRecord(mediaId: String = "external_primary_123"): UploadRecord = UploadRecord(
         mediaId = MediaId.of(mediaId),
         cloudStoragePath = CloudStoragePath.of("private/identity123/uuid.jpg"),
         isDeleted = IsDeleted.of(false),
@@ -413,9 +411,7 @@ class UploadMediaWorkerTest {
         mediaUploadedAt = MediaUploadedAt.of(1700000000000L)
     )
 
-    private fun createPendingRecord(
-        mediaId: String = "external_primary_123"
-    ): UploadRecord = UploadRecord(
+    private fun createPendingRecord(mediaId: String = "external_primary_123"): UploadRecord = UploadRecord(
         mediaId = MediaId.of(mediaId),
         cloudStoragePath = null,
         isDeleted = IsDeleted.of(false),

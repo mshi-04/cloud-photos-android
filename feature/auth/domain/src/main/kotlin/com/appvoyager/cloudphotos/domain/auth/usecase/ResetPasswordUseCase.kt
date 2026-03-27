@@ -5,11 +5,7 @@ import com.appvoyager.cloudphotos.domain.auth.repository.AuthRepository
 import com.appvoyager.cloudphotos.domain.auth.request.ResetPasswordRequest
 import javax.inject.Inject
 
-class ResetPasswordUseCase @Inject constructor(
-    private val repository: AuthRepository
-) {
+class ResetPasswordUseCase @Inject constructor(private val repository: AuthRepository) {
 
-    suspend operator fun invoke(request: ResetPasswordRequest): AuthResult<Unit> =
-        repository.resetPassword(request)
-
+    suspend operator fun invoke(request: ResetPasswordRequest): AuthResult<Unit> = repository.resetPassword(request)
 }

@@ -1,7 +1,6 @@
 package com.appvoyager.cloudphotos.domain.auth.model
 
 enum class SignInStep {
-
     CONFIRM_SIGN_IN_WITH_CUSTOM_CHALLENGE,
     CONFIRM_SIGN_IN_WITH_SMS_MFA_CODE,
     CONFIRM_SIGN_IN_WITH_TOTP_CODE,
@@ -10,5 +9,4 @@ enum class SignInStep {
     CONFIRM_SIGN_IN_WITH_NEW_PASSWORD,
     DONE,
     UNKNOWN
-
 }

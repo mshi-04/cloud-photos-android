@@ -43,5 +43,4 @@ class PrepareUploadQueueUseCase @Inject constructor(
         localUploadRecordsRepository.saveUploadRecords(newRecords)
         uploadScheduler.scheduleUpload()
     }
-
 }

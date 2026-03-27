@@ -9,12 +9,10 @@ import com.appvoyager.cloudphotos.domain.media.model.UploadRecord
 import com.appvoyager.cloudphotos.domain.media.request.CreateUploadRecordRequest
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaId
 import com.appvoyager.cloudphotos.domain.media.valueobject.UploadSuccessCount
-import org.json.JSONObject
 import javax.inject.Inject
+import org.json.JSONObject
 
-class UploadRecordRemoteDataSourceImpl @Inject constructor(
-    private val clock: Clock
-) : UploadRecordRemoteDataSource {
+class UploadRecordRemoteDataSourceImpl @Inject constructor(private val clock: Clock) : UploadRecordRemoteDataSource {
 
     override suspend fun fetchUploadRecords(): List<UploadRecord> {
         val options = RestOptions.builder()
@@ -80,5 +78,4 @@ class UploadRecordRemoteDataSourceImpl @Inject constructor(
             Amplify.API.delete(name, opts, onResp, onErr)
         }
     }
-
 }

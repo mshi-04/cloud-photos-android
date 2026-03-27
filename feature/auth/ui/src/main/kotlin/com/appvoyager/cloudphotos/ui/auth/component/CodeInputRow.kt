@@ -17,11 +17,7 @@ import com.appvoyager.cloudphotos.core.ui.R
 private const val CODE_LENGTH = 6
 
 @Composable
-fun CodeInputRow(
-    codes: List<String>,
-    isError: Boolean,
-    onCodeChanged: (Int, String) -> Unit
-) {
+fun CodeInputRow(codes: List<String>, isError: Boolean, onCodeChanged: (Int, String) -> Unit) {
     require(codes.size == CODE_LENGTH) { "codes must have exactly $CODE_LENGTH elements" }
     val focusRequesters = remember { List(CODE_LENGTH) { FocusRequester() } }
     val keyboardController = LocalSoftwareKeyboardController.current

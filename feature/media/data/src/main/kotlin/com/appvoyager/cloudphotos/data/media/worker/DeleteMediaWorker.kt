@@ -79,5 +79,4 @@ class DeleteMediaWorker @AssistedInject constructor(
     companion object {
         const val WORK_NAME = "delete_media_worker"
     }
-
 }

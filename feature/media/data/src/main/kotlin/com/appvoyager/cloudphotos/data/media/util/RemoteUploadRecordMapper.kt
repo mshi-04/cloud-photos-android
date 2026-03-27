@@ -39,5 +39,4 @@ internal object RemoteUploadRecordMapper {
         syncStatus = SyncStatus.SYNCED,
         mediaUploadedAt = MediaUploadedAt.of(uploadedAt ?: fallbackUploadedAt)
     )
-
 }

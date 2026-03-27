@@ -73,5 +73,4 @@ class CloudPhotosFirebaseMessagingService : FirebaseMessagingService() {
         const val CHANNEL_ID = "upload_complete"
         private const val NOTIFICATION_ID = 2001
     }
-
 }

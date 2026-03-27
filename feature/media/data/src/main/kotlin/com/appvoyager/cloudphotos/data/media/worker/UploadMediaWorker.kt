@@ -70,12 +70,14 @@ class UploadMediaWorker @AssistedInject constructor(
                     continue
                 }
 
-                when (val uploadResult = uploadDataSource.uploadMedia(
-                    UploadMediaRequest(
-                        localUri = localUri,
-                        contentType = contentType
+                when (
+                    val uploadResult = uploadDataSource.uploadMedia(
+                        UploadMediaRequest(
+                            localUri = localUri,
+                            contentType = contentType
+                        )
                     )
-                )) {
+                ) {
                     is UploadResult.Success -> {
                         val uploaded = current.copy(cloudStoragePath = uploadResult.value)
                         localRepository.saveUploadRecords(listOf(uploaded))
@@ -147,15 +149,14 @@ class UploadMediaWorker @AssistedInject constructor(
         return if (hasTemporaryFailure) Result.retry() else Result.success()
     }
 
-    private fun isS3PermanentFailure(error: UploadError): Boolean =
-        when (error) {
-            is UploadError.AccessDenied -> true
-            is UploadError.NotAuthenticated -> true
-            is UploadError.StorageLimitExceeded -> true
-            is UploadError.FileNotFound -> true
-            is UploadError.Network -> false
-            is UploadError.Unknown -> false
-        }
+    private fun isS3PermanentFailure(error: UploadError): Boolean = when (error) {
+        is UploadError.AccessDenied -> true
+        is UploadError.NotAuthenticated -> true
+        is UploadError.StorageLimitExceeded -> true
+        is UploadError.FileNotFound -> true
+        is UploadError.Network -> false
+        is UploadError.Unknown -> false
+    }
 
     private fun isPermanentFailure(e: Throwable): Boolean {
         val message = e.message ?: return false
@@ -168,5 +169,4 @@ class UploadMediaWorker @AssistedInject constructor(
     companion object {
         const val WORK_NAME = "upload_media_worker"
     }
-
 }

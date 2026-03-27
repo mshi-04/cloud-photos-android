@@ -23,5 +23,4 @@ object StringUtils {
         }
         return "$maskedLocal@$domain"
     }
-
 }

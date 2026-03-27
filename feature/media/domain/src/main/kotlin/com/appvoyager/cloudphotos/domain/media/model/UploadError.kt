@@ -13,5 +13,4 @@ sealed class UploadError(open val message: String?) {
     data class FileNotFound(override val message: String? = null) : UploadError(message)
 
     data class Unknown(override val message: String? = null) : UploadError(message)
-
 }

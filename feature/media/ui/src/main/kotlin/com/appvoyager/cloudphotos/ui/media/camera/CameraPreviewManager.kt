@@ -20,15 +20,15 @@ import androidx.lifecycle.LifecycleOwner
 import com.appvoyager.cloudphotos.domain.media.model.PhotoCaptureHandle
 import com.appvoyager.cloudphotos.domain.media.model.SavePhotoResult
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaUrl
+import java.text.SimpleDateFormat
+import java.util.Locale
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
-import java.text.SimpleDateFormat
-import java.util.Locale
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
 
 class CameraPreviewManager(
     private val context: Context,
@@ -189,7 +189,9 @@ class CameraPreviewManager(
 
                         override fun onError(exception: ImageCaptureException) {
                             val errorType =
-                                if (exception.imageCaptureError == ImageCapture.ERROR_FILE_IO && isStorageFull(exception)) {
+                                if (exception.imageCaptureError == ImageCapture.ERROR_FILE_IO &&
+                                    isStorageFull(exception)
+                                ) {
                                     SavePhotoResult.ErrorType.STORAGE_FULL
                                 } else {
                                     SavePhotoResult.ErrorType.SAVE_FAILED
@@ -226,26 +228,24 @@ class CameraPreviewManager(
     }
 
     @Suppress("BlockingMethodInNonBlockingContext")
-    private suspend fun getCameraProvider(): ProcessCameraProvider =
-        suspendCancellableCoroutine { continuation ->
-            val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
-            cameraProviderFuture.addListener(
-                {
-                    try {
-                        continuation.resume(cameraProviderFuture.get())
-                    } catch (e: java.util.concurrent.CancellationException) {
-                        continuation.cancel(e)
-                    } catch (e: Exception) {
-                        continuation.resumeWithException(e)
-                    }
-                },
-                ContextCompat.getMainExecutor(context)
-            )
-        }
+    private suspend fun getCameraProvider(): ProcessCameraProvider = suspendCancellableCoroutine { continuation ->
+        val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
+        cameraProviderFuture.addListener(
+            {
+                try {
+                    continuation.resume(cameraProviderFuture.get())
+                } catch (e: java.util.concurrent.CancellationException) {
+                    continuation.cancel(e)
+                } catch (e: Exception) {
+                    continuation.resumeWithException(e)
+                }
+            },
+            ContextCompat.getMainExecutor(context)
+        )
+    }
 
     companion object {
         private const val FILENAME_FORMAT = "yyyy-MM-dd-HH-mm-ss-SSS"
         private const val RELATIVE_PATH = "DCIM/Camera"
     }
-
 }

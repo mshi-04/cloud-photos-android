@@ -61,5 +61,4 @@ class GetMediaListUseCaseTest {
         }
         assertEquals(expected, actual)
     }
-
 }

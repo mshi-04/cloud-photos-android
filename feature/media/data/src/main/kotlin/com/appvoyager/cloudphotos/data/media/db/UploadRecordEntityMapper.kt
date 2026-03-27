@@ -26,5 +26,4 @@ internal object UploadRecordEntityMapper {
         syncStatus = record.syncStatus.name,
         uploadedAt = record.mediaUploadedAt.value
     )
-
 }

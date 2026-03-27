@@ -15,5 +15,4 @@ abstract class AuthRepositoryModule {
     @Binds
     @Singleton
     abstract fun bindAuthRepository(authRepositoryImpl: AuthRepositoryImpl): AuthRepository
-
 }
