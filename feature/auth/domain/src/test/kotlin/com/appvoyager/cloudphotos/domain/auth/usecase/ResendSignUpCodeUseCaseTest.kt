@@ -21,37 +21,34 @@ class ResendSignUpCodeUseCaseTest {
     private val useCase = ResendSignUpCodeUseCase(repository)
 
     @Test
-    fun `invoke returns success when repository succeeds`() =
-        runTest(StandardTestDispatcher()) {
-            // Arrange
-            val email = validEmail()
-            val request = ResendSignUpCodeRequest(email)
-            val expected = AuthResult.Success(Unit)
-            coEvery { repository.resendSignUpCode(request) } returns expected
+    fun `invoke returns success when repository succeeds`() = runTest(StandardTestDispatcher()) {
+        // Arrange
+        val email = validEmail()
+        val request = ResendSignUpCodeRequest(email)
+        val expected = AuthResult.Success(Unit)
+        coEvery { repository.resendSignUpCode(request) } returns expected
 
-            // Act
-            val actual = useCase(request)
+        // Act
+        val actual = useCase(request)
 
-            // Assert
-            assertEquals(expected, actual)
-            coVerify(exactly = 1) { repository.resendSignUpCode(request) }
-        }
+        // Assert
+        assertEquals(expected, actual)
+        coVerify(exactly = 1) { repository.resendSignUpCode(request) }
+    }
 
     @Test
-    fun `invoke returns error when repository fails`() =
-        runTest(StandardTestDispatcher()) {
-            // Arrange
-            val email = validEmail()
-            val request = ResendSignUpCodeRequest(email)
-            val expected = AuthResult.Error(AuthError.TooManyRequests("too many"))
-            coEvery { repository.resendSignUpCode(request) } returns expected
+    fun `invoke returns error when repository fails`() = runTest(StandardTestDispatcher()) {
+        // Arrange
+        val email = validEmail()
+        val request = ResendSignUpCodeRequest(email)
+        val expected = AuthResult.Error(AuthError.TooManyRequests("too many"))
+        coEvery { repository.resendSignUpCode(request) } returns expected
 
-            // Act
-            val actual = useCase(request)
+        // Act
+        val actual = useCase(request)
 
-            // Assert
-            assertEquals(expected, actual)
-            coVerify(exactly = 1) { repository.resendSignUpCode(request) }
-        }
-
+        // Assert
+        assertEquals(expected, actual)
+        coVerify(exactly = 1) { repository.resendSignUpCode(request) }
+    }
 }

@@ -10,13 +10,12 @@ import com.appvoyager.cloudphotos.domain.media.valueobject.MediaCreatedAt
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaId
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaUrl
 import dagger.hilt.android.qualifiers.ApplicationContext
+import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import javax.inject.Inject
 
-class LocalMediaDataSourceImpl @Inject constructor(
-    @param:ApplicationContext private val context: Context
-) : LocalMediaDataSource {
+class LocalMediaDataSourceImpl @Inject constructor(@param:ApplicationContext private val context: Context) :
+    LocalMediaDataSource {
 
     override suspend fun getLocalMediaList(): List<Media> = withContext(Dispatchers.IO) {
         val mediaList = mutableListOf<Media>()
@@ -34,7 +33,7 @@ class LocalMediaDataSourceImpl @Inject constructor(
         }
         val selection =
             "(${MediaStore.Files.FileColumns.MEDIA_TYPE} = ? OR ${MediaStore.Files.FileColumns.MEDIA_TYPE} = ?)" +
-                    " AND ($pathFilter)"
+                " AND ($pathFilter)"
         val selectionArgs = arrayOf(
             MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE.toString(),
             MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO.toString(),
@@ -69,14 +68,16 @@ class LocalMediaDataSourceImpl @Inject constructor(
                         MediaType.VIDEO
                     }
 
-                    val contentUri = ContentUris.withAppendedId(
-                        MediaStore.Files.getContentUri(volumeName),
-                        idLong
-                    )
+                    val baseUri = if (type == MediaType.VIDEO) {
+                        MediaStore.Video.Media.getContentUri(volumeName)
+                    } else {
+                        MediaStore.Images.Media.getContentUri(volumeName)
+                    }
+                    val contentUri = ContentUris.withAppendedId(baseUri, idLong)
 
                     mediaList.add(
                         Media(
-                            id = MediaId.of("${volumeName}_${idLong}"),
+                            id = MediaId.of("${volumeName}_$idLong"),
                             url = MediaUrl.of(contentUri.toString()),
                             type = type,
                             thumbnailUrl = null,
@@ -91,7 +92,6 @@ class LocalMediaDataSourceImpl @Inject constructor(
     }
 
     companion object {
-        private val TARGET_PATHS = arrayOf("DCIM/%", "Pictures/%", "Download/%")
+        private val TARGET_PATHS = arrayOf("DCIM/%", "Pictures/%", "Download/%", "Movies/%")
     }
-
 }

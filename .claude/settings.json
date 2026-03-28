@@ -1,10 +1,18 @@
 {
   "permissions": {
     "allow": [
-      "Bash(./gradlew:*)",
+      "Bash(./gradlew *)",
+      "Edit(.github/**)",
       "Edit(app/src/**)",
-      "Read(app/src/**)",
-      "Write(app/src/**)"
+      "Edit(build-logic/**)",
+      "Edit(build.gradle.kts)",
+      "Edit(CLAUDE.md)",
+      "Edit(core/**)",
+      "Edit(fastlane/**)",
+      "Edit(feature/**)",
+      "Edit(gradle/**)",
+      "Edit(SECURITY.md)",
+      "Edit(settings.gradle.kts)"
     ]
   }
 }

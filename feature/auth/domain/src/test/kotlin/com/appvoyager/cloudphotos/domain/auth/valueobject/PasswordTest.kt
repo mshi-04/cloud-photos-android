@@ -69,5 +69,4 @@ class PasswordTest {
         // Assert
         assertEquals("Password must be at least 8 characters.", ex.message)
     }
-
 }

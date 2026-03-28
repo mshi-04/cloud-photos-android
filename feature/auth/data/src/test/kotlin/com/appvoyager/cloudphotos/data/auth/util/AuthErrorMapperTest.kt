@@ -5,9 +5,9 @@ import com.amplifyframework.auth.exceptions.SessionExpiredException
 import com.amplifyframework.auth.exceptions.SignedOutException
 import com.amplifyframework.auth.exceptions.ValidationException
 import com.appvoyager.cloudphotos.domain.auth.model.AuthError
+import java.io.IOException
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
-import java.io.IOException
 
 class AuthErrorMapperTest {
 

@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Verification Code Input Box -->
+    <string name="code_input_box_description">Verification code digit %1$d</string>
+
     <!-- Verification Code Screen -->
     <string name="verification_code_prompt">A verification code has been sent to your registered
         email address.\nPlease check and enter it below.</string>
@@ -22,6 +25,11 @@
     <string name="message_code_resent">Verification code has been resent</string>
     <string name="message_password_reset">Password has been reset</string>
 
+    <!-- Media Detail Screen -->
+    <string name="media_detail_back">Back</string>
+    <string name="media_detail_play">Play</string>
+    <string name="media_detail_pause">Pause</string>
+
     <!-- Media Screen -->
     <string name="media_grid_settings">Grid settings</string>
     <string name="media_sign_out">Sign out</string>
@@ -36,6 +44,9 @@
     <string name="settings_grid_column_value">%1$d columns</string>
     <string name="settings_confirm">OK</string>
     <string name="settings_cancel">Cancel</string>
+
+    <!-- Sign Out -->
+    <string name="error_sign_out">Failed to sign out</string>
 
     <!-- Error Messages -->
     <string name="error_invalid_credentials">Incorrect email address or password</string>
@@ -58,4 +69,16 @@
     <string name="error_permission_required">Full access to all photos and videos is required</string>
     <string name="error_permission_partial_access">Selecting "Allow access to limited photos only" is treated the same as denying permission</string>
     <string name="permission_open_settings">Open settings</string>
+
+    <!-- Camera Screen -->
+    <string name="camera_permission_required">Camera access permission is required</string>
+    <string name="camera_error_camera_unavailable">Cannot start the camera</string>
+    <string name="camera_error_capture_failed">Failed to capture photo</string>
+    <string name="camera_error_storage_full_title">Storage is full</string>
+    <string name="camera_error_storage_full_message">Cannot save photo because the device storage is full. Please free up some space and try again.</string>
+    <string name="camera_cd_take_photo">Take photo</string>
+    <string name="camera_cd_switch_camera">Switch camera</string>
+    <string name="camera_cd_last_photo">Last taken photo</string>
+    <string name="camera_cd_close">Close camera</string>
+
 </resources>

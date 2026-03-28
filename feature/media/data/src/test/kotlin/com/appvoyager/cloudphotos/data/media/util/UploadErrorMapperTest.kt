@@ -2,10 +2,10 @@ package com.appvoyager.cloudphotos.data.media.util
 
 import com.amplifyframework.storage.StorageException
 import com.appvoyager.cloudphotos.domain.media.model.UploadError
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Test
 import java.io.FileNotFoundException
 import java.io.IOException
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
 
 class UploadErrorMapperTest {
 

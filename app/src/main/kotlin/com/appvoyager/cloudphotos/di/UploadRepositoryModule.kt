@@ -15,5 +15,4 @@ abstract class UploadRepositoryModule {
     @Binds
     @Singleton
     abstract fun bindUploadRepository(uploadRepositoryImpl: UploadRepositoryImpl): UploadRepository
-
 }

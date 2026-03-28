@@ -16,8 +16,9 @@ import com.appvoyager.cloudphotos.ui.auth.effect.AuthSnackbarMessage
 import com.appvoyager.cloudphotos.ui.auth.effect.ResetPasswordEffect
 import com.appvoyager.cloudphotos.ui.auth.uistate.AuthFieldError
 import com.appvoyager.cloudphotos.ui.auth.uistate.ResetPasswordUiState
+import com.appvoyager.cloudphotos.ui.util.ResendTimer
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.delay
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -26,7 +27,6 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 @HiltViewModel
 class ResetPasswordViewModel @Inject constructor(
@@ -35,13 +35,19 @@ class ResetPasswordViewModel @Inject constructor(
     private val resetPasswordUseCase: ResetPasswordUseCase
 ) : ViewModel() {
 
-    val email: String = savedStateHandle.get<String>(ARG_EMAIL)
-        ?: error("Missing required nav argument: $ARG_EMAIL")
+    val email: Email = Email.of(
+        savedStateHandle.get<String>(ARG_EMAIL)
+            ?: error("Missing required nav argument: $ARG_EMAIL")
+    )
 
     private val _uiState = MutableStateFlow(ResetPasswordUiState())
     val uiState: StateFlow<ResetPasswordUiState> = _uiState.asStateFlow()
 
     private var isTimerStarted = false
+    private val resendTimer = ResendTimer(
+        durationSeconds = ResetPasswordUiState.DEFAULT_RESEND_COOLDOWN_SECONDS,
+        scope = viewModelScope
+    ) { seconds -> _uiState.update { it.copy(resendTimerSeconds = seconds) } }
 
     private val _effect = MutableSharedFlow<ResetPasswordEffect>(extraBufferCapacity = 1)
     val effect: SharedFlow<ResetPasswordEffect> = _effect.asSharedFlow()
@@ -49,7 +55,7 @@ class ResetPasswordViewModel @Inject constructor(
     fun startTimerIfNeeded() {
         if (!isTimerStarted) {
             isTimerStarted = true
-            startResendTimer()
+            resendTimer.start()
         }
     }
 
@@ -73,11 +79,9 @@ class ResetPasswordViewModel @Inject constructor(
         _uiState.update { it.copy(codes = currentCodes) }
     }
 
-    fun onNewPasswordChanged(value: String) =
-        _uiState.update { it.copy(newPassword = value, passwordError = null) }
+    fun onNewPasswordChanged(value: String) = _uiState.update { it.copy(newPassword = value, passwordError = null) }
 
-    fun onToggleNewPasswordVisibility() =
-        _uiState.update { it.copy(isNewPasswordVisible = !it.isNewPasswordVisible) }
+    fun onToggleNewPasswordVisibility() = _uiState.update { it.copy(isNewPasswordVisible = !it.isNewPasswordVisible) }
 
     fun onConfirm() {
         if (_uiState.value.isLoading || !validateForm()) return
@@ -86,11 +90,10 @@ class ResetPasswordViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                val emailVO = Email.of(email)
                 val code = ConfirmationCode.of(fullCode)
                 val password = Password.of(_uiState.value.newPassword)
                 val result = confirmResetPasswordUseCase(
-                    ConfirmResetPasswordRequest(emailVO, code, password)
+                    ConfirmResetPasswordRequest(email, code, password)
                 )
 
                 when (result) {
@@ -114,11 +117,10 @@ class ResetPasswordViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                val emailVO = Email.of(email)
-                when (val result = resetPasswordUseCase(ResetPasswordRequest(emailVO))) {
+                when (val result = resetPasswordUseCase(ResetPasswordRequest(email))) {
                     is AuthResult.Success -> {
                         _effect.emit(ResetPasswordEffect.ShowSnackbar(AuthSnackbarMessage.CodeResent))
-                        startResendTimer()
+                        resendTimer.start()
                     }
 
                     is AuthResult.Error -> handleResendError(result.error)
@@ -137,7 +139,7 @@ class ResetPasswordViewModel @Inject constructor(
             _uiState.update { it.copy(codeError = AuthFieldError.EnterCode) }
             valid = false
         }
-        if (_uiState.value.newPassword.length < MIN_PASSWORD_LENGTH) {
+        if (_uiState.value.newPassword.trim().length < MIN_PASSWORD_LENGTH) {
             _uiState.update { it.copy(passwordError = AuthFieldError.PasswordTooShort) }
             valid = false
         }
@@ -161,8 +163,11 @@ class ResetPasswordViewModel @Inject constructor(
             _effect.emit(ResetPasswordEffect.ShowSnackbar(AuthSnackbarMessage.TooManyRequests))
         }
 
+        is AuthError.InvalidPassword -> {
+            _uiState.update { it.copy(passwordError = AuthFieldError.InvalidPassword) }
+        }
+
         is AuthError.InvalidCredentials,
-        is AuthError.InvalidPassword,
         is AuthError.Unknown,
         is AuthError.UserNotConfirmed,
         is AuthError.UsernameAlreadyExists -> {
@@ -190,19 +195,8 @@ class ResetPasswordViewModel @Inject constructor(
         }
     }
 
-    private fun startResendTimer() {
-        _uiState.update { it.copy(resendTimerSeconds = ResetPasswordUiState.DEFAULT_RESEND_COOLDOWN_SECONDS) }
-        viewModelScope.launch {
-            while (_uiState.value.resendTimerSeconds > 0) {
-                delay(1_000L)
-                _uiState.update { it.copy(resendTimerSeconds = it.resendTimerSeconds - 1) }
-            }
-        }
-    }
-
     companion object {
         private const val ARG_EMAIL = "email"
         private const val MIN_PASSWORD_LENGTH = 8
     }
-
 }

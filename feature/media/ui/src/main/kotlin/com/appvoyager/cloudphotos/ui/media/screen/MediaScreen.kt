@@ -6,23 +6,22 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -30,13 +29,17 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.BrokenImage
-import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.PlayCircleOutline
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -45,6 +48,8 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
@@ -58,10 +63,11 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
@@ -77,7 +83,6 @@ import androidx.lifecycle.repeatOnLifecycle
 import coil3.compose.AsyncImage
 import com.appvoyager.cloudphotos.core.ui.R
 import com.appvoyager.cloudphotos.domain.media.model.Media
-import com.appvoyager.cloudphotos.ui.media.effect.MediaSnackbarMessage
 import com.appvoyager.cloudphotos.domain.media.model.MediaType
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaCreatedAt
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaId
@@ -85,6 +90,7 @@ import com.appvoyager.cloudphotos.domain.media.valueobject.MediaUrl
 import com.appvoyager.cloudphotos.domain.settings.valueobject.GridColumnCount
 import com.appvoyager.cloudphotos.ui.media.component.GridColumnSettingsDialog
 import com.appvoyager.cloudphotos.ui.media.effect.MediaEffect
+import com.appvoyager.cloudphotos.ui.media.effect.MediaSnackbarMessage
 import com.appvoyager.cloudphotos.ui.media.uistate.MediaUiState
 import com.appvoyager.cloudphotos.ui.media.viewmodel.MediaViewModel
 import com.appvoyager.cloudphotos.ui.theme.CloudPhotosTheme
@@ -94,20 +100,18 @@ import java.util.Locale
 
 private const val URI_SCHEME_PACKAGE = "package"
 
-private fun MediaSnackbarMessage.toMessage(context: android.content.Context): String = when (this) {
-    MediaSnackbarMessage.Unknown -> context.getString(R.string.error_unknown)
-    MediaSnackbarMessage.MediaLoadFailed -> context.getString(R.string.error_media_load_failed)
-}
-
 @Composable
 fun MediaScreen(
     viewModel: MediaViewModel = hiltViewModel(),
-    onSignOut: () -> Unit
+    onNavigateToCamera: () -> Unit,
+    onNavigateToLogin: () -> Unit,
+    onMediaClick: (mediaId: MediaId, mediaList: List<Media>) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
     val latestContext = rememberUpdatedState(context)
+    val latestOnNavigateToLogin = rememberUpdatedState(onNavigateToLogin)
     val lifecycleOwner = LocalLifecycleOwner.current
     var permissionCheckKey by remember { mutableIntStateOf(0) }
     var notificationPermissionRequested by remember { mutableStateOf(false) }
@@ -122,6 +126,7 @@ fun MediaScreen(
                     is MediaEffect.ShowSnackbar -> {
                         snackbarHostState.showSnackbar(effect.message.toMessage(latestContext.value))
                     }
+                    is MediaEffect.NavigateToLogin -> latestOnNavigateToLogin.value()
                 }
             }
         }
@@ -130,8 +135,8 @@ fun MediaScreen(
     LifecycleResumeEffect(Unit) {
         permissionCheckKey++
         viewModel.onScreenResumed()
-        if (!notificationPermissionRequested
-            && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+        if (!notificationPermissionRequested &&
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
         ) {
             notificationPermissionRequested = true
             notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -147,6 +152,14 @@ fun MediaScreen(
 
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+        floatingActionButton = {
+            FloatingActionButton(onClick = onNavigateToCamera) {
+                Icon(
+                    imageVector = Icons.Default.CameraAlt,
+                    contentDescription = stringResource(R.string.camera_cd_take_photo)
+                )
+            }
+        },
         contentWindowInsets = WindowInsets(0)
     ) { innerPadding ->
         Box(
@@ -158,7 +171,8 @@ fun MediaScreen(
                 screenState = uiState.screenState,
                 gridColumnCount = uiState.gridColumnCount,
                 onGridSettingsClick = { viewModel.onShowSettingsDialog() },
-                onSignOut = onSignOut,
+                onSignOut = { viewModel.signOut() },
+                onMediaClick = onMediaClick,
                 onRetry = { viewModel.loadMediaList() },
                 onRetryPermissions = { permissionCheckKey++ }
             )
@@ -172,6 +186,29 @@ fun MediaScreen(
             onDismiss = { viewModel.onDismissSettingsDialog() }
         )
     }
+
+    BackHandler(enabled = uiState.isSigningOut) {}
+
+    if (uiState.isSigningOut) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.4f))
+                .pointerInput(Unit) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            awaitPointerEvent()
+                        }
+                    }
+                }
+                .clearAndSetSemantics { },
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator(
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+    }
 }
 
 @Composable
@@ -180,15 +217,18 @@ private fun MediaContent(
     gridColumnCount: GridColumnCount,
     onGridSettingsClick: () -> Unit,
     onSignOut: () -> Unit,
+    onMediaClick: (mediaId: MediaId, mediaList: List<Media>) -> Unit,
     onRetry: () -> Unit,
     onRetryPermissions: () -> Unit
 ) {
     val gridState = rememberLazyGridState()
-    val isButtonVisible by rememberScrollButtonVisibility(gridState)
-
+    val isAppBarVisible by rememberAppBarVisibility(gridState)
     val statusBarPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val navigationBarPadding =
         WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    val appBarHeight = TopAppBarDefaults.TopAppBarExpandedHeight
+
+    val showAppBar = screenState is MediaUiState.ScreenState.Success
 
     Box(
         modifier = Modifier
@@ -208,39 +248,27 @@ private fun MediaContent(
 
             is MediaUiState.ScreenState.Success -> {
                 if (screenState.mediaList.isNotEmpty()) {
-                    MediaGrid(
-                        mediaList = screenState.mediaList,
-                        gridColumnCount = gridColumnCount,
-                        gridState = gridState,
-                        topPadding = statusBarPadding,
-                        bottomPadding = navigationBarPadding
-                    )
-
-                    AnimatedVisibility(
-                        visible = isButtonVisible,
-                        enter = fadeIn(),
-                        exit = fadeOut(),
-                        modifier = Modifier.align(Alignment.TopStart)
+                    LazyVerticalGrid(
+                        state = gridState,
+                        columns = GridCells.Fixed(gridColumnCount.value),
+                        contentPadding = PaddingValues(
+                            start = 2.dp,
+                            end = 2.dp,
+                            top = statusBarPadding + appBarHeight + 2.dp,
+                            bottom = navigationBarPadding + 2.dp
+                        ),
+                        horizontalArrangement = Arrangement.spacedBy(2.dp),
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                        modifier = Modifier.fillMaxSize()
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(statusBarPadding)
-                                .background(MaterialTheme.colorScheme.background)
-                        )
-                    }
-
-                    AnimatedVisibility(
-                        visible = isButtonVisible,
-                        enter = fadeIn(),
-                        exit = fadeOut(),
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(top = statusBarPadding + 8.dp, end = 8.dp)
-                    ) {
-                        Row {
-                            SignOutButton(onClick = onSignOut)
-                            AppIconButton(onClick = onGridSettingsClick)
+                        itemsIndexed(
+                            items = screenState.mediaList,
+                            key = { _, media -> media.id.value }
+                        ) { _, media ->
+                            MediaGridItem(
+                                media = media,
+                                onClick = { onMediaClick(media.id, screenState.mediaList) }
+                            )
                         }
                     }
                 } else {
@@ -248,11 +276,55 @@ private fun MediaContent(
                 }
             }
         }
+
+        if (showAppBar) {
+            MediaAppBar(
+                visible = isAppBarVisible,
+                onSignOut = onSignOut,
+                onGridSettingsClick = onGridSettingsClick
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MediaAppBar(visible: Boolean, onSignOut: () -> Unit, onGridSettingsClick: () -> Unit) {
+    AnimatedVisibility(
+        visible = visible,
+        enter = slideInVertically { -it },
+        exit = slideOutVertically { -it }
+    ) {
+        TopAppBar(
+            title = {},
+            actions = {
+                IconButton(onClick = onSignOut) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Logout,
+                        contentDescription = stringResource(R.string.media_sign_out),
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+                IconButton(onClick = onGridSettingsClick) {
+                    Icon(
+                        imageVector = Icons.Default.Tune,
+                        contentDescription = stringResource(R.string.media_grid_settings),
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
+            },
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = MaterialTheme.colorScheme.background,
+                scrolledContainerColor = MaterialTheme.colorScheme.background
+            )
+        )
     }
 }
 
 @Composable
-private fun rememberScrollButtonVisibility(gridState: LazyGridState): State<Boolean> {
+private fun rememberAppBarVisibility(gridState: LazyGridState): State<Boolean> {
     val isVisible = remember { mutableStateOf(true) }
     var previousFirstVisibleItemIndex by remember { mutableIntStateOf(0) }
     var previousFirstVisibleItemScrollOffset by remember { mutableIntStateOf(0) }
@@ -262,7 +334,10 @@ private fun rememberScrollButtonVisibility(gridState: LazyGridState): State<Bool
             gridState.firstVisibleItemIndex to gridState.firstVisibleItemScrollOffset
         }.collect { (currentIndex, currentOffset) ->
             val isScrollingUp = currentIndex < previousFirstVisibleItemIndex ||
-                    (currentIndex == previousFirstVisibleItemIndex && currentOffset < previousFirstVisibleItemScrollOffset)
+                (
+                    currentIndex == previousFirstVisibleItemIndex &&
+                        currentOffset < previousFirstVisibleItemScrollOffset
+                    )
             val isAtTop = currentIndex == 0 && currentOffset == 0
 
             previousFirstVisibleItemIndex = currentIndex
@@ -276,61 +351,7 @@ private fun rememberScrollButtonVisibility(gridState: LazyGridState): State<Bool
 }
 
 @Composable
-private fun SignOutButton(onClick: () -> Unit) {
-    IconButton(onClick = onClick) {
-        Icon(
-            imageVector = Icons.AutoMirrored.Filled.Logout,
-            contentDescription = stringResource(R.string.media_sign_out),
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(24.dp)
-        )
-    }
-}
-
-@Composable
-private fun AppIconButton(onClick: () -> Unit) {
-    IconButton(onClick = onClick) {
-        Icon(
-            painter = painterResource(R.drawable.ic_launcher_foreground),
-            contentDescription = stringResource(R.string.media_grid_settings),
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(32.dp)
-        )
-    }
-}
-
-@Composable
-private fun MediaGrid(
-    mediaList: List<Media>,
-    gridColumnCount: GridColumnCount,
-    gridState: LazyGridState,
-    topPadding: androidx.compose.ui.unit.Dp,
-    bottomPadding: androidx.compose.ui.unit.Dp
-) {
-    LazyVerticalGrid(
-        state = gridState,
-        columns = GridCells.Fixed(gridColumnCount.value),
-        contentPadding = PaddingValues(
-            start = 2.dp,
-            end = 2.dp,
-            top = topPadding + 2.dp,
-            bottom = bottomPadding + 2.dp
-        ),
-        horizontalArrangement = Arrangement.spacedBy(2.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp),
-        modifier = Modifier.fillMaxSize()
-    ) {
-        items(
-            items = mediaList,
-            key = { it.id.value }
-        ) { media ->
-            MediaGridItem(media = media)
-        }
-    }
-}
-
-@Composable
-private fun MediaGridItem(media: Media) {
+private fun MediaGridItem(media: Media, onClick: () -> Unit) {
     val mediaTypeLabel = if (media.type == MediaType.VIDEO) {
         stringResource(R.string.media_content_description_video)
     } else {
@@ -350,6 +371,7 @@ private fun MediaGridItem(media: Media) {
         modifier = Modifier
             .aspectRatio(1f)
             .clip(MaterialTheme.shapes.extraSmall)
+            .clickable(onClick = onClick)
             .semantics(mergeDescendants = true) {
                 contentDescription = accessibilityLabel
             }
@@ -456,11 +478,7 @@ private fun ErrorContent(onRetry: () -> Unit) {
 }
 
 @Composable
-private fun RequestMediaPermissions(
-    key: Int,
-    onGranted: () -> Unit,
-    onDenied: () -> Unit
-) {
+private fun RequestMediaPermissions(key: Int, onGranted: () -> Unit, onDenied: () -> Unit) {
     val context = LocalContext.current
     val latestOnGranted = rememberUpdatedState(onGranted)
     val latestOnDenied = rememberUpdatedState(onDenied)
@@ -495,6 +513,12 @@ private fun RequestMediaPermissions(
     }
 }
 
+private fun MediaSnackbarMessage.toMessage(context: android.content.Context): String = when (this) {
+    MediaSnackbarMessage.Unknown -> context.getString(R.string.error_unknown)
+    MediaSnackbarMessage.MediaLoadFailed -> context.getString(R.string.error_media_load_failed)
+    MediaSnackbarMessage.SignOutFailed -> context.getString(R.string.error_sign_out)
+}
+
 @Preview(showBackground = true)
 @Composable
 private fun MediaContentPreview() {
@@ -519,6 +543,7 @@ private fun MediaContentPreview() {
             gridColumnCount = GridColumnCount.of(3),
             onGridSettingsClick = {},
             onSignOut = {},
+            onMediaClick = { _, _ -> },
             onRetry = {},
             onRetryPermissions = {}
         )
@@ -534,6 +559,7 @@ private fun MediaContentErrorPreview() {
             gridColumnCount = GridColumnCount.of(3),
             onGridSettingsClick = {},
             onSignOut = {},
+            onMediaClick = { _, _ -> },
             onRetry = {},
             onRetryPermissions = {}
         )
@@ -549,6 +575,7 @@ private fun MediaContentPermissionRequiredPreview() {
             gridColumnCount = GridColumnCount.of(3),
             onGridSettingsClick = {},
             onSignOut = {},
+            onMediaClick = { _, _ -> },
             onRetry = {},
             onRetryPermissions = {}
         )

@@ -6,5 +6,4 @@ interface SettingsDataSource {
 
     val gridColumnCount: Flow<Int>
     suspend fun setGridColumnCount(count: Int)
-
 }

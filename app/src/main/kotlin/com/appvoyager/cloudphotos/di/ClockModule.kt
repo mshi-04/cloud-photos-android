@@ -15,5 +15,4 @@ abstract class ClockModule {
     @Binds
     @Singleton
     abstract fun bindClock(systemClock: SystemClock): Clock
-
 }

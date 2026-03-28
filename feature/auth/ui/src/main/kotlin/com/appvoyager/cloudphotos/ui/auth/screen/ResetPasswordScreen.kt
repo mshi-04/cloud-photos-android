@@ -96,7 +96,7 @@ fun ResetPasswordScreen(
                 .padding(innerPadding)
         ) {
             ResetPasswordCodeContent(
-                email = viewModel.email,
+                email = viewModel.email.value,
                 codes = uiState.codes,
                 newPassword = uiState.newPassword,
                 isNewPasswordVisible = uiState.isNewPasswordVisible,

@@ -7,25 +7,35 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.appvoyager.cloudphotos.domain.auth.model.AuthResult
 import com.appvoyager.cloudphotos.domain.auth.usecase.GetSessionUseCase
+import com.appvoyager.cloudphotos.fcm.FcmTokenRegistrar
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlin.coroutines.cancellation.CancellationException
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val getSessionUseCase: GetSessionUseCase,
+    private val fcmTokenRegistrar: FcmTokenRegistrar
 ) : ViewModel() {
 
-    var uiState by mutableStateOf<MainUiState>(MainUiState.Loading)
+    var uiState by mutableStateOf<MainUiState>(MainUiState.None)
         private set
 
-    private var isSessionChecked = false
+    var isCheckingSession by mutableStateOf(true)
+        private set
+
+    var isRetrying by mutableStateOf(false)
+        private set
+
+    private var checkSessionJob: Job? = null
 
     fun checkSession() {
-        if (isSessionChecked) return
-        isSessionChecked = true
-
-        viewModelScope.launch {
+        if (checkSessionJob?.isActive == true) return
+        val retrying = uiState is MainUiState.SessionCheckError
+        checkSessionJob = viewModelScope.launch {
+            if (retrying) isRetrying = true
             try {
                 val result = getSessionUseCase()
                 uiState = when (result) {
@@ -37,13 +47,17 @@ class MainViewModel @Inject constructor(
                         }
                     }
 
-                    is AuthResult.Error -> MainUiState.Unauthenticated
+                    is AuthResult.Error -> MainUiState.SessionCheckError
                 }
-            } catch (_: Exception) {
-                isSessionChecked = false
-                uiState = MainUiState.Unauthenticated
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                uiState = MainUiState.SessionCheckError
+            } finally {
+                isCheckingSession = false
+                isRetrying = false
             }
         }
     }
 
+    fun registerFcmToken() = fcmTokenRegistrar.register()
 }

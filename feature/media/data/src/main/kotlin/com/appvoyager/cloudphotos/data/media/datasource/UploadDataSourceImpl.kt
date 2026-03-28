@@ -10,51 +10,49 @@ import com.appvoyager.cloudphotos.domain.media.model.UploadResult
 import com.appvoyager.cloudphotos.domain.media.request.UploadMediaRequest
 import com.appvoyager.cloudphotos.domain.media.valueobject.CloudStoragePath
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.suspendCancellableCoroutine
 import java.io.FileNotFoundException
 import java.util.UUID
 import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.coroutines.resumeWithException
+import kotlinx.coroutines.suspendCancellableCoroutine
 
-class UploadDataSourceImpl @Inject constructor(
-    @param:ApplicationContext private val context: Context
-) : UploadDataSource {
+class UploadDataSourceImpl @Inject constructor(@param:ApplicationContext private val context: Context) :
+    UploadDataSource {
 
-    override suspend fun uploadMedia(request: UploadMediaRequest): UploadResult<CloudStoragePath> =
-        try {
-            val contentUri = request.localUri.value.toUri()
-            val extension = resolveExtension(request.contentType.value)
-            val remotePath = StoragePath.fromIdentityId { identityId ->
-                "private/$identityId/${UUID.randomUUID()}$extension"
-            }
-
-            val inputStream = context.contentResolver.openInputStream(contentUri)
-                ?: throw FileNotFoundException("Cannot open input stream for: ${request.localUri.value}")
-
-            val options = StorageUploadInputStreamOptions.builder()
-                .contentType(request.contentType.value)
-                .build()
-
-            val result = inputStream.use { stream ->
-                suspendCancellableCoroutine { coroutine ->
-                    val operation = Amplify.Storage.uploadInputStream(
-                        remotePath,
-                        stream,
-                        options,
-                        { coroutine.resume(it) { _, _, _ -> } },
-                        { coroutine.resumeWithException(it) }
-                    )
-                    coroutine.invokeOnCancellation { operation.cancel() }
-                }
-            }
-
-            UploadResult.Success(CloudStoragePath.of(result.path))
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            UploadResult.Error(UploadErrorMapper.map(e))
+    override suspend fun uploadMedia(request: UploadMediaRequest): UploadResult<CloudStoragePath> = try {
+        val contentUri = request.localUri.value.toUri()
+        val extension = resolveExtension(request.contentType.value)
+        val remotePath = StoragePath.fromIdentityId { identityId ->
+            "private/$identityId/${UUID.randomUUID()}$extension"
         }
+
+        val inputStream = context.contentResolver.openInputStream(contentUri)
+            ?: throw FileNotFoundException("Cannot open input stream for: ${request.localUri.value}")
+
+        val options = StorageUploadInputStreamOptions.builder()
+            .contentType(request.contentType.value)
+            .build()
+
+        val result = inputStream.use { stream ->
+            suspendCancellableCoroutine { coroutine ->
+                val operation = Amplify.Storage.uploadInputStream(
+                    remotePath,
+                    stream,
+                    options,
+                    { coroutine.resume(it) { _, _, _ -> } },
+                    { coroutine.resumeWithException(it) }
+                )
+                coroutine.invokeOnCancellation { operation.cancel() }
+            }
+        }
+
+        UploadResult.Success(CloudStoragePath.of(result.path))
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        UploadResult.Error(UploadErrorMapper.map(e))
+    }
 
     override suspend fun deleteUploadedObject(cloudStoragePath: CloudStoragePath) =
         suspendCancellableCoroutine { coroutine ->
@@ -72,5 +70,4 @@ class UploadDataSourceImpl @Inject constructor(
             .trim()
         return if (subtype.isBlank()) "" else ".$subtype"
     }
-
 }

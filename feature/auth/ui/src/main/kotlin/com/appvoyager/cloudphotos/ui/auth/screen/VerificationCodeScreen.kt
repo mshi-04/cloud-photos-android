@@ -50,7 +50,8 @@ import com.appvoyager.cloudphotos.ui.util.StringUtils
 @Composable
 fun VerificationCodeScreen(
     viewModel: VerificationCodeViewModel = hiltViewModel(),
-    onNavigateToHome: () -> Unit
+    onNavigateToHome: () -> Unit,
+    onNavigateBack: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -58,6 +59,7 @@ fun VerificationCodeScreen(
     val context = LocalContext.current
     val latestContext = rememberUpdatedState(context)
     val latestOnNavigateToHome = rememberUpdatedState(onNavigateToHome)
+    val latestOnNavigateBack = rememberUpdatedState(onNavigateBack)
 
     LaunchedEffect(Unit) {
         viewModel.startTimer()
@@ -65,6 +67,10 @@ fun VerificationCodeScreen(
             when (effect) {
                 is VerificationEffect.NavigateToHome -> {
                     latestOnNavigateToHome.value()
+                }
+
+                is VerificationEffect.NavigateBack -> {
+                    latestOnNavigateBack.value()
                 }
 
                 is VerificationEffect.ShowSnackbar -> {
@@ -85,7 +91,7 @@ fun VerificationCodeScreen(
                 .padding(innerPadding)
         ) {
             VerificationContent(
-                email = viewModel.email,
+                email = viewModel.email?.value.orEmpty(),
                 codes = uiState.codes,
                 codeError = uiState.codeError?.toCodeMessage(),
                 isCodeComplete = uiState.isCodeComplete,
@@ -140,7 +146,7 @@ private fun VerificationContent(
     onResend: () -> Unit
 ) {
     val maskedEmail = runCatching { StringUtils.maskEmail(Email.of(email)) }
-        .getOrElse { "" }
+        .getOrDefault(email)
 
     Column(
         modifier = Modifier
@@ -168,7 +174,6 @@ private fun VerificationContent(
 
         Spacer(modifier = Modifier.height(32.dp))
 
-
         CodeInputRow(
             codes = codes,
             isError = codeError != null,
@@ -186,7 +191,6 @@ private fun VerificationContent(
         }
 
         Spacer(modifier = Modifier.height(32.dp))
-
 
         Row(
             modifier = Modifier.fillMaxWidth(),

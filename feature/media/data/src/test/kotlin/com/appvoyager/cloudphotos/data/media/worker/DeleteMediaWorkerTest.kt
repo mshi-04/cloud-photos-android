@@ -19,6 +19,7 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.slot
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -30,7 +31,6 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import kotlin.coroutines.cancellation.CancellationException
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class DeleteMediaWorkerTest {
@@ -47,7 +47,13 @@ class DeleteMediaWorkerTest {
     @BeforeEach
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        worker = DeleteMediaWorker(context, workerParams, localRepository, remoteRepository, uploadDataSource)
+        worker = DeleteMediaWorker(
+            context,
+            workerParams,
+            localRepository,
+            remoteRepository,
+            uploadDataSource
+        )
     }
 
     @AfterEach
@@ -94,7 +100,7 @@ class DeleteMediaWorkerTest {
         val record = createUploadRecord("media-1")
         coEvery { localRepository.getPendingDeleteRecords() } returns listOf(record)
         coEvery { remoteRepository.deleteUploadRecord(any()) } throws
-                Exception("Unexpected response code 403: Forbidden")
+            Exception("Unexpected response code 403: Forbidden")
         val slot = slot<List<UploadRecord>>()
         coEvery { localRepository.saveUploadRecords(capture(slot)) } just runs
 

@@ -6,7 +6,11 @@ import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -14,18 +18,30 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.appvoyager.cloudphotos.domain.auth.valueobject.Email
+import com.appvoyager.cloudphotos.domain.media.valueobject.MediaId
 import com.appvoyager.cloudphotos.ui.auth.effect.AuthSnackbarMessage
 import com.appvoyager.cloudphotos.ui.auth.screen.ForgotPasswordScreen
 import com.appvoyager.cloudphotos.ui.auth.screen.LoginScreen
 import com.appvoyager.cloudphotos.ui.auth.screen.ResetPasswordScreen
 import com.appvoyager.cloudphotos.ui.auth.screen.VerificationCodeScreen
+import com.appvoyager.cloudphotos.ui.media.screen.CameraScreen
+import com.appvoyager.cloudphotos.ui.media.screen.MediaDetailScreen
 import com.appvoyager.cloudphotos.ui.media.screen.MediaScreen
+import com.appvoyager.cloudphotos.ui.media.uistate.MediaUiState
+import com.appvoyager.cloudphotos.ui.media.viewmodel.MediaViewModel
 
 private const val TRANSITION_DURATION_MS = 300
+
+object MediaRoute {
+    internal const val URI_DETAIL = "media_detail/{mediaId}"
+
+    fun detail(mediaId: MediaId): String = "media_detail/${Uri.encode(mediaId.value)}"
+}
 
 object AuthRoute {
 
     const val HOME = "home"
+    const val CAMERA = "camera"
     internal const val LOGIN = "login"
     internal const val FORGOT_PASSWORD = "forgot_password"
 
@@ -36,20 +52,13 @@ object AuthRoute {
     fun login(message: AuthSnackbarMessage? = null): String =
         if (message != null) "login?message=${message.key}" else LOGIN
 
-    fun verification(email: Email): String =
-        URI_VERIFICATION.replace("{email}", Uri.encode(email.value))
+    fun verification(email: Email): String = URI_VERIFICATION.replace("{email}", Uri.encode(email.value))
 
-    fun resetPassword(email: Email): String =
-        URI_RESET_PASSWORD.replace("{email}", Uri.encode(email.value))
-
+    fun resetPassword(email: Email): String = URI_RESET_PASSWORD.replace("{email}", Uri.encode(email.value))
 }
 
 @Composable
-fun NavGraph(
-    navController: NavHostController = rememberNavController(),
-    startDestination: String,
-    onSignOut: () -> Unit = {}
-) {
+fun NavGraph(navController: NavHostController = rememberNavController(), startDestination: String) {
     NavHost(
         navController = navController,
         startDestination = startDestination,
@@ -57,11 +66,13 @@ fun NavGraph(
     ) {
         composable(
             route = AuthRoute.URI_LOGIN,
-            arguments = listOf(navArgument("message") {
-                type = NavType.StringType
-                nullable = true
-                defaultValue = null
-            }),
+            arguments = listOf(
+                navArgument("message") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            ),
             enterTransition = { enterForward() },
             exitTransition = { exitForward() },
             popEnterTransition = { enterBack() },
@@ -95,6 +106,9 @@ fun NavGraph(
                     navController.navigate(AuthRoute.HOME) {
                         popUpTo(AuthRoute.URI_LOGIN) { inclusive = true }
                     }
+                },
+                onNavigateBack = {
+                    navController.popBackStack()
                 }
             )
         }
@@ -142,11 +156,10 @@ fun NavGraph(
                 val fromRoute = initialState.destination.route
                 if (fromRoute == AuthRoute.URI_LOGIN) {
                     EnterTransition.None
+                } else if (fromRoute == AuthRoute.CAMERA) {
+                    enterBack()
                 } else {
-                    slideIntoContainer(
-                        towards = AnimatedContentTransitionScope.SlideDirection.Left,
-                        animationSpec = tween(TRANSITION_DURATION_MS)
-                    )
+                    enterForward()
                 }
             },
             exitTransition = null,
@@ -154,34 +167,79 @@ fun NavGraph(
             popExitTransition = { exitBack() }
         ) {
             MediaScreen(
-                onSignOut = {
-                    onSignOut()
+                onNavigateToCamera = {
+                    navController.navigate(AuthRoute.CAMERA)
+                },
+                onNavigateToLogin = {
+                    navController.navigate(AuthRoute.login()) {
+                        popUpTo(AuthRoute.HOME) { inclusive = true }
+                    }
+                },
+                onMediaClick = { mediaId, _ ->
+                    navController.navigate(MediaRoute.detail(mediaId))
                 }
+            )
+        }
+
+        composable(
+            route = AuthRoute.CAMERA,
+            enterTransition = { enterForward() },
+            exitTransition = { exitForward() },
+            popEnterTransition = { enterBack() },
+            popExitTransition = { exitBack() }
+        ) {
+            CameraScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable(
+            route = MediaRoute.URI_DETAIL,
+            arguments = listOf(navArgument("mediaId") { type = NavType.StringType }),
+            enterTransition = { enterForward() },
+            exitTransition = { exitForward() },
+            popEnterTransition = { enterBack() },
+            popExitTransition = { exitBack() }
+        ) { backStackEntry ->
+            val rawMediaId = backStackEntry.arguments?.getString("mediaId")
+            val homeEntry = remember(backStackEntry) {
+                navController.getBackStackEntry(AuthRoute.HOME)
+            }
+            val mediaViewModel: MediaViewModel = hiltViewModel(homeEntry)
+            val uiState by mediaViewModel.uiState.collectAsStateWithLifecycle()
+            if (rawMediaId.isNullOrBlank()) {
+                navController.popBackStack()
+                return@composable
+            }
+            val mediaList = (uiState.screenState as? MediaUiState.ScreenState.Success)
+                ?.mediaList ?: emptyList()
+            MediaDetailScreen(
+                mediaList = mediaList,
+                initialMediaId = MediaId.of(rawMediaId),
+                onNavigateBack = { navController.popBackStack() }
             )
         }
     }
 }
 
-private fun AnimatedContentTransitionScope<*>.enterForward() =
-    slideIntoContainer(
-        towards = AnimatedContentTransitionScope.SlideDirection.Left,
-        animationSpec = tween(TRANSITION_DURATION_MS)
-    )
+private fun AnimatedContentTransitionScope<*>.enterForward() = slideIntoContainer(
+    towards = AnimatedContentTransitionScope.SlideDirection.Left,
+    animationSpec = tween(TRANSITION_DURATION_MS)
+)
 
-private fun AnimatedContentTransitionScope<*>.exitForward() =
-    slideOutOfContainer(
-        towards = AnimatedContentTransitionScope.SlideDirection.Left,
-        animationSpec = tween(TRANSITION_DURATION_MS)
-    )
+private fun AnimatedContentTransitionScope<*>.exitForward() = slideOutOfContainer(
+    towards = AnimatedContentTransitionScope.SlideDirection.Left,
+    animationSpec = tween(TRANSITION_DURATION_MS)
+)
 
-private fun AnimatedContentTransitionScope<*>.enterBack() =
-    slideIntoContainer(
-        towards = AnimatedContentTransitionScope.SlideDirection.Right,
-        animationSpec = tween(TRANSITION_DURATION_MS)
-    )
+private fun AnimatedContentTransitionScope<*>.enterBack() = slideIntoContainer(
+    towards = AnimatedContentTransitionScope.SlideDirection.Right,
+    animationSpec = tween(TRANSITION_DURATION_MS)
+)
 
-private fun AnimatedContentTransitionScope<*>.exitBack() =
-    slideOutOfContainer(
-        towards = AnimatedContentTransitionScope.SlideDirection.Right,
-        animationSpec = tween(TRANSITION_DURATION_MS)
-    )
+private fun AnimatedContentTransitionScope<*>.exitBack() = slideOutOfContainer(
+    towards = AnimatedContentTransitionScope.SlideDirection.Right,
+    animationSpec = tween(TRANSITION_DURATION_MS)
+)

@@ -15,9 +15,9 @@ import com.appvoyager.cloudphotos.ui.auth.effect.AuthSnackbarMessage
 import com.appvoyager.cloudphotos.ui.auth.effect.VerificationEffect
 import com.appvoyager.cloudphotos.ui.auth.uistate.AuthFieldError
 import com.appvoyager.cloudphotos.ui.auth.uistate.VerificationCodeUiState
+import com.appvoyager.cloudphotos.ui.util.ResendTimer
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -26,7 +26,6 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 @HiltViewModel
 class VerificationCodeViewModel @Inject constructor(
@@ -35,21 +34,25 @@ class VerificationCodeViewModel @Inject constructor(
     private val resendSignUpCodeUseCase: ResendSignUpCodeUseCase
 ) : ViewModel() {
 
-    val email: String = savedStateHandle.get<String>(ARG_EMAIL).orEmpty()
+    val email: Email? = savedStateHandle.get<String>(ARG_EMAIL)
+        ?.let { runCatching { Email.of(it) }.getOrNull() }
 
-    private val _uiState = MutableStateFlow(VerificationCodeUiState())
+    private val _uiState = MutableStateFlow(VerificationCodeUiState(isLoading = false))
     val uiState: StateFlow<VerificationCodeUiState> = _uiState.asStateFlow()
 
     private val _effect = MutableSharedFlow<VerificationEffect>(extraBufferCapacity = 1)
     val effect: SharedFlow<VerificationEffect> = _effect.asSharedFlow()
 
     private var isTimerStarted = false
-    private var resendTimerJob: Job? = null
+    private val resendTimer = ResendTimer(
+        durationSeconds = VerificationCodeUiState.DEFAULT_RESEND_COOLDOWN_SECONDS,
+        scope = viewModelScope
+    ) { seconds -> _uiState.update { it.copy(resendTimerSeconds = seconds) } }
 
     init {
-        if (email.isBlank()) {
+        if (email == null) {
             viewModelScope.launch {
-                _effect.emit(VerificationEffect.ShowSnackbar(AuthSnackbarMessage.Unknown))
+                _effect.emit(VerificationEffect.NavigateBack)
             }
         }
     }
@@ -57,7 +60,7 @@ class VerificationCodeViewModel @Inject constructor(
     fun startTimer() {
         if (!isTimerStarted) {
             isTimerStarted = true
-            startResendTimer()
+            resendTimer.start()
         }
     }
 
@@ -89,16 +92,18 @@ class VerificationCodeViewModel @Inject constructor(
     }
 
     fun onVerify() {
+        val emailValue = email ?: return
         if (!_uiState.value.isCodeComplete || _uiState.value.isLoading) return
         _uiState.update { it.copy(isLoading = true) }
         val fullCode = _uiState.value.codes.joinToString("")
 
         viewModelScope.launch {
             try {
-                val emailValue = Email.of(email)
                 val codeValue = ConfirmationCode.of(fullCode)
-                when (val confirmResult =
-                    confirmSignUpUseCase(ConfirmSignUpRequest(emailValue, codeValue))) {
+                when (
+                    val confirmResult =
+                        confirmSignUpUseCase(ConfirmSignUpRequest(emailValue, codeValue))
+                ) {
                     is AuthResult.Success -> _effect.emit(VerificationEffect.NavigateToHome)
                     is AuthResult.Error -> handleConfirmError(confirmResult.error)
                 }
@@ -111,16 +116,16 @@ class VerificationCodeViewModel @Inject constructor(
     }
 
     fun onResend() {
+        val emailValue = email ?: return
         if (!_uiState.value.isResendEnabled || _uiState.value.isLoading) return
         _uiState.update { it.copy(isLoading = true) }
 
         viewModelScope.launch {
             try {
-                val emailValue = Email.of(email)
                 when (val result = resendSignUpCodeUseCase(ResendSignUpCodeRequest(emailValue))) {
                     is AuthResult.Success -> {
                         _effect.emit(VerificationEffect.ShowSnackbar(AuthSnackbarMessage.CodeResent))
-                        startResendTimer()
+                        resendTimer.start()
                     }
 
                     is AuthResult.Error -> handleResendError(result.error)
@@ -179,19 +184,7 @@ class VerificationCodeViewModel @Inject constructor(
         }
     }
 
-    private fun startResendTimer() {
-        resendTimerJob?.cancel()
-        _uiState.update { it.copy(resendTimerSeconds = VerificationCodeUiState.DEFAULT_RESEND_COOLDOWN_SECONDS) }
-        resendTimerJob = viewModelScope.launch {
-            while (_uiState.value.resendTimerSeconds > 0) {
-                delay(1_000L)
-                _uiState.update { it.copy(resendTimerSeconds = it.resendTimerSeconds - 1) }
-            }
-        }
-    }
-
     companion object {
         private const val ARG_EMAIL = "email"
     }
-
 }

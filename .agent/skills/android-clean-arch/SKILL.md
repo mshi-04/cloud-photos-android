@@ -1,78 +1,107 @@
 ---
 name: android-clean-arch
-description: "Use when creating or modifying UseCase, Repository interface, RepositoryImpl, or DataSource in an Android Clean Architecture project"
+description: "Use when creating or modifying UseCase, Repository interface, RepositoryImpl, DataSource, mapper, or module boundaries in this Android Clean Architecture project"
 ---
 
 # Clean Architecture Guidelines
 
-## Package Structure
+## Primary references
+
+Read these first before using this skill:
+1. `AGENTS.md`
+2. `core/AGENTS.md` or `app/AGENTS.md` when relevant
+3. `feature/<target>/AGENTS.md`
+
+This skill is a quick pattern guide.
+If it conflicts with repository guidance, prefer the repository guidance.
+
+## Current repository structure
+
 ```text
-com.appvoyager.cloudphotos
-├── domain
-│   └── {feature}
-│       ├── usecase/        # UseCases
-│       ├── repository/     # Repository interfaces
-│       ├── model/          # Domain models
-│       ├── request/        # Request data classes
-│       └── valueobject/    # Value objects
-└── data
-    └── {feature}
-        ├── repository/     # RepositoryImpl
-        ├── datasource/     # DataSource interfaces + DataSourceImpl
-        └── util/           # Error mappers etc.
+app/                    # app-wide startup, navigation, DI bootstrap, flavors
+core/common/            # shared abstractions
+core/data/              # shared data implementations
+core/ui/                # shared theme/resources/ui
+feature/<name>/domain/  # use cases, repository interfaces, models, value objects
+feature/<name>/data/    # repository impls, data sources, mappers, workers, persistence
+feature/<name>/ui/      # ViewModels, UI state/effect, Compose screens
 ```
 
-## Rules
-1. Domain層: Pure Kotlin のみ。Android依存 (Context等) 禁止
-2. UseCase: 単一責務。`suspend operator fun invoke()` を使う
-3. Repository interface: domain層に置く
-4. RepositoryImpl: dataSourceに委譲するだけ。ビジネスロジックを書かない
-5. 戻り値: `AuthResult<T>` のようなドメイン固有のResult型を使う
-6. DI: `@Inject constructor` を使う
+## Placement rules
 
-## UseCase Template
-```kotlin
-package com.appvoyager.cloudphotos.domain.{feature}.usecase
+### Domain
+Place here:
+- use cases
+- repository interfaces
+- domain models
+- request models
+- value objects
+- pure validation/business rules
 
-import com.appvoyager.cloudphotos.domain.{feature}.model.HogeResult
-import com.appvoyager.cloudphotos.domain.{feature}.repository.HogeRepository
-import com.appvoyager.cloudphotos.domain.{feature}.request.HogeRequest
-import javax.inject.Inject
+Do not place here:
+- Android framework types
+- Compose APIs
+- Room/DAO/entity code
+- Amplify/Firebase/WorkManager implementation details
+- concrete repository/data source implementations
 
-class HogeUseCase @Inject constructor(
-    private val repository: HogeRepository
-) {
-    suspend operator fun invoke(request: HogeRequest): HogeResult =
-        repository.hoge(request)
-}
-```
+### Data
+Place here:
+- repository implementations
+- local/remote data sources
+- mapper objects
+- persistence code
+- provider/framework integration code
 
-## Repository Interface Template
-```kotlin
-package com.appvoyager.cloudphotos.domain.{feature}.repository
+Rules:
+- RepositoryImpl should delegate to data sources and mappers.
+- Keep business rules out of data unless they are purely translation/integration concerns.
+- Error mapping belongs in data-layer mappers.
+- Re-throw `CancellationException` in coroutine error handling.
 
-import com.appvoyager.cloudphotos.domain.{feature}.model.HogeResult
-import com.appvoyager.cloudphotos.domain.{feature}.request.HogeRequest
+### UI
+Place here:
+- ViewModels
+- UI state/effect models
+- Compose screens/components
+- screen-level input handling
 
-interface HogeRepository {
-    suspend fun hoge(request: HogeRequest): HogeResult
-}
-```
+Rules:
+- UI talks to use cases or domain-facing abstractions.
+- UI must not talk directly to repository implementations, DAOs, or provider SDKs.
 
-## RepositoryImpl Template
-```kotlin
-package com.appvoyager.cloudphotos.data.{feature}.repository
+## UseCase rules
 
-import com.appvoyager.cloudphotos.data.{feature}.datasource.HogeDataSource
-import com.appvoyager.cloudphotos.domain.{feature}.model.HogeResult
-import com.appvoyager.cloudphotos.domain.{feature}.repository.HogeRepository
-import com.appvoyager.cloudphotos.domain.{feature}.request.HogeRequest
-import javax.inject.Inject
+- Prefer `suspend operator fun invoke()`.
+- Keep each use case single-purpose.
+- Use cases orchestrate domain work and do not own Android/framework behavior.
 
-class HogeRepositoryImpl @Inject constructor(
-    private val dataSource: HogeDataSource
-) : HogeRepository {
-    override suspend fun hoge(request: HogeRequest): HogeResult =
-        dataSource.hoge(request)
-}
-```
+## Repository rules
+
+- Repository interfaces live in `feature/<name>/domain`.
+- Repository implementations live in `feature/<name>/data`.
+- RepositoryImpl should not become a second use case layer.
+
+## Value object rules
+
+- Prefer `@JvmInline value class` with `private constructor` for validated domain concepts.
+- Create instances via `of(...)` in a companion object.
+- Use `require()` for validation.
+- Do not replace established value objects with raw primitives in domain APIs.
+
+## Decision checklist
+
+Before adding code, ask:
+1. Which feature owns this concept?
+2. Is this domain, data, or UI responsibility?
+3. Is there already an equivalent pattern in the same feature?
+4. Does this belong in `core` or only in one feature?
+5. Am I leaking data/framework details upward?
+
+## Output expectations
+
+When using this skill, report:
+- touched module(s)
+- why the file belongs in that layer
+- whether a new abstraction was introduced
+- tests run

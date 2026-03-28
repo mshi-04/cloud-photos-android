@@ -10,6 +10,7 @@ android {
 dependencies {
     implementation(project(":feature:media:domain"))
     implementation(project(":core:common"))
+    implementation(project(":core:data"))
 
     implementation(libs.amplify.core)
     implementation(libs.amplify.storage.s3)

@@ -37,10 +37,18 @@ class LocalMediaDataSourceImplTest {
         mockkStatic(ContentUris::class)
         mockkStatic(MediaStore::class)
         mockkStatic(MediaStore.Files::class)
+        mockkStatic(MediaStore.Images.Media::class)
+        mockkStatic(MediaStore.Video.Media::class)
 
         val mockVolumeUri = mockk<Uri>(relaxed = true)
         every { MediaStore.Files.getContentUri(any<String>()) } returns mockVolumeUri
         every { MediaStore.getExternalVolumeNames(any()) } returns setOf("external_primary")
+
+        val mockImageBaseUri = mockk<Uri>(relaxed = true)
+        every { MediaStore.Images.Media.getContentUri(any<String>()) } returns mockImageBaseUri
+
+        val mockVideoBaseUri = mockk<Uri>(relaxed = true)
+        every { MediaStore.Video.Media.getContentUri(any<String>()) } returns mockVideoBaseUri
 
         val mockImageUri = mockk<Uri>(relaxed = true)
         every { mockImageUri.toString() } returns "content://media/external_primary/file/123"
@@ -48,8 +56,8 @@ class LocalMediaDataSourceImplTest {
         val mockVideoUri = mockk<Uri>(relaxed = true)
         every { mockVideoUri.toString() } returns "content://media/external_primary/file/456"
 
-        every { ContentUris.withAppendedId(any(), 123L) } returns mockImageUri
-        every { ContentUris.withAppendedId(any(), 456L) } returns mockVideoUri
+        every { ContentUris.withAppendedId(mockImageBaseUri, 123L) } returns mockImageUri
+        every { ContentUris.withAppendedId(mockVideoBaseUri, 456L) } returns mockVideoUri
 
         dataSource = LocalMediaDataSourceImpl(mockContext)
     }

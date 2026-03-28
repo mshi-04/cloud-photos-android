@@ -17,6 +17,8 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -26,6 +28,7 @@ fun CodeInputBox(
     value: String,
     isError: Boolean,
     focusRequester: FocusRequester,
+    contentDescription: String,
     onValueChange: (String) -> Unit,
     onBackspace: () -> Unit
 ) {
@@ -43,6 +46,7 @@ fun CodeInputBox(
         modifier = Modifier
             .size(48.dp)
             .focusRequester(focusRequester)
+            .semantics { this.contentDescription = contentDescription }
             .onKeyEvent { event ->
                 if (event.key == Key.Backspace) {
                     onBackspace()
@@ -57,7 +61,7 @@ fun CodeInputBox(
                     .border(
                         width = if (value.isNotEmpty() || isError) 2.dp else 1.dp,
                         color = borderColor,
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RoundedCornerShape(8.dp)
                     )
                     .background(
                         color = MaterialTheme.colorScheme.surface,

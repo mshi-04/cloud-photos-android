@@ -20,19 +20,18 @@ class FetchCurrentUserUseCaseTest {
     private val useCase = FetchCurrentUserUseCase(repository)
 
     @Test
-    fun `invoke returns current user when repository succeeds`() =
-        runTest(StandardTestDispatcher()) {
-            // Arrange
-            val expected = AuthResult.Success(authUser())
-            coEvery { repository.fetchCurrentUser() } returns expected
+    fun `invoke returns current user when repository succeeds`() = runTest(StandardTestDispatcher()) {
+        // Arrange
+        val expected = AuthResult.Success(authUser())
+        coEvery { repository.fetchCurrentUser() } returns expected
 
-            // Act
-            val actual = useCase()
+        // Act
+        val actual = useCase()
 
-            // Assert
-            assertEquals(expected, actual)
-            coVerify(exactly = 1) { repository.fetchCurrentUser() }
-        }
+        // Assert
+        assertEquals(expected, actual)
+        coVerify(exactly = 1) { repository.fetchCurrentUser() }
+    }
 
     @Test
     fun `invoke returns error when repository fails`() = runTest(StandardTestDispatcher()) {

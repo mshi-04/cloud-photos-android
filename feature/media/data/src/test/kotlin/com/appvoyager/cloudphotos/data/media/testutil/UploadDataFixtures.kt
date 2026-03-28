@@ -8,12 +8,9 @@ import com.appvoyager.cloudphotos.domain.media.valueobject.MediaUrl
 fun uploadMediaRequestFixture(
     localUri: String = "content://media/external/images/media/1",
     contentType: String = "image/jpeg"
-): UploadMediaRequest =
-    UploadMediaRequest(
-        localUri = MediaUrl.of(localUri),
-        contentType = ContentType.of(contentType)
-    )
+): UploadMediaRequest = UploadMediaRequest(
+    localUri = MediaUrl.of(localUri),
+    contentType = ContentType.of(contentType)
+)
 
-fun cloudStoragePathFixture(
-    path: String = "media/identity123/image.jpg"
-): CloudStoragePath = CloudStoragePath.of(path)
+fun cloudStoragePathFixture(path: String = "media/identity123/image.jpg"): CloudStoragePath = CloudStoragePath.of(path)

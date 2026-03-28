@@ -25,11 +25,7 @@ import com.appvoyager.cloudphotos.ui.theme.CloudPhotosTheme
 import kotlin.math.roundToInt
 
 @Composable
-fun GridColumnSettingsDialog(
-    currentColumnCount: Int,
-    onColumnCountChanged: (Int) -> Unit,
-    onDismiss: () -> Unit
-) {
+fun GridColumnSettingsDialog(currentColumnCount: Int, onColumnCountChanged: (Int) -> Unit, onDismiss: () -> Unit) {
     var sliderValue by remember(currentColumnCount) { mutableIntStateOf(currentColumnCount) }
 
     AlertDialog(

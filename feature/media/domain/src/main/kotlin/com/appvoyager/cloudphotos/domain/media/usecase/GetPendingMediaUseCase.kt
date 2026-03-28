@@ -20,5 +20,4 @@ class GetPendingMediaUseCase @Inject constructor(
         val uploadedMediaIds = uploadRecords.map { it.mediaId }.toSet()
         return allLocalMedia.filter { it.id !in uploadedMediaIds }
     }
-
 }

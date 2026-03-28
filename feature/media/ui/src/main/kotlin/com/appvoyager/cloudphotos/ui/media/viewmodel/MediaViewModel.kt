@@ -3,6 +3,8 @@ package com.appvoyager.cloudphotos.ui.media.viewmodel
 import android.os.SystemClock
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.appvoyager.cloudphotos.domain.auth.model.AuthResult
+import com.appvoyager.cloudphotos.domain.auth.usecase.SignOutUseCase
 import com.appvoyager.cloudphotos.domain.media.usecase.GetMediaListUseCase
 import com.appvoyager.cloudphotos.domain.media.usecase.PrepareUploadQueueUseCase
 import com.appvoyager.cloudphotos.domain.media.usecase.ScheduleDeleteUseCase
@@ -14,6 +16,8 @@ import com.appvoyager.cloudphotos.ui.media.effect.MediaEffect
 import com.appvoyager.cloudphotos.ui.media.effect.MediaSnackbarMessage
 import com.appvoyager.cloudphotos.ui.media.uistate.MediaUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.Channel
@@ -25,8 +29,6 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
-import kotlin.coroutines.cancellation.CancellationException
 
 @HiltViewModel
 class MediaViewModel @Inject constructor(
@@ -35,7 +37,8 @@ class MediaViewModel @Inject constructor(
     private val setGridColumnCountUseCase: SetGridColumnCountUseCase,
     private val syncUploadRecordsUseCase: SyncUploadRecordsUseCase,
     private val prepareUploadQueueUseCase: PrepareUploadQueueUseCase,
-    private val scheduleDeleteUseCase: ScheduleDeleteUseCase
+    private val scheduleDeleteUseCase: ScheduleDeleteUseCase,
+    private val signOutUseCase: SignOutUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MediaUiState())
@@ -97,6 +100,25 @@ class MediaViewModel @Inject constructor(
         }
     }
 
+    fun signOut() {
+        viewModelScope.launch {
+            if (_uiState.value.isSigningOut) return@launch
+            _uiState.update { it.copy(isSigningOut = true) }
+            try {
+                val result = signOutUseCase()
+                when (result) {
+                    is AuthResult.Success -> _effect.send(MediaEffect.NavigateToLogin)
+                    is AuthResult.Error -> _effect.send(MediaEffect.ShowSnackbar(MediaSnackbarMessage.SignOutFailed))
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                _effect.send(MediaEffect.ShowSnackbar(MediaSnackbarMessage.SignOutFailed))
+            } finally {
+                _uiState.update { it.copy(isSigningOut = false) }
+            }
+        }
+    }
+
     fun onGridColumnCountChanged(count: Int) {
         viewModelScope.launch {
             try {
@@ -109,14 +131,11 @@ class MediaViewModel @Inject constructor(
         }
     }
 
-    fun onShowSettingsDialog() =
-        _uiState.update { it.copy(isSettingsDialogVisible = true) }
+    fun onShowSettingsDialog() = _uiState.update { it.copy(isSettingsDialogVisible = true) }
 
-    fun onDismissSettingsDialog() =
-        _uiState.update { it.copy(isSettingsDialogVisible = false) }
+    fun onDismissSettingsDialog() = _uiState.update { it.copy(isSettingsDialogVisible = false) }
 
-    fun onPermissionDenied() =
-        _uiState.update { it.copy(screenState = MediaUiState.ScreenState.PermissionRequired) }
+    fun onPermissionDenied() = _uiState.update { it.copy(screenState = MediaUiState.ScreenState.PermissionRequired) }
 
     private suspend fun syncRemote() {
         runCatching { syncUploadRecordsUseCase() }
@@ -139,5 +158,4 @@ class MediaViewModel @Inject constructor(
     companion object {
         internal const val MIN_RESUME_INTERVAL_MS = 3_000L
     }
-
 }

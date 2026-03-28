@@ -5,7 +5,6 @@ enum class MediaType {
     VIDEO;
 
     companion object {
-        fun fromContentType(contentType: String): MediaType =
-            if (contentType.startsWith("video/")) VIDEO else IMAGE
+        fun fromContentType(contentType: String): MediaType = if (contentType.startsWith("video/")) VIDEO else IMAGE
     }
 }

@@ -115,29 +115,28 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun `onSignIn with UserNotConfirmed emits NavigateToVerification`() =
-        runTest(testDispatcher) {
-            // Arrange
-            viewModel.onEmailChanged("test@example.com")
-            viewModel.onPasswordChanged("password1")
-            coEvery { signInUseCase(any()) } returns AuthResult.Error(
-                AuthError.UserNotConfirmed()
-            )
+    fun `onSignIn with UserNotConfirmed emits NavigateToVerification`() = runTest(testDispatcher) {
+        // Arrange
+        viewModel.onEmailChanged("test@example.com")
+        viewModel.onPasswordChanged("password1")
+        coEvery { signInUseCase(any()) } returns AuthResult.Error(
+            AuthError.UserNotConfirmed()
+        )
 
-            // Act
-            var effect: LoginEffect? = null
-            val job = launch { effect = viewModel.effect.first() }
-            viewModel.onSignIn()
-            advanceUntilIdle()
+        // Act
+        var effect: LoginEffect? = null
+        val job = launch { effect = viewModel.effect.first() }
+        viewModel.onSignIn()
+        advanceUntilIdle()
 
-            // Assert
-            Assertions.assertTrue(effect is LoginEffect.NavigateToVerification)
-            Assertions.assertEquals(
-                Email.of("test@example.com"),
-                (effect as LoginEffect.NavigateToVerification).email
-            )
-            job.cancel()
-        }
+        // Assert
+        Assertions.assertTrue(effect is LoginEffect.NavigateToVerification)
+        Assertions.assertEquals(
+            Email.of("test@example.com"),
+            (effect as LoginEffect.NavigateToVerification).email
+        )
+        job.cancel()
+    }
 
     @Test
     fun `onSignIn with InvalidCredentials sets passwordError`() = runTest(testDispatcher) {
@@ -242,62 +241,60 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun `onSignIn guards against duplicate requests when isLoading`() =
-        runTest(testDispatcher) {
-            // Arrange
-            viewModel.onEmailChanged("test@example.com")
-            viewModel.onPasswordChanged("password1")
-            coEvery { signInUseCase(any()) } coAnswers {
-                delay(1000)
-                AuthResult.Success(SignInState.SignedIn)
-            }
-
-            // Act – call twice quickly
-            viewModel.onSignIn()
-            Assertions.assertTrue(
-                viewModel.uiState.value.isLoading,
-                "Expected isLoading to be true immediately after first call"
-            )
-            Assertions.assertTrue(
-                viewModel.uiState.value.isLoading,
-                "Expected isLoading to be true immediately after first call"
-            )
-            viewModel.onSignIn()
-            advanceUntilIdle()
-
-            // Assert – use case should only be invoked once
-            coVerify(exactly = 1) { signInUseCase(any()) }
-            Assertions.assertFalse(viewModel.uiState.value.isLoading)
+    fun `onSignIn guards against duplicate requests when isLoading`() = runTest(testDispatcher) {
+        // Arrange
+        viewModel.onEmailChanged("test@example.com")
+        viewModel.onPasswordChanged("password1")
+        coEvery { signInUseCase(any()) } coAnswers {
+            delay(1000)
+            AuthResult.Success(SignInState.SignedIn)
         }
+
+        // Act – call twice quickly
+        viewModel.onSignIn()
+        Assertions.assertTrue(
+            viewModel.uiState.value.isLoading,
+            "Expected isLoading to be true immediately after first call"
+        )
+        Assertions.assertTrue(
+            viewModel.uiState.value.isLoading,
+            "Expected isLoading to be true immediately after first call"
+        )
+        viewModel.onSignIn()
+        advanceUntilIdle()
+
+        // Assert – use case should only be invoked once
+        coVerify(exactly = 1) { signInUseCase(any()) }
+        Assertions.assertFalse(viewModel.uiState.value.isLoading)
+    }
 
     @Test
-    fun `onSignUp guards against duplicate requests when isLoading`() =
-        runTest(testDispatcher) {
-            // Arrange
-            viewModel.onEmailChanged("test@example.com")
-            viewModel.onPasswordChanged("password1")
-            coEvery { signUpUseCase(any()) } coAnswers {
-                delay(1000)
-                AuthResult.Success(Unit)
-            }
-
-            // Act – call twice quickly
-            viewModel.onSignUp()
-            Assertions.assertTrue(
-                viewModel.uiState.value.isLoading,
-                "Expected isLoading to be true immediately after first call"
-            )
-            Assertions.assertTrue(
-                viewModel.uiState.value.isLoading,
-                "Expected isLoading to be true immediately after first call"
-            )
-            viewModel.onSignUp()
-            advanceUntilIdle()
-
-            // Assert – use case should only be invoked once
-            coVerify(exactly = 1) { signUpUseCase(any()) }
-            Assertions.assertFalse(viewModel.uiState.value.isLoading)
+    fun `onSignUp guards against duplicate requests when isLoading`() = runTest(testDispatcher) {
+        // Arrange
+        viewModel.onEmailChanged("test@example.com")
+        viewModel.onPasswordChanged("password1")
+        coEvery { signUpUseCase(any()) } coAnswers {
+            delay(1000)
+            AuthResult.Success(Unit)
         }
+
+        // Act – call twice quickly
+        viewModel.onSignUp()
+        Assertions.assertTrue(
+            viewModel.uiState.value.isLoading,
+            "Expected isLoading to be true immediately after first call"
+        )
+        Assertions.assertTrue(
+            viewModel.uiState.value.isLoading,
+            "Expected isLoading to be true immediately after first call"
+        )
+        viewModel.onSignUp()
+        advanceUntilIdle()
+
+        // Assert – use case should only be invoked once
+        coVerify(exactly = 1) { signUpUseCase(any()) }
+        Assertions.assertFalse(viewModel.uiState.value.isLoading)
+    }
 
     @Test
     fun `onSignIn with invalid email only sets emailError`() = runTest(testDispatcher) {
@@ -330,5 +327,4 @@ class LoginViewModelTest {
         Assertions.assertNull(state.emailError)
         Assertions.assertEquals(AuthFieldError.PasswordTooShort, state.passwordError)
     }
-
 }

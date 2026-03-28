@@ -8,6 +8,8 @@ dependencies {
     compileOnly(libs.compose.gradlePlugin)
     compileOnly(libs.ksp.gradlePlugin)
     compileOnly(libs.hilt.gradlePlugin)
+    compileOnly(libs.ktlint.gradlePlugin)
+    compileOnly(libs.detekt.gradlePlugin)
 }
 
 gradlePlugin {
@@ -27,6 +29,10 @@ gradlePlugin {
         register("androidFeature") {
             id = "cloudphotos.android.feature"
             implementationClass = "AndroidFeatureConventionPlugin"
+        }
+        register("lint") {
+            id = "cloudphotos.lint"
+            implementationClass = "LintConventionPlugin"
         }
     }
 }

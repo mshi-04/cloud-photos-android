@@ -14,6 +14,7 @@ import com.appvoyager.cloudphotos.domain.media.repository.RemoteUploadRecordsRep
 import com.appvoyager.cloudphotos.domain.media.request.CreateUploadRecordRequest
 import com.appvoyager.cloudphotos.domain.media.request.UploadMediaRequest
 import com.appvoyager.cloudphotos.domain.media.valueobject.ContentType
+import com.appvoyager.cloudphotos.domain.media.valueobject.UploadSuccessCount
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlin.coroutines.cancellation.CancellationException
@@ -29,6 +30,7 @@ class UploadMediaWorker @AssistedInject constructor(
     private val notificationHelper: UploadNotificationHelper
 ) : CoroutineWorker(context, workerParams) {
 
+    @Suppress("ThrowsCount", "LoopWithTooManyJumpStatements")
     override suspend fun doWork(): Result {
         val pendingRecords = localRepository.getPendingUploadRecords()
         if (pendingRecords.isEmpty()) return Result.success()
@@ -36,6 +38,7 @@ class UploadMediaWorker @AssistedInject constructor(
         notificationHelper.show(pendingRecords.size)
 
         var hasTemporaryFailure = false
+        var successCount = 0
 
         for (record in pendingRecords) {
             val current = localRepository.getUploadRecords(listOf(record.mediaId)).firstOrNull()
@@ -68,12 +71,14 @@ class UploadMediaWorker @AssistedInject constructor(
                     continue
                 }
 
-                when (val uploadResult = uploadDataSource.uploadMedia(
-                    UploadMediaRequest(
-                        localUri = localUri,
-                        contentType = contentType
+                when (
+                    val uploadResult = uploadDataSource.uploadMedia(
+                        UploadMediaRequest(
+                            localUri = localUri,
+                            contentType = contentType
+                        )
                     )
-                )) {
+                ) {
                     is UploadResult.Success -> {
                         val uploaded = current.copy(cloudStoragePath = uploadResult.value)
                         localRepository.saveUploadRecords(listOf(uploaded))
@@ -108,6 +113,7 @@ class UploadMediaWorker @AssistedInject constructor(
                     )
                 )
                 localRepository.saveUploadRecords(listOf(created))
+                successCount++
             }.onFailure { e ->
                 if (e is CancellationException) throw e
                 if (isPermanentFailure(e)) {
@@ -135,18 +141,23 @@ class UploadMediaWorker @AssistedInject constructor(
         }
 
         notificationHelper.cancel()
+
+        if (!hasTemporaryFailure && successCount > 0) {
+            runCatching { remoteRepository.completeUpload(UploadSuccessCount.of(successCount)) }
+                .onFailure { if (it is CancellationException) throw it }
+        }
+
         return if (hasTemporaryFailure) Result.retry() else Result.success()
     }
 
-    private fun isS3PermanentFailure(error: UploadError): Boolean =
-        when (error) {
-            is UploadError.AccessDenied -> true
-            is UploadError.NotAuthenticated -> true
-            is UploadError.StorageLimitExceeded -> true
-            is UploadError.FileNotFound -> true
-            is UploadError.Network -> false
-            is UploadError.Unknown -> false
-        }
+    private fun isS3PermanentFailure(error: UploadError): Boolean = when (error) {
+        is UploadError.AccessDenied -> true
+        is UploadError.NotAuthenticated -> true
+        is UploadError.StorageLimitExceeded -> true
+        is UploadError.FileNotFound -> true
+        is UploadError.Network -> false
+        is UploadError.Unknown -> false
+    }
 
     private fun isPermanentFailure(e: Throwable): Boolean {
         val message = e.message ?: return false
@@ -159,5 +170,4 @@ class UploadMediaWorker @AssistedInject constructor(
     companion object {
         const val WORK_NAME = "upload_media_worker"
     }
-
 }

@@ -2,41 +2,25 @@ package com.appvoyager.cloudphotos.data.media.datasource
 
 import com.amplifyframework.api.rest.RestOptions
 import com.amplifyframework.core.Amplify
+import com.appvoyager.cloudphotos.data.common.awaitAmplifyRestCall
 import com.appvoyager.cloudphotos.data.media.util.RemoteUploadRecordMapper
 import com.appvoyager.cloudphotos.domain.common.Clock
 import com.appvoyager.cloudphotos.domain.media.model.UploadRecord
 import com.appvoyager.cloudphotos.domain.media.request.CreateUploadRecordRequest
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaId
-import kotlinx.coroutines.suspendCancellableCoroutine
-import org.json.JSONObject
+import com.appvoyager.cloudphotos.domain.media.valueobject.UploadSuccessCount
 import javax.inject.Inject
-import kotlin.coroutines.resumeWithException
+import org.json.JSONObject
 
-class UploadRecordRemoteDataSourceImpl @Inject constructor(
-    private val clock: Clock
-) : UploadRecordRemoteDataSource {
+class UploadRecordRemoteDataSourceImpl @Inject constructor(private val clock: Clock) : UploadRecordRemoteDataSource {
 
     override suspend fun fetchUploadRecords(): List<UploadRecord> {
-        val request = RestOptions.builder()
+        val options = RestOptions.builder()
             .addPath("/media/uploads")
             .build()
 
-        val response = suspendCancellableCoroutine { coroutine ->
-            val operation = Amplify.API.get(
-                API_NAME,
-                request,
-                { apiResponse ->
-                    if (apiResponse.code.isSuccessful) {
-                        coroutine.resume(apiResponse) { _, _, _ -> }
-                    } else {
-                        coroutine.resumeWithException(
-                            Exception("Unexpected response code ${apiResponse.code}: ${apiResponse.data.asString()}")
-                        )
-                    }
-                },
-                { coroutine.resumeWithException(it) }
-            )
-            coroutine.invokeOnCancellation { operation?.cancel() }
+        val response = awaitAmplifyRestCall(options) { name, opts, onResp, onErr ->
+            Amplify.API.get(name, opts, onResp, onErr)
         }
 
         return RemoteUploadRecordMapper.fromFetchResponse(response.data.asString())
@@ -50,28 +34,14 @@ class UploadRecordRemoteDataSourceImpl @Inject constructor(
             put("mediaType", request.mediaType.name)
         }.toString()
 
-        val restOptions = RestOptions.builder()
+        val options = RestOptions.builder()
             .addPath("/media/uploads")
             .addHeaders(mapOf("Content-Type" to "application/json"))
             .addBody(body.toByteArray())
             .build()
 
-        val response = suspendCancellableCoroutine { coroutine ->
-            val operation = Amplify.API.post(
-                API_NAME,
-                restOptions,
-                { apiResponse ->
-                    if (apiResponse.code.isSuccessful) {
-                        coroutine.resume(apiResponse) { _, _, _ -> }
-                    } else {
-                        coroutine.resumeWithException(
-                            Exception("Unexpected response code ${apiResponse.code}: ${apiResponse.data.asString()}")
-                        )
-                    }
-                },
-                { coroutine.resumeWithException(it) }
-            )
-            coroutine.invokeOnCancellation { operation?.cancel() }
+        val response = awaitAmplifyRestCall(options) { name, opts, onResp, onErr ->
+            Amplify.API.post(name, opts, onResp, onErr)
         }
 
         val json = JSONObject(response.data.asString())
@@ -83,32 +53,29 @@ class UploadRecordRemoteDataSourceImpl @Inject constructor(
         )
     }
 
-    override suspend fun deleteUploadRecord(mediaId: MediaId) {
-        val request = RestOptions.builder()
-            .addPath("/media/uploads/${mediaId.value}")
+    override suspend fun completeUpload(successCount: UploadSuccessCount) {
+        val body = JSONObject().apply {
+            put("successCount", successCount.value)
+        }.toString()
+
+        val options = RestOptions.builder()
+            .addPath("/media/uploads/complete")
+            .addHeaders(mapOf("Content-Type" to "application/json"))
+            .addBody(body.toByteArray())
             .build()
 
-        suspendCancellableCoroutine { coroutine ->
-            val operation = Amplify.API.delete(
-                API_NAME,
-                request,
-                { apiResponse ->
-                    if (apiResponse.code.isSuccessful) {
-                        coroutine.resume(apiResponse) { _, _, _ -> }
-                    } else {
-                        coroutine.resumeWithException(
-                            Exception("Unexpected response code ${apiResponse.code}: ${apiResponse.data.asString()}")
-                        )
-                    }
-                },
-                { coroutine.resumeWithException(it) }
-            )
-            coroutine.invokeOnCancellation { operation?.cancel() }
+        awaitAmplifyRestCall(options) { name, opts, onResp, onErr ->
+            Amplify.API.post(name, opts, onResp, onErr)
         }
     }
 
-    companion object {
-        private const val API_NAME = "CloudPhotosAPI"
-    }
+    override suspend fun deleteUploadRecord(mediaId: MediaId) {
+        val options = RestOptions.builder()
+            .addPath("/media/uploads/${mediaId.value}")
+            .build()
 
+        awaitAmplifyRestCall(options) { name, opts, onResp, onErr ->
+            Amplify.API.delete(name, opts, onResp, onErr)
+        }
+    }
 }

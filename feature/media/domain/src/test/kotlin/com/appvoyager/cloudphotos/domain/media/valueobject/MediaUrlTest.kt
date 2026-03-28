@@ -71,5 +71,4 @@ class MediaUrlTest {
         // Assert
         assertEquals("MediaUrl must be a valid URL/URI.", exception.message)
     }
-
 }
