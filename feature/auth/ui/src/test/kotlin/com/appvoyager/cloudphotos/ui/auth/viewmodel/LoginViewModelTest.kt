@@ -184,7 +184,7 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun `onSignUp emits NavigateToVerification when sign up succeeds`() = runTest(testDispatcher) {
+    fun `onSignUp emits NavigateToVerification when signUp returns Success`() = runTest(testDispatcher) {
         // Arrange
         viewModel.onEmailChanged("test@example.com")
         viewModel.onPasswordChanged("password1")
