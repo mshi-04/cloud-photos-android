@@ -34,7 +34,7 @@ class DeleteMediaUseCaseTest {
     }
 
     @Test
-    fun `saved record has isDeleted set to true for synced record`() = runTest {
+    fun `invoke sets isDeleted to true when record is synced`() = runTest {
         // Arrange
         val record = createUploadRecord(syncStatus = SyncStatus.SYNCED)
         val slot = slot<List<UploadRecord>>()
@@ -49,7 +49,7 @@ class DeleteMediaUseCaseTest {
     }
 
     @Test
-    fun `saved record has syncStatus set to PENDING_DELETE for synced record`() = runTest {
+    fun `invoke sets syncStatus to PENDING_DELETE when record is synced`() = runTest {
         // Arrange
         val record = createUploadRecord(syncStatus = SyncStatus.SYNCED)
         val slot = slot<List<UploadRecord>>()
@@ -64,7 +64,7 @@ class DeleteMediaUseCaseTest {
     }
 
     @Test
-    fun `saveUploadRecords is called once for synced record`() = runTest {
+    fun `invoke calls saveUploadRecords when record is synced`() = runTest {
         // Arrange
         val record = createUploadRecord(syncStatus = SyncStatus.SYNCED)
         coEvery { localRepository.saveUploadRecords(any()) } just runs
@@ -78,7 +78,7 @@ class DeleteMediaUseCaseTest {
     }
 
     @Test
-    fun `scheduleDelete is called for synced record`() = runTest {
+    fun `invoke calls scheduleDelete when record is synced`() = runTest {
         // Arrange
         val record = createUploadRecord(syncStatus = SyncStatus.SYNCED)
         coEvery { localRepository.saveUploadRecords(any()) } just runs
@@ -92,7 +92,7 @@ class DeleteMediaUseCaseTest {
     }
 
     @Test
-    fun `pending upload record is physically deleted from Room`() = runTest {
+    fun `invoke calls deleteUploadRecord when record is PENDING_UPLOAD`() = runTest {
         // Arrange
         val mediaId = MediaId.of("media-1")
         val record = createUploadRecord(mediaId = mediaId, syncStatus = SyncStatus.PENDING_UPLOAD)
@@ -106,7 +106,7 @@ class DeleteMediaUseCaseTest {
     }
 
     @Test
-    fun `saveUploadRecords is not called for pending upload record`() = runTest {
+    fun `invoke ignores saveUploadRecords when record is PENDING_UPLOAD`() = runTest {
         // Arrange
         val record = createUploadRecord(syncStatus = SyncStatus.PENDING_UPLOAD)
         coEvery { localRepository.deleteUploadRecord(any()) } just runs
@@ -119,7 +119,7 @@ class DeleteMediaUseCaseTest {
     }
 
     @Test
-    fun `scheduleDelete is not called for pending upload record`() = runTest {
+    fun `invoke ignores scheduleDelete when record is PENDING_UPLOAD`() = runTest {
         // Arrange
         val record = createUploadRecord(syncStatus = SyncStatus.PENDING_UPLOAD)
         coEvery { localRepository.deleteUploadRecord(any()) } just runs

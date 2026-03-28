@@ -33,7 +33,7 @@ class AuthRepositoryImplTest {
     }
 
     @Test
-    fun `signUp calls dataSource once and returns success as is`() = runTest(StandardTestDispatcher()) {
+    fun `signUp returns Success when dataSource returns Success`() = runTest(StandardTestDispatcher()) {
         // Arrange
         val request = signUpRequestFixture()
         val expected = AuthResult.Success(Unit)
@@ -48,7 +48,7 @@ class AuthRepositoryImplTest {
     }
 
     @Test
-    fun `confirmSignUp calls dataSource once and returns error as is`() = runTest(StandardTestDispatcher()) {
+    fun `confirmSignUp returns Error when dataSource returns Error`() = runTest(StandardTestDispatcher()) {
         // Arrange
         val request = confirmSignUpRequestFixture()
         val expected = AuthResult.Error(AuthError.CodeMismatch("invalid code"))
@@ -63,7 +63,7 @@ class AuthRepositoryImplTest {
     }
 
     @Test
-    fun `signIn delegates only to dataSource signIn and returns mapped state from dataSource`() =
+    fun `signIn returns mapped state when dataSource returns Success`() =
         runTest(StandardTestDispatcher()) {
             // Arrange
             val request = signInRequestFixture()
@@ -82,7 +82,7 @@ class AuthRepositoryImplTest {
         }
 
     @Test
-    fun `signOut returns error from dataSource without fallback`() = runTest(StandardTestDispatcher()) {
+    fun `signOut returns Error when dataSource returns Error`() = runTest(StandardTestDispatcher()) {
         // Arrange
         val expected = AuthResult.Error(AuthError.Network("network down"))
         coEvery { dataSource.signOut() } returns expected
@@ -96,7 +96,7 @@ class AuthRepositoryImplTest {
     }
 
     @Test
-    fun `fetchCurrentUser returns domain user from dataSource as is`() = runTest(StandardTestDispatcher()) {
+    fun `fetchCurrentUser returns user when dataSource returns Success`() = runTest(StandardTestDispatcher()) {
         // Arrange
         val expected = AuthResult.Success(authUserFixture())
         coEvery { dataSource.fetchCurrentUser() } returns expected
@@ -110,7 +110,7 @@ class AuthRepositoryImplTest {
     }
 
     @Test
-    fun `getSession returns session from dataSource as is`() = runTest(StandardTestDispatcher()) {
+    fun `getSession returns session when dataSource returns Success`() = runTest(StandardTestDispatcher()) {
         // Arrange
         val expected = AuthResult.Success(authSessionFixture())
         coEvery { dataSource.getSession() } returns expected

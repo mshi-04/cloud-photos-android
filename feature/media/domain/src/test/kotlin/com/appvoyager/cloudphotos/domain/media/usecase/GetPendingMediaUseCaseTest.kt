@@ -33,7 +33,7 @@ class GetPendingMediaUseCaseTest {
     }
 
     @Test
-    fun `returns all media when no upload records exist`() = runTest {
+    fun `invoke returns all media when no upload records exist`() = runTest {
         // Arrange
         val media1 = createMedia("1")
         val media2 = createMedia("2")
@@ -48,7 +48,7 @@ class GetPendingMediaUseCaseTest {
     }
 
     @Test
-    fun `returns empty list when all media have upload records`() = runTest {
+    fun `invoke returns empty list when all media have upload records`() = runTest {
         // Arrange
         val media1 = createMedia("1")
         val media2 = createMedia("2")
@@ -66,7 +66,7 @@ class GetPendingMediaUseCaseTest {
     }
 
     @Test
-    fun `returns only media without upload records`() = runTest {
+    fun `invoke returns only media without upload records when some media are uploaded`() = runTest {
         // Arrange
         val media1 = createMedia("1")
         val media2 = createMedia("2")
@@ -85,7 +85,7 @@ class GetPendingMediaUseCaseTest {
     }
 
     @Test
-    fun `returns empty list when no local media exist`() = runTest {
+    fun `invoke returns empty list when no local media exist`() = runTest {
         // Arrange
         coEvery { localMediaRepository.getMediaList() } returns emptyList()
         coEvery { localUploadRecordsRepository.getUploadRecords(any()) } returns emptyList()
@@ -98,7 +98,7 @@ class GetPendingMediaUseCaseTest {
     }
 
     @Test
-    fun `chunks media ids when more than 900 items`() = runTest {
+    fun `invoke calls getUploadRecords in chunks when more than 900 items exist`() = runTest {
         // Arrange
         val mediaList = (1..1000).map { createMedia(it.toString()) }
         coEvery { localMediaRepository.getMediaList() } returns mediaList

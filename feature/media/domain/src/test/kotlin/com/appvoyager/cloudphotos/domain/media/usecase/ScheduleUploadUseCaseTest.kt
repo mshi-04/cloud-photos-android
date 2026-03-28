@@ -15,7 +15,7 @@ class ScheduleUploadUseCaseTest {
     private val useCase = ScheduleUploadUseCase(uploadScheduler)
 
     @Test
-    fun `invoke calls uploadScheduler scheduleUpload`() = runTest {
+    fun `invoke calls scheduleUpload when invoked`() = runTest {
         // Arrange
         every { uploadScheduler.scheduleUpload() } just runs
 

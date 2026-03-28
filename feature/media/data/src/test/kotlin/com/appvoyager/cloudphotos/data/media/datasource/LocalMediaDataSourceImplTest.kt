@@ -68,7 +68,7 @@ class LocalMediaDataSourceImplTest {
     }
 
     @Test
-    fun `getLocalMediaList successfully maps cursor data to Media list`() = runTest {
+    fun `getLocalMediaList returns Media list when cursor contains image data`() = runTest {
         // Arrange
         every {
             mockContentResolver.query(any(), any(), any(), any(), any())
@@ -97,7 +97,7 @@ class LocalMediaDataSourceImplTest {
     }
 
     @Test
-    fun `getLocalMediaList successfully maps cursor data to Media list for video`() = runTest {
+    fun `getLocalMediaList returns Media list when cursor contains video data`() = runTest {
         // Arrange
         every {
             mockContentResolver.query(any(), any(), any(), any(), any())
@@ -140,7 +140,7 @@ class LocalMediaDataSourceImplTest {
     }
 
     @Test
-    fun `getLocalMediaList clamps zero dateAddedSeconds to zero createdAt`() = runTest {
+    fun `getLocalMediaList returns zero createdAt when dateAdded is zero`() = runTest {
         // Arrange
         every {
             mockContentResolver.query(any(), any(), any(), any(), any())
@@ -163,7 +163,7 @@ class LocalMediaDataSourceImplTest {
     }
 
     @Test
-    fun `getLocalMediaList clamps negative dateAddedSeconds to zero createdAt`() = runTest {
+    fun `getLocalMediaList returns zero createdAt when dateAdded is negative`() = runTest {
         // Arrange
         every {
             mockContentResolver.query(any(), any(), any(), any(), any())

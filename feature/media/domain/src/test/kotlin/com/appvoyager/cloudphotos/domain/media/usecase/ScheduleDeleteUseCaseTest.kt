@@ -15,7 +15,7 @@ class ScheduleDeleteUseCaseTest {
     private val useCase = ScheduleDeleteUseCase(deleteScheduler)
 
     @Test
-    fun `invoke calls deleteScheduler scheduleDelete`() = runTest {
+    fun `invoke calls scheduleDelete when invoked`() = runTest {
         // Arrange
         every { deleteScheduler.scheduleDelete() } just runs
 

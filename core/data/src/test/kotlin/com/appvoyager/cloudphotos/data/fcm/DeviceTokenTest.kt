@@ -7,7 +7,7 @@ import org.junit.jupiter.api.assertThrows
 class DeviceTokenTest {
 
     @Test
-    fun `of trims and creates token when non blank`() {
+    fun `of returns DeviceToken with trimmed value when input is non blank`() {
         // Arrange
         val raw = "  fcm-token-value  "
 

@@ -7,7 +7,7 @@ import org.junit.jupiter.api.assertThrows
 class JwtTokenTest {
 
     @Test
-    fun `of trims and creates token when non blank`() {
+    fun `of returns JwtToken with trimmed value when input is non blank`() {
         // Arrange
         val raw = "  token-value  "
 

@@ -33,7 +33,7 @@ class RecordMediaUploadUseCaseTest {
     }
 
     @Test
-    fun `saved record has correct mediaId`() = runTest {
+    fun `invoke sets correct mediaId when invoked`() = runTest {
         // Arrange
         val mediaId = MediaId.of("media-1")
         val slot = slot<List<UploadRecord>>()
@@ -48,7 +48,7 @@ class RecordMediaUploadUseCaseTest {
     }
 
     @Test
-    fun `saved record has null cloudStoragePath`() = runTest {
+    fun `invoke sets cloudStoragePath to null when invoked`() = runTest {
         // Arrange
         val slot = slot<List<UploadRecord>>()
         coEvery { localRepository.saveUploadRecords(capture(slot)) } just runs
@@ -62,7 +62,7 @@ class RecordMediaUploadUseCaseTest {
     }
 
     @Test
-    fun `saved record has isDeleted set to false`() = runTest {
+    fun `invoke sets isDeleted to false when invoked`() = runTest {
         // Arrange
         val slot = slot<List<UploadRecord>>()
         coEvery { localRepository.saveUploadRecords(capture(slot)) } just runs
@@ -76,7 +76,7 @@ class RecordMediaUploadUseCaseTest {
     }
 
     @Test
-    fun `saved record has syncStatus set to PENDING_UPLOAD`() = runTest {
+    fun `invoke sets syncStatus to PENDING_UPLOAD when invoked`() = runTest {
         // Arrange
         val slot = slot<List<UploadRecord>>()
         coEvery { localRepository.saveUploadRecords(capture(slot)) } just runs
@@ -90,7 +90,7 @@ class RecordMediaUploadUseCaseTest {
     }
 
     @Test
-    fun `saved record has the provided mediaUploadedAt`() = runTest {
+    fun `invoke sets mediaUploadedAt to provided value when invoked`() = runTest {
         // Arrange
         val uploadedAt = MediaUploadedAt.of(1700000000000L)
         val slot = slot<List<UploadRecord>>()
@@ -105,7 +105,7 @@ class RecordMediaUploadUseCaseTest {
     }
 
     @Test
-    fun `scheduleUpload is called after saving record`() = runTest {
+    fun `invoke calls scheduleUpload when invoked`() = runTest {
         // Arrange
         coEvery { localRepository.saveUploadRecords(any()) } just runs
         every { uploadScheduler.scheduleUpload() } just runs

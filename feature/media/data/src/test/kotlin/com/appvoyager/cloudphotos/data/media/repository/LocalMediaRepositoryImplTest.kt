@@ -27,7 +27,7 @@ class LocalMediaRepositoryImplTest {
     }
 
     @Test
-    fun `getMediaListFlow returns flow emitting media list from data source`() = runTest {
+    fun `getMediaListFlow returns flow of media list when data source provides list`() = runTest {
         // Arrange
         coEvery { mockDataSource.getLocalMediaList() } returns expectedMediaList
 
@@ -39,7 +39,7 @@ class LocalMediaRepositoryImplTest {
     }
 
     @Test
-    fun `getMediaList returns media list from data source`() = runTest {
+    fun `getMediaList returns media list when data source provides list`() = runTest {
         // Arrange
         coEvery { mockDataSource.getLocalMediaList() } returns expectedMediaList
 
@@ -51,7 +51,7 @@ class LocalMediaRepositoryImplTest {
     }
 
     @Test
-    fun `getMediaList propagates exception from data source`() = runTest {
+    fun `getMediaList rethrows exception when data source throws`() = runTest {
         // Arrange
         coEvery { mockDataSource.getLocalMediaList() } throws RuntimeException("data source failure")
 
@@ -62,7 +62,7 @@ class LocalMediaRepositoryImplTest {
     }
 
     @Test
-    fun `getMediaListFlow propagates exception from data source`() = runTest {
+    fun `getMediaListFlow rethrows exception when data source throws`() = runTest {
         // Arrange
         coEvery { mockDataSource.getLocalMediaList() } throws RuntimeException("data source failure")
 

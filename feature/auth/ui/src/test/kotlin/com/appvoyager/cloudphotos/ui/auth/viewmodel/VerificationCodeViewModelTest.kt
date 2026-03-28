@@ -57,7 +57,7 @@ class VerificationCodeViewModelTest {
     }
 
     @Test
-    fun `initial state has empty codes and timer started`() {
+    fun `uiState sets codes to empty when viewModel is initialized`() {
         val state = viewModel.uiState.value
         Assertions.assertEquals(List(6) { "" }, state.codes)
         Assertions.assertFalse(state.isLoading)
@@ -67,7 +67,7 @@ class VerificationCodeViewModelTest {
     }
 
     @Test
-    fun `onCodeChanged updates single digit`() {
+    fun `onCodeChanged sets single digit when single character is entered`() {
         viewModel.onCodeChanged(0, "1")
         val state = viewModel.uiState.value
         Assertions.assertEquals("1", state.codes[0])
@@ -75,7 +75,7 @@ class VerificationCodeViewModelTest {
     }
 
     @Test
-    fun `onCodeChanged with paste distributes digits`() {
+    fun `onCodeChanged sets all digits when paste input of 6 characters is entered`() {
         viewModel.onCodeChanged(0, "123456")
         Assertions.assertEquals(
             listOf("1", "2", "3", "4", "5", "6"),
@@ -84,13 +84,13 @@ class VerificationCodeViewModelTest {
     }
 
     @Test
-    fun `isCodeComplete returns true when all 6 digits filled`() {
+    fun `isCodeComplete returns true when all 6 digits are filled`() {
         repeat(6) { i -> viewModel.onCodeChanged(i, (i + 1).toString()) }
         Assertions.assertTrue(viewModel.uiState.value.isCodeComplete)
     }
 
     @Test
-    fun `onVerify success navigates to home`() = runTest(testDispatcher) {
+    fun `onVerify emits NavigateToHome when confirmation succeeds`() = runTest(testDispatcher) {
         // Arrange
         coEvery { confirmSignUpUseCase(any()) } returns AuthResult.Success(Unit)
 
@@ -108,7 +108,7 @@ class VerificationCodeViewModelTest {
     }
 
     @Test
-    fun `onVerify with CodeMismatch sets codeError`() = runTest(testDispatcher) {
+    fun `onVerify sets codeError when confirmation returns CodeMismatch`() = runTest(testDispatcher) {
         // Arrange
         coEvery { confirmSignUpUseCase(any()) } returns AuthResult.Error(
             AuthError.CodeMismatch("wrong code")
@@ -128,7 +128,7 @@ class VerificationCodeViewModelTest {
     }
 
     @Test
-    fun `onVerify with CodeExpired sets codeError with resend prompt`() = runTest(testDispatcher) {
+    fun `onVerify sets codeError when confirmation returns CodeExpired`() = runTest(testDispatcher) {
         // Arrange
         coEvery { confirmSignUpUseCase(any()) } returns AuthResult.Error(
             AuthError.CodeExpired("expired")
@@ -148,7 +148,7 @@ class VerificationCodeViewModelTest {
     }
 
     @Test
-    fun `onVerify with Network error emits ShowSnackbar`() = runTest(testDispatcher) {
+    fun `onVerify emits ShowSnackbar when confirmation returns Network error`() = runTest(testDispatcher) {
         // Arrange
         coEvery { confirmSignUpUseCase(any()) } returns AuthResult.Error(
             AuthError.Network("offline")
@@ -168,7 +168,7 @@ class VerificationCodeViewModelTest {
     }
 
     @Test
-    fun `onResend success emits ShowSnackbar and resets timer`() = runTest(testDispatcher) {
+    fun `onResend emits ShowSnackbar when resend succeeds`() = runTest(testDispatcher) {
         // Arrange
         coEvery { resendSignUpCodeUseCase(any()) } returns AuthResult.Success(Unit)
 

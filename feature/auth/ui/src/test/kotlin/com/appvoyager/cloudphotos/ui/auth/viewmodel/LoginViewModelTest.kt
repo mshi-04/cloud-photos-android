@@ -49,7 +49,7 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun `initial state has empty email and password`() {
+    fun `uiState sets email to empty when viewModel is initialized`() {
         val state = viewModel.uiState.value
         Assertions.assertEquals("", state.email)
         Assertions.assertEquals("", state.password)
@@ -59,7 +59,7 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun `onEmailChanged updates email and clears error`() {
+    fun `onEmailChanged sets email when called`() {
         viewModel.onEmailChanged("test@example.com")
         val state = viewModel.uiState.value
         Assertions.assertEquals("test@example.com", state.email)
@@ -67,7 +67,7 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun `onPasswordChanged updates password and clears error`() {
+    fun `onPasswordChanged sets password when called`() {
         viewModel.onPasswordChanged("password1")
         val state = viewModel.uiState.value
         Assertions.assertEquals("password1", state.password)
@@ -75,28 +75,28 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun `isFormValid returns true for valid input`() {
+    fun `isFormValid returns true when email and password are valid`() {
         viewModel.onEmailChanged("test@example.com")
         viewModel.onPasswordChanged("password1")
         Assertions.assertTrue(viewModel.isFormValid)
     }
 
     @Test
-    fun `isFormValid returns false for invalid email`() {
+    fun `isFormValid returns false when email is invalid`() {
         viewModel.onEmailChanged("invalid")
         viewModel.onPasswordChanged("password1")
         Assertions.assertFalse(viewModel.isFormValid)
     }
 
     @Test
-    fun `isFormValid returns false for short password`() {
+    fun `isFormValid returns false when password is too short`() {
         viewModel.onEmailChanged("test@example.com")
         viewModel.onPasswordChanged("short")
         Assertions.assertFalse(viewModel.isFormValid)
     }
 
     @Test
-    fun `onSignIn success emits NavigateToHome`() = runTest(testDispatcher) {
+    fun `onSignIn emits NavigateToHome when sign in returns SignedIn`() = runTest(testDispatcher) {
         // Arrange
         viewModel.onEmailChanged("test@example.com")
         viewModel.onPasswordChanged("password1")
@@ -115,7 +115,7 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun `onSignIn with UserNotConfirmed emits NavigateToVerification`() = runTest(testDispatcher) {
+    fun `onSignIn emits NavigateToVerification when sign in returns UserNotConfirmed error`() = runTest(testDispatcher) {
         // Arrange
         viewModel.onEmailChanged("test@example.com")
         viewModel.onPasswordChanged("password1")
@@ -139,7 +139,7 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun `onSignIn with InvalidCredentials sets passwordError`() = runTest(testDispatcher) {
+    fun `onSignIn sets passwordError when sign in returns InvalidCredentials error`() = runTest(testDispatcher) {
         // Arrange
         viewModel.onEmailChanged("test@example.com")
         viewModel.onPasswordChanged("password1")
@@ -159,7 +159,7 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun `onSignIn with Network error emits ShowSnackbar`() = runTest(testDispatcher) {
+    fun `onSignIn emits ShowSnackbar when sign in returns Network error`() = runTest(testDispatcher) {
         // Arrange
         viewModel.onEmailChanged("test@example.com")
         viewModel.onPasswordChanged("password1")
@@ -183,7 +183,7 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun `onSignUp success emits NavigateToVerification`() = runTest(testDispatcher) {
+    fun `onSignUp emits NavigateToVerification when sign up succeeds`() = runTest(testDispatcher) {
         // Arrange
         viewModel.onEmailChanged("test@example.com")
         viewModel.onPasswordChanged("password1")
@@ -205,7 +205,7 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun `onSignUp with UsernameAlreadyExists sets emailError`() = runTest(testDispatcher) {
+    fun `onSignUp sets emailError when sign up returns UsernameAlreadyExists error`() = runTest(testDispatcher) {
         // Arrange
         viewModel.onEmailChanged("test@example.com")
         viewModel.onPasswordChanged("password1")
@@ -225,7 +225,7 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun `onSignIn with invalid form sets error messages`() = runTest(testDispatcher) {
+    fun `onSignIn sets emailError when both fields are empty`() = runTest(testDispatcher) {
         // Arrange
         viewModel.onEmailChanged("")
         viewModel.onPasswordChanged("")
@@ -241,7 +241,7 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun `onSignIn guards against duplicate requests when isLoading`() = runTest(testDispatcher) {
+    fun `onSignIn ignores duplicate call when isLoading is true`() = runTest(testDispatcher) {
         // Arrange
         viewModel.onEmailChanged("test@example.com")
         viewModel.onPasswordChanged("password1")
@@ -269,7 +269,7 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun `onSignUp guards against duplicate requests when isLoading`() = runTest(testDispatcher) {
+    fun `onSignUp ignores duplicate call when isLoading is true`() = runTest(testDispatcher) {
         // Arrange
         viewModel.onEmailChanged("test@example.com")
         viewModel.onPasswordChanged("password1")
@@ -297,7 +297,7 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun `onSignIn with invalid email only sets emailError`() = runTest(testDispatcher) {
+    fun `onSignIn sets emailError when email is invalid`() = runTest(testDispatcher) {
         // Arrange – invalid email, valid password
         viewModel.onEmailChanged("invalid")
         viewModel.onPasswordChanged("password1")
@@ -313,7 +313,7 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun `onSignIn with invalid password only sets passwordError`() = runTest(testDispatcher) {
+    fun `onSignIn sets passwordError when password is too short`() = runTest(testDispatcher) {
         // Arrange – valid email, short password
         viewModel.onEmailChanged("test@example.com")
         viewModel.onPasswordChanged("short")

@@ -21,7 +21,7 @@ class RemoteUploadRecordMapperTest {
     )
 
     @Test
-    fun `fromCreateResponse uses uploadedAt when provided`() {
+    fun `fromCreateResponse returns record with uploadedAt when uploadedAt is not null`() {
         // Arrange & Act
         val result = RemoteUploadRecordMapper.fromCreateResponse(
             uploadedAt = 1_700_000_000_000L,
@@ -34,7 +34,7 @@ class RemoteUploadRecordMapperTest {
     }
 
     @Test
-    fun `fromCreateResponse uses fallback when uploadedAt is null`() {
+    fun `fromCreateResponse returns record with fallbackUploadedAt when uploadedAt is null`() {
         // Arrange & Act
         val result = RemoteUploadRecordMapper.fromCreateResponse(
             uploadedAt = null,
@@ -47,7 +47,7 @@ class RemoteUploadRecordMapperTest {
     }
 
     @Test
-    fun `fromCreateResponse sets mediaId from request`() {
+    fun `fromCreateResponse sets mediaId from request when invoked`() {
         // Arrange & Act
         val result = RemoteUploadRecordMapper.fromCreateResponse(
             uploadedAt = 1_700_000_000_000L,
@@ -60,7 +60,7 @@ class RemoteUploadRecordMapperTest {
     }
 
     @Test
-    fun `fromCreateResponse sets cloudStoragePath from request`() {
+    fun `fromCreateResponse sets cloudStoragePath from request when invoked`() {
         // Arrange & Act
         val result = RemoteUploadRecordMapper.fromCreateResponse(
             uploadedAt = 1_700_000_000_000L,
@@ -73,7 +73,7 @@ class RemoteUploadRecordMapperTest {
     }
 
     @Test
-    fun `fromCreateResponse sets syncStatus to SYNCED`() {
+    fun `fromCreateResponse sets syncStatus to SYNCED when invoked`() {
         // Arrange & Act
         val result = RemoteUploadRecordMapper.fromCreateResponse(
             uploadedAt = 1_700_000_000_000L,
@@ -86,7 +86,7 @@ class RemoteUploadRecordMapperTest {
     }
 
     @Test
-    fun `fromCreateResponse sets isDeleted to false`() {
+    fun `fromCreateResponse sets isDeleted to false when invoked`() {
         // Arrange & Act
         val result = RemoteUploadRecordMapper.fromCreateResponse(
             uploadedAt = 1_700_000_000_000L,

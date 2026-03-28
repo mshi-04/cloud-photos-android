@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test
 class UploadErrorMapperTest {
 
     @Test
-    fun `map returns FileNotFound for FileNotFoundException`() {
+    fun `map returns FileNotFound when throwable is FileNotFoundException`() {
         // Arrange
         val throwable = FileNotFoundException("file not found")
 
@@ -22,7 +22,7 @@ class UploadErrorMapperTest {
     }
 
     @Test
-    fun `map returns Network for IOException`() {
+    fun `map returns Network when throwable is IOException`() {
         // Arrange
         val throwable = IOException("timeout")
 
@@ -34,7 +34,7 @@ class UploadErrorMapperTest {
     }
 
     @Test
-    fun `map returns AccessDenied for StorageException with access denied message`() {
+    fun `map returns AccessDenied when StorageException message contains access denied`() {
         // Arrange
         val throwable = StorageException("Access Denied", "check permissions")
 
@@ -46,7 +46,7 @@ class UploadErrorMapperTest {
     }
 
     @Test
-    fun `map returns NotAuthenticated for StorageException with signed in message`() {
+    fun `map returns NotAuthenticated when StorageException message contains signed in`() {
         // Arrange
         val throwable = StorageException("User is not signed in", "sign in first")
 
@@ -58,7 +58,7 @@ class UploadErrorMapperTest {
     }
 
     @Test
-    fun `map returns NotAuthenticated for StorageException with unauthenticated message`() {
+    fun `map returns NotAuthenticated when StorageException message contains Unauthenticated`() {
         // Arrange
         val throwable = StorageException("Unauthenticated access", "sign in first")
 
@@ -70,7 +70,7 @@ class UploadErrorMapperTest {
     }
 
     @Test
-    fun `map returns StorageLimitExceeded for StorageException with limit message`() {
+    fun `map returns StorageLimitExceeded when StorageException message contains limit`() {
         // Arrange
         val throwable = StorageException("Storage limit exceeded", "upgrade plan")
 
@@ -82,7 +82,7 @@ class UploadErrorMapperTest {
     }
 
     @Test
-    fun `map returns StorageLimitExceeded for StorageException with quota message`() {
+    fun `map returns StorageLimitExceeded when StorageException message contains quota`() {
         // Arrange
         val throwable = StorageException("Quota exceeded", "upgrade plan")
 
@@ -94,7 +94,7 @@ class UploadErrorMapperTest {
     }
 
     @Test
-    fun `map returns Network for StorageException caused by IOException`() {
+    fun `map returns Network when StorageException is caused by IOException`() {
         // Arrange
         val throwable = StorageException("upload failed", IOException("connection reset"), "retry")
 
@@ -106,7 +106,7 @@ class UploadErrorMapperTest {
     }
 
     @Test
-    fun `map returns Unknown for StorageException with unmapped message`() {
+    fun `map returns Unknown when StorageException message is not mapped`() {
         // Arrange
         val throwable = StorageException("something went wrong", "retry")
 

@@ -19,7 +19,7 @@ class SignOutUseCaseTest {
     private val useCase = SignOutUseCase(repository)
 
     @Test
-    fun `invoke returns success when repository succeeds`() = runTest(StandardTestDispatcher()) {
+    fun `invoke returns Success when repository succeeds`() = runTest(StandardTestDispatcher()) {
         // Arrange
         val expected = AuthResult.Success(Unit)
         coEvery { repository.signOut() } returns expected
@@ -33,7 +33,7 @@ class SignOutUseCaseTest {
     }
 
     @Test
-    fun `invoke returns error when repository fails`() = runTest(StandardTestDispatcher()) {
+    fun `invoke returns Error when repository fails`() = runTest(StandardTestDispatcher()) {
         // Arrange
         val expected = AuthResult.Error(AuthError.Network("offline"))
         coEvery { repository.signOut() } returns expected

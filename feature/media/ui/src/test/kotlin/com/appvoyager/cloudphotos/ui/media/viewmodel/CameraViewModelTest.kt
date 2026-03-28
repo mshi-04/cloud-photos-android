@@ -42,31 +42,31 @@ class CameraViewModelTest {
     }
 
     @Test
-    fun `initial state is checking permission`() {
+    fun `uiState returns CheckingPermission when viewModel is created`() {
         assertEquals(CameraUiState.CheckingPermission, viewModel.uiState.value)
     }
 
     @Test
-    fun `onPermissionGranted transitions to ready from checking permission`() {
+    fun `onPermissionGranted sets uiState to Ready when in CheckingPermission state`() {
         viewModel.onPermissionGranted()
         assertEquals(CameraUiState.Ready, viewModel.uiState.value)
     }
 
     @Test
-    fun `onPermissionGranted transitions to ready from permission required`() {
+    fun `onPermissionGranted sets uiState to Ready when in PermissionRequired state`() {
         viewModel.onPermissionDenied()
         viewModel.onPermissionGranted()
         assertEquals(CameraUiState.Ready, viewModel.uiState.value)
     }
 
     @Test
-    fun `onPermissionDenied transitions to permission required`() {
+    fun `onPermissionDenied sets uiState to PermissionRequired when called`() {
         viewModel.onPermissionDenied()
         assertEquals(CameraUiState.PermissionRequired, viewModel.uiState.value)
     }
 
     @Test
-    fun `onCameraError transitions to error with camera unavailable`() = runTest {
+    fun `onCameraError sets uiState to Error when called`() = runTest {
         viewModel.onCameraError()
         advanceUntilIdle()
         assertEquals(
@@ -76,7 +76,7 @@ class CameraViewModelTest {
     }
 
     @Test
-    fun `onCameraError emits show snackbar effect`() = runTest {
+    fun `onCameraError emits ShowSnackbar when called`() = runTest {
         viewModel.onCameraError()
         advanceUntilIdle()
         val effect = viewModel.effect.first()
@@ -84,7 +84,7 @@ class CameraViewModelTest {
     }
 
     @Test
-    fun `retryCamera transitions to ready`() {
+    fun `retryCamera sets uiState to Ready when called`() {
         viewModel.onPermissionGranted()
         viewModel.onCameraError()
         viewModel.retryCamera()
@@ -92,7 +92,7 @@ class CameraViewModelTest {
     }
 
     @Test
-    fun `takePhoto calls writer on success`() = runTest {
+    fun `takePhoto calls writer when captureJpeg succeeds`() = runTest {
         viewModel.onPermissionGranted()
         coEvery { mockWriter.write(any()) } returns SavePhotoResult.Success(
             MediaUrl.of("content://media/external/images/media/123")
@@ -108,7 +108,7 @@ class CameraViewModelTest {
     }
 
     @Test
-    fun `takePhoto transitions to ready on success`() = runTest {
+    fun `takePhoto sets uiState to Ready when captureJpeg succeeds`() = runTest {
         viewModel.onPermissionGranted()
         coEvery { mockWriter.write(any()) } returns SavePhotoResult.Success(
             MediaUrl.of("content://media/external/images/media/123")
@@ -124,7 +124,7 @@ class CameraViewModelTest {
     }
 
     @Test
-    fun `takePhoto emits on photo captured on success`() = runTest {
+    fun `takePhoto emits OnPhotoCaptured when captureJpeg succeeds`() = runTest {
         // Arrange
         viewModel.onPermissionGranted()
         coEvery { mockWriter.write(any()) } returns SavePhotoResult.Success(
@@ -147,7 +147,7 @@ class CameraViewModelTest {
     }
 
     @Test
-    fun `takePhoto transitions to error on save failed`() = runTest {
+    fun `takePhoto sets uiState to Error when photo save fails`() = runTest {
         // Arrange
         viewModel.onPermissionGranted()
         coEvery { mockWriter.write(any()) } returns SavePhotoResult.Error(SavePhotoResult.ErrorType.SAVE_FAILED)
@@ -167,7 +167,7 @@ class CameraViewModelTest {
     }
 
     @Test
-    fun `takePhoto emits show snackbar on save failed`() = runTest {
+    fun `takePhoto emits ShowSnackbar when photo save fails`() = runTest {
         viewModel.onPermissionGranted()
         coEvery { mockWriter.write(any()) } returns SavePhotoResult.Error(SavePhotoResult.ErrorType.SAVE_FAILED)
 
@@ -182,7 +182,7 @@ class CameraViewModelTest {
     }
 
     @Test
-    fun `takePhoto emits capture failed message on save failed`() = runTest {
+    fun `takePhoto emits ShowSnackbar with CaptureFailed when photo save fails`() = runTest {
         viewModel.onPermissionGranted()
         coEvery { mockWriter.write(any()) } returns SavePhotoResult.Error(SavePhotoResult.ErrorType.SAVE_FAILED)
 
@@ -197,7 +197,7 @@ class CameraViewModelTest {
     }
 
     @Test
-    fun `takePhoto transitions to error on storage full`() = runTest {
+    fun `takePhoto sets uiState to Error when storage is full`() = runTest {
         viewModel.onPermissionGranted()
         coEvery { mockWriter.write(any()) } returns SavePhotoResult.Error(SavePhotoResult.ErrorType.STORAGE_FULL)
 
@@ -214,7 +214,7 @@ class CameraViewModelTest {
     }
 
     @Test
-    fun `takePhoto emits show storage full dialog on storage full`() = runTest {
+    fun `takePhoto emits ShowStorageFullDialog when storage is full`() = runTest {
         viewModel.onPermissionGranted()
         coEvery { mockWriter.write(any()) } returns SavePhotoResult.Error(SavePhotoResult.ErrorType.STORAGE_FULL)
 
@@ -229,7 +229,7 @@ class CameraViewModelTest {
     }
 
     @Test
-    fun `takePhoto does not change state when not in ready state`() = runTest {
+    fun `takePhoto ignores uiState when not in Ready state`() = runTest {
         viewModel.takePhoto(
             captureJpeg = { byteArrayOf() },
             onCaptureAnimTrigger = {}
@@ -240,7 +240,7 @@ class CameraViewModelTest {
     }
 
     @Test
-    fun `takePhoto does not call writer when not in ready state`() = runTest {
+    fun `takePhoto ignores writer when not in Ready state`() = runTest {
         viewModel.takePhoto(
             captureJpeg = { byteArrayOf() },
             onCaptureAnimTrigger = {}
@@ -251,7 +251,7 @@ class CameraViewModelTest {
     }
 
     @Test
-    fun `takePhoto handles captureJpeg exception as save failed`() = runTest {
+    fun `takePhoto sets uiState to Error when captureJpeg throws`() = runTest {
         // Arrange
         viewModel.onPermissionGranted()
 
@@ -270,7 +270,7 @@ class CameraViewModelTest {
     }
 
     @Test
-    fun `takePhoto calls onCaptureAnimTrigger`() = runTest {
+    fun `takePhoto calls onCaptureAnimTrigger when captureJpeg succeeds`() = runTest {
         // Arrange
         viewModel.onPermissionGranted()
         var triggered = false

@@ -7,7 +7,7 @@ import org.junit.jupiter.api.assertThrows
 class MediaUploadedAtTest {
 
     @Test
-    fun `of returns MediaUploadedAt with correct value`() {
+    fun `of returns MediaUploadedAt when epochMillis is positive`() {
         // Arrange
         val expectedTimeMillis = 1678886400000L
 
@@ -33,7 +33,7 @@ class MediaUploadedAtTest {
     }
 
     @Test
-    fun `of returns MediaUploadedAt with zero value`() {
+    fun `of returns MediaUploadedAt when epochMillis is zero`() {
         // Arrange
         val zeroMillis = 0L
 
