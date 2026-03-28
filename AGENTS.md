@@ -143,7 +143,7 @@ Rules:
 - Validate in `of()` using `require()`.
 - Trim string input before validation where appropriate.
 - Do not use raw primitives for validated domain concepts when an established value object pattern exists.
-- Follow the existing value object placement under `domain/<feature>/valueobject/`.
+- Place value objects in the `valueobject/` package under the corresponding `feature:<name>:domain` module (e.g., `feature/auth/domain/src/main/kotlin/.../auth/valueobject/`).
 
 ### Tests
 - Use JUnit 5, MockK, and `kotlinx-coroutines-test`.
@@ -157,34 +157,39 @@ All test function names must use exactly this format:
 `[tested function name] [expected outcome] when [condition]`
 ```
 
-- `tested function name`: the exact function, property, or event handler under test — always placed first.
-- `expected outcome`: one observable verb phrase. Allowed verbs: `returns`, `throws`, `sets`, `emits`, `calls`, `rethrows`, `ignores`.
-- `when [condition]`: the scenario or input state — never omit.
-
 This format applies to all layers: value objects, use cases, repositories, mappers, workers, and ViewModels.
 
-#### Examples
+**Segment definitions:**
+
+| Segment | Rule |
+|---|---|
+| `tested function name` | The exact Kotlin function, property, or event-handler name under test. Must appear first. camelCase is allowed only in this segment (e.g., `onSignIn`, `fetchMedia`). |
+| `expected outcome` | A verb phrase using one of the allowed verbs only (see below). |
+| `when [condition]` | The scenario or input state. Must always be present — never omit. |
+
+**Allowed verbs:** `returns` / `throws` / `sets` / `emits` / `calls` / `rethrows` / `ignores`
+
+**Naming restrictions:**
+
+- `test`, `should`, `verify`, or similar prefixes are forbidden.
+- snake_case is forbidden anywhere in the name.
+- camelCase is forbidden outside the tested function name segment.
+- Japanese characters are forbidden.
+- Vague outcome words (`works`, `handles`, `correctly`, `properly`) are forbidden.
+- Categorical labels (`success case`, `failure case`, `happy path`, `error case`) are forbidden.
+- `success` or `failure` alone as the outcome is forbidden — write `returns Success` / `returns Error` instead.
+- Multiple behaviors in one function name are forbidden.
+
+**Examples:**
 
 ```kotlin
-fun `of returns Email when input is valid`()
-fun `of throws when email is blank after trim`()
 fun `invoke returns Success when repository succeeds`()
-fun `invoke returns Error when network is unavailable`()
+fun `of throws IllegalArgumentException when email is blank after trim`()
 fun `onSignIn emits NavigateToHome when credentials are valid`()
 fun `onSignIn sets passwordError when credentials are invalid`()
+fun `invoke returns Error when network is unavailable`()
+fun `of returns Email when input is valid`()
 ```
-
-#### Forbidden naming patterns
-
-- Starting with `test`, `should`, `verify`, or similar prefixes
-- Using `success case`, `failure case`, `happy path`, `error case`, or other categorical labels
-- Omitting `when [condition]`
-- Using `success` or `failure` as the outcome — write `returns Success` / `returns Error` instead
-- Describing multiple behaviors in one function name
-- Using `works`, `handles`, `correctly`, `properly`, or other vague outcome words
-- Using snake_case or camelCase inside backticks
-- Using Japanese characters
-- Using any naming style other than the required format
 
 #### Annotations
 
@@ -279,7 +284,7 @@ Follow this three-stage approach based on change scope:
 - Single module: `./gradlew :feature:<name>:<layer>:test`
 - Quick lint: `./gradlew ktlintCheck`
 
-**Before opening a PR** — run lint and tests for all changed modules:
+**Before handing the change back to the user** — run lint and tests for all changed modules:
 ```bash
 ./gradlew ktlintFormat  # local auto-fix (not executed by CI)
 ./gradlew ktlintCheck detekt
@@ -289,7 +294,7 @@ Follow this three-stage approach based on change scope:
 ./gradlew test
 ```
 
-**Before merging** — CI is the final gate. Do not merge if CI is red.
+**CI gate (user's merge workflow)** — CI is the final gate before merging. The user must not merge if CI is red.
 CI runs `bundle exec fastlane lint` and `bundle exec fastlane test`.
 
 If tests are not run, explicitly state that they were not run.
@@ -307,7 +312,13 @@ If tests are not run, explicitly state that they were not run.
 ./gradlew :feature:settings:data:test
 ```
 
+## Git operations ownership
+
+Git operations are user-owned unless explicitly requested. Do not commit, push, create a branch, or open a pull request unless the user explicitly asks for it. Focus on code changes, verification, and reporting.
+
 ## Pull request and branch workflow
+
+The following applies when the user explicitly requests Git operations:
 
 - Branch from `develop` for feature work unless explicitly told otherwise.
 - Do not push directly to protected branches.
@@ -323,19 +334,6 @@ When asked to implement something:
 4. Make the smallest safe change.
 5. Run targeted verification.
 6. Summarize exactly what changed, what was not changed, and remaining risks.
-
-## Things to avoid
-
-- Direct framework calls from domain use cases
-- UI code owning business rules that belong in domain
-- Cross-feature shortcuts
-- Silent large refactors
-- Editing unrelated files to "clean up"
-- Introducing duplicate abstractions when an existing pattern already fits
-- Hardcoding environment-specific values
-- Swallowing `CancellationException`
-- Returning data-layer models to UI
-- Violating the [Logging](#logging) rules
 
 ## Required reporting format for AI-generated changes
 
