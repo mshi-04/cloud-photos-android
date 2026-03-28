@@ -3,6 +3,8 @@ package com.appvoyager.cloudphotos.ui.media.viewmodel
 import android.os.SystemClock
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.appvoyager.cloudphotos.domain.auth.model.AuthResult
+import com.appvoyager.cloudphotos.domain.auth.usecase.SignOutUseCase
 import com.appvoyager.cloudphotos.domain.media.usecase.GetMediaListUseCase
 import com.appvoyager.cloudphotos.domain.media.usecase.PrepareUploadQueueUseCase
 import com.appvoyager.cloudphotos.domain.media.usecase.ScheduleDeleteUseCase
@@ -27,6 +29,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
 
 @HiltViewModel
 class MediaViewModel @Inject constructor(
@@ -35,7 +38,8 @@ class MediaViewModel @Inject constructor(
     private val setGridColumnCountUseCase: SetGridColumnCountUseCase,
     private val syncUploadRecordsUseCase: SyncUploadRecordsUseCase,
     private val prepareUploadQueueUseCase: PrepareUploadQueueUseCase,
-    private val scheduleDeleteUseCase: ScheduleDeleteUseCase
+    private val scheduleDeleteUseCase: ScheduleDeleteUseCase,
+    private val signOutUseCase: SignOutUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MediaUiState())
@@ -44,6 +48,7 @@ class MediaViewModel @Inject constructor(
     private val _effect = Channel<MediaEffect>(Channel.BUFFERED)
     val effect: Flow<MediaEffect> = _effect.receiveAsFlow()
 
+    private val signOutMutex = Mutex()
     private var mediaListJob: Job? = null
     private var syncJob: Job? = null
     private var lastResumeElapsedRealtimeMs: Long? = null
@@ -94,6 +99,26 @@ class MediaViewModel @Inject constructor(
                         it.copy(screenState = MediaUiState.ScreenState.Success(mediaList))
                     }
                 }
+        }
+    }
+
+    fun signOut() {
+        viewModelScope.launch {
+            if (!signOutMutex.tryLock()) return@launch
+            try {
+                _uiState.update { it.copy(isSigningOut = true) }
+                val result = signOutUseCase()
+                when (result) {
+                    is AuthResult.Success -> _effect.send(MediaEffect.NavigateToLogin)
+                    is AuthResult.Error -> _effect.send(MediaEffect.ShowSnackbar(MediaSnackbarMessage.SignOutFailed))
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                _effect.send(MediaEffect.ShowSnackbar(MediaSnackbarMessage.SignOutFailed))
+            } finally {
+                _uiState.update { it.copy(isSigningOut = false) }
+                signOutMutex.unlock()
+            }
         }
     }
 

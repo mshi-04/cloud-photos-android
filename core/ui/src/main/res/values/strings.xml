@@ -44,6 +44,9 @@
     <string name="settings_confirm">OK</string>
     <string name="settings_cancel">キャンセル</string>
 
+    <!-- サインアウト -->
+    <string name="error_sign_out">サインアウトに失敗しました</string>
+
     <!-- エラーメッセージ -->
     <string name="error_invalid_credentials">メールアドレスまたはパスワードが正しくありません</string>
     <string name="error_network">ネットワークエラーが発生しました</string>

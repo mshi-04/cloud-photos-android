@@ -1,5 +1,8 @@
 package com.appvoyager.cloudphotos.ui.media.viewmodel
 
+import com.appvoyager.cloudphotos.domain.auth.model.AuthError
+import com.appvoyager.cloudphotos.domain.auth.model.AuthResult
+import com.appvoyager.cloudphotos.domain.auth.usecase.SignOutUseCase
 import com.appvoyager.cloudphotos.domain.media.model.Media
 import com.appvoyager.cloudphotos.domain.media.model.MediaType
 import com.appvoyager.cloudphotos.domain.media.usecase.GetMediaListUseCase
@@ -26,6 +29,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -48,6 +52,7 @@ class MediaViewModelTest {
     private lateinit var syncUploadRecordsUseCase: SyncUploadRecordsUseCase
     private lateinit var prepareUploadQueueUseCase: PrepareUploadQueueUseCase
     private lateinit var scheduleDeleteUseCase: ScheduleDeleteUseCase
+    private lateinit var signOutUseCase: SignOutUseCase
 
     @BeforeEach
     fun setup() {
@@ -58,6 +63,7 @@ class MediaViewModelTest {
         syncUploadRecordsUseCase = mockk()
         prepareUploadQueueUseCase = mockk()
         scheduleDeleteUseCase = mockk()
+        signOutUseCase = mockk()
     }
 
     @AfterEach
@@ -71,7 +77,8 @@ class MediaViewModelTest {
         setGridColumnCountUseCase = setGridColumnCountUseCase,
         syncUploadRecordsUseCase = syncUploadRecordsUseCase,
         prepareUploadQueueUseCase = prepareUploadQueueUseCase,
-        scheduleDeleteUseCase = scheduleDeleteUseCase
+        scheduleDeleteUseCase = scheduleDeleteUseCase,
+        signOutUseCase = signOutUseCase
     )
 
     @Test
@@ -430,5 +437,100 @@ class MediaViewModelTest {
         // Assert
         val effect = viewModel.effect.first()
         assertEquals(MediaSnackbarMessage.Unknown, (effect as MediaEffect.ShowSnackbar).message)
+    }
+
+    @Test
+    fun `signOut emits NavigateToLogin on success`() = runTest {
+        // Arrange
+        every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
+        coEvery { signOutUseCase() } returns AuthResult.Success(Unit)
+
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // Act
+        viewModel.signOut()
+        advanceUntilIdle()
+
+        // Assert
+        val effect = viewModel.effect.first()
+        assertEquals(MediaEffect.NavigateToLogin, effect)
+    }
+
+    @Test
+    fun `signOut emits SignOutFailed snackbar on error`() = runTest {
+        // Arrange
+        every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
+        coEvery { signOutUseCase() } returns AuthResult.Error(AuthError.Unknown())
+
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // Act
+        viewModel.signOut()
+        advanceUntilIdle()
+
+        // Assert
+        val effect = viewModel.effect.first()
+        assertEquals(MediaSnackbarMessage.SignOutFailed, (effect as MediaEffect.ShowSnackbar).message)
+    }
+
+    @Test
+    fun `signOut emits SignOutFailed snackbar on exception`() = runTest {
+        // Arrange
+        every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
+        coEvery { signOutUseCase() } throws RuntimeException("sign out failed")
+
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // Act
+        viewModel.signOut()
+        advanceUntilIdle()
+
+        // Assert
+        val effect = viewModel.effect.first()
+        assertEquals(MediaSnackbarMessage.SignOutFailed, (effect as MediaEffect.ShowSnackbar).message)
+    }
+
+    @Test
+    fun `signOut sets isSigningOut to false after completion`() = runTest {
+        // Arrange
+        every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
+        coEvery { signOutUseCase() } returns AuthResult.Success(Unit)
+
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // Act
+        viewModel.signOut()
+        advanceUntilIdle()
+
+        // Assert
+        assertFalse(viewModel.uiState.value.isSigningOut)
+    }
+
+    @Test
+    fun `signOut does not run concurrently`() = runTest {
+        // Arrange
+        every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
+        val deferred = kotlinx.coroutines.CompletableDeferred<AuthResult<Unit>>()
+        coEvery { signOutUseCase() } coAnswers { deferred.await() }
+
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // Act
+        val job1 = launch { viewModel.signOut() }
+        val job2 = launch { viewModel.signOut() }
+        testScheduler.advanceTimeBy(1)
+
+        deferred.complete(AuthResult.Success(Unit))
+        advanceUntilIdle()
+        job1.join()
+        job2.join()
+
+        // Assert
+        coVerify(exactly = 1) { signOutUseCase() }
     }
 }

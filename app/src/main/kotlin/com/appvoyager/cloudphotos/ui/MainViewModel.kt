@@ -7,20 +7,16 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.appvoyager.cloudphotos.domain.auth.model.AuthResult
 import com.appvoyager.cloudphotos.domain.auth.usecase.GetSessionUseCase
-import com.appvoyager.cloudphotos.domain.auth.usecase.SignOutUseCase
 import com.appvoyager.cloudphotos.fcm.FcmTokenRegistrar
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val getSessionUseCase: GetSessionUseCase,
-    private val signOutUseCase: SignOutUseCase,
     private val fcmTokenRegistrar: FcmTokenRegistrar
 ) : ViewModel() {
 
@@ -33,11 +29,7 @@ class MainViewModel @Inject constructor(
     var isRetrying by mutableStateOf(false)
         private set
 
-    private val _uiEvent = Channel<MainUiEvent>(Channel.BUFFERED)
-    val uiEvent = _uiEvent.receiveAsFlow()
-
     private var checkSessionJob: Job? = null
-    private var signOutJob: Job? = null
 
     fun checkSession() {
         if (checkSessionJob?.isActive == true) return
@@ -68,24 +60,4 @@ class MainViewModel @Inject constructor(
     }
 
     fun registerFcmToken() = fcmTokenRegistrar.register()
-
-    fun signOut() {
-        if (signOutJob?.isActive == true) return
-        signOutJob = viewModelScope.launch {
-            try {
-                val result = signOutUseCase()
-                uiState = when (result) {
-                    is AuthResult.Success -> MainUiState.Unauthenticated
-                    is AuthResult.Error -> {
-                        _uiEvent.trySend(MainUiEvent.SignOutFailed)
-                        MainUiState.Authenticated
-                    }
-                }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                uiState = MainUiState.Authenticated
-                _uiEvent.trySend(MainUiEvent.SignOutFailed)
-            }
-        }
-    }
 }
