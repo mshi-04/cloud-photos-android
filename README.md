@@ -79,7 +79,7 @@ Firebase Cloud Messaging（FCM）によるプッシュ通知を受信します�
 
 ## 画面構成
 
-```
+```text
 スプラッシュ（セッション確認）
  ├─ セッション有効 → メディアグリッド（ホーム）
  └─ セッション無効 → ログイン
@@ -94,7 +94,7 @@ Firebase Cloud Messaging（FCM）によるプッシュ通知を受信します�
 
 ## モジュール構成
 
-```
+```text
 app/                          # Activity・NavGraph・DI ブートストラップ・Amplify / Firebase 初期化
 core/
   common/                     # 横断的な抽象化（Clock など）
