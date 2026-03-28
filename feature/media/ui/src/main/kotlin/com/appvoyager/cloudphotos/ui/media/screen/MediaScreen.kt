@@ -278,11 +278,7 @@ private fun MediaContent(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MediaAppBar(
-    visible: Boolean,
-    onSignOut: () -> Unit,
-    onGridSettingsClick: () -> Unit
-) {
+private fun MediaAppBar(visible: Boolean, onSignOut: () -> Unit, onGridSettingsClick: () -> Unit) {
     AnimatedVisibility(
         visible = visible,
         enter = slideInVertically { -it },

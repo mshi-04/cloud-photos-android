@@ -58,10 +58,7 @@ object AuthRoute {
 }
 
 @Composable
-fun NavGraph(
-    navController: NavHostController = rememberNavController(),
-    startDestination: String
-) {
+fun NavGraph(navController: NavHostController = rememberNavController(), startDestination: String) {
     NavHost(
         navController = navController,
         startDestination = startDestination,

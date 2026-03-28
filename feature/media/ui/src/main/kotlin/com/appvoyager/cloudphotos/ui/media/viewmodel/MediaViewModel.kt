@@ -29,7 +29,6 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
 
 @HiltViewModel
 class MediaViewModel @Inject constructor(
@@ -48,7 +47,6 @@ class MediaViewModel @Inject constructor(
     private val _effect = Channel<MediaEffect>(Channel.BUFFERED)
     val effect: Flow<MediaEffect> = _effect.receiveAsFlow()
 
-    private val signOutMutex = Mutex()
     private var mediaListJob: Job? = null
     private var syncJob: Job? = null
     private var lastResumeElapsedRealtimeMs: Long? = null
@@ -104,9 +102,9 @@ class MediaViewModel @Inject constructor(
 
     fun signOut() {
         viewModelScope.launch {
-            if (!signOutMutex.tryLock()) return@launch
+            if (_uiState.value.isSigningOut) return@launch
+            _uiState.update { it.copy(isSigningOut = true) }
             try {
-                _uiState.update { it.copy(isSigningOut = true) }
                 val result = signOutUseCase()
                 when (result) {
                     is AuthResult.Success -> _effect.send(MediaEffect.NavigateToLogin)
@@ -117,7 +115,6 @@ class MediaViewModel @Inject constructor(
                 _effect.send(MediaEffect.ShowSnackbar(MediaSnackbarMessage.SignOutFailed))
             } finally {
                 _uiState.update { it.copy(isSigningOut = false) }
-                signOutMutex.unlock()
             }
         }
     }

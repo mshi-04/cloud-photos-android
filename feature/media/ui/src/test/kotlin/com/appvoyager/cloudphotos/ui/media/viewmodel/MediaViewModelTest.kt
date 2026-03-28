@@ -29,7 +29,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -511,7 +510,7 @@ class MediaViewModelTest {
     }
 
     @Test
-    fun `signOut does not run concurrently`() = runTest {
+    fun `signOut does not run while isSigningOut is true`() = runTest {
         // Arrange
         every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
         val deferred = kotlinx.coroutines.CompletableDeferred<AuthResult<Unit>>()
@@ -520,15 +519,13 @@ class MediaViewModelTest {
         val viewModel = createViewModel()
         advanceUntilIdle()
 
-        // Act
-        val job1 = launch { viewModel.signOut() }
-        val job2 = launch { viewModel.signOut() }
+        // Act: 1回目を開始してisSigningOut=trueになった後、2回目を呼ぶ
+        viewModel.signOut()
         testScheduler.advanceTimeBy(1)
+        viewModel.signOut()
 
         deferred.complete(AuthResult.Success(Unit))
         advanceUntilIdle()
-        job1.join()
-        job2.join()
 
         // Assert
         coVerify(exactly = 1) { signOutUseCase() }
