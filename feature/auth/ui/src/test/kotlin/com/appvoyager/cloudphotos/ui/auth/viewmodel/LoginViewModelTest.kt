@@ -115,28 +115,29 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun `onSignIn emits NavigateToVerification when sign in returns UserNotConfirmed error`() = runTest(testDispatcher) {
-        // Arrange
-        viewModel.onEmailChanged("test@example.com")
-        viewModel.onPasswordChanged("password1")
-        coEvery { signInUseCase(any()) } returns AuthResult.Error(
-            AuthError.UserNotConfirmed()
-        )
+    fun `onSignIn emits NavigateToVerification when sign in returns UserNotConfirmed error`() =
+        runTest(testDispatcher) {
+            // Arrange
+            viewModel.onEmailChanged("test@example.com")
+            viewModel.onPasswordChanged("password1")
+            coEvery { signInUseCase(any()) } returns AuthResult.Error(
+                AuthError.UserNotConfirmed()
+            )
 
-        // Act
-        var effect: LoginEffect? = null
-        val job = launch { effect = viewModel.effect.first() }
-        viewModel.onSignIn()
-        advanceUntilIdle()
+            // Act
+            var effect: LoginEffect? = null
+            val job = launch { effect = viewModel.effect.first() }
+            viewModel.onSignIn()
+            advanceUntilIdle()
 
-        // Assert
-        Assertions.assertTrue(effect is LoginEffect.NavigateToVerification)
-        Assertions.assertEquals(
-            Email.of("test@example.com"),
-            (effect as LoginEffect.NavigateToVerification).email
-        )
-        job.cancel()
-    }
+            // Assert
+            Assertions.assertTrue(effect is LoginEffect.NavigateToVerification)
+            Assertions.assertEquals(
+                Email.of("test@example.com"),
+                (effect as LoginEffect.NavigateToVerification).email
+            )
+            job.cancel()
+        }
 
     @Test
     fun `onSignIn sets passwordError when sign in returns InvalidCredentials error`() = runTest(testDispatcher) {

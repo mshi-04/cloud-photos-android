@@ -63,23 +63,22 @@ class AuthRepositoryImplTest {
     }
 
     @Test
-    fun `signIn returns mapped state when dataSource returns Success`() =
-        runTest(StandardTestDispatcher()) {
-            // Arrange
-            val request = signInRequestFixture()
-            val expected = AuthResult.Success(
-                SignInState.MFARequired(SignInStep.CONFIRM_SIGN_IN_WITH_SMS_MFA_CODE)
-            )
-            coEvery { dataSource.signIn(request) } returns expected
+    fun `signIn returns mapped state when dataSource returns Success`() = runTest(StandardTestDispatcher()) {
+        // Arrange
+        val request = signInRequestFixture()
+        val expected = AuthResult.Success(
+            SignInState.MFARequired(SignInStep.CONFIRM_SIGN_IN_WITH_SMS_MFA_CODE)
+        )
+        coEvery { dataSource.signIn(request) } returns expected
 
-            // Act
-            val actual = repository.signIn(request)
+        // Act
+        val actual = repository.signIn(request)
 
-            // Assert
-            assertEquals(expected, actual)
-            coVerify(exactly = 1) { dataSource.signIn(request) }
-            coVerify(exactly = 0) { dataSource.signOut() }
-        }
+        // Assert
+        assertEquals(expected, actual)
+        coVerify(exactly = 1) { dataSource.signIn(request) }
+        coVerify(exactly = 0) { dataSource.signOut() }
+    }
 
     @Test
     fun `signOut returns Error when dataSource returns Error`() = runTest(StandardTestDispatcher()) {
