@@ -37,6 +37,7 @@ import androidx.compose.material.icons.filled.BrokenImage
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.PlayCircleOutline
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -226,7 +227,7 @@ private fun MediaContent(
     val statusBarPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val navigationBarPadding =
         WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    val appBarHeight = 64.dp
+    val appBarHeight = TopAppBarDefaults.TopAppBarExpandedHeight
 
     val showAppBar = screenState is MediaUiState.ScreenState.Success
 
@@ -308,7 +309,7 @@ private fun MediaAppBar(visible: Boolean, onSignOut: () -> Unit, onGridSettingsC
                 }
                 IconButton(onClick = onGridSettingsClick) {
                     Icon(
-                        imageVector = Icons.Default.Menu,
+                        imageVector = Icons.Default.Tune,
                         contentDescription = stringResource(R.string.media_grid_settings),
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(32.dp)
