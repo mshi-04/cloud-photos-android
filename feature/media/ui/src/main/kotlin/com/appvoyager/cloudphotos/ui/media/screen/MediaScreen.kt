@@ -35,6 +35,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.BrokenImage
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.PlayCircleOutline
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -65,7 +66,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -308,7 +308,7 @@ private fun MediaAppBar(visible: Boolean, onSignOut: () -> Unit, onGridSettingsC
                 }
                 IconButton(onClick = onGridSettingsClick) {
                     Icon(
-                        painter = painterResource(R.drawable.ic_launcher_foreground),
+                        imageVector = Icons.Default.Menu,
                         contentDescription = stringResource(R.string.media_grid_settings),
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(32.dp)
