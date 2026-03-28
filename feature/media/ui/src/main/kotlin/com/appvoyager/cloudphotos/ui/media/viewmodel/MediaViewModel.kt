@@ -3,6 +3,8 @@ package com.appvoyager.cloudphotos.ui.media.viewmodel
 import android.os.SystemClock
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.appvoyager.cloudphotos.domain.auth.model.AuthResult
+import com.appvoyager.cloudphotos.domain.auth.usecase.SignOutUseCase
 import com.appvoyager.cloudphotos.domain.media.usecase.GetMediaListUseCase
 import com.appvoyager.cloudphotos.domain.media.usecase.PrepareUploadQueueUseCase
 import com.appvoyager.cloudphotos.domain.media.usecase.ScheduleDeleteUseCase
@@ -35,7 +37,8 @@ class MediaViewModel @Inject constructor(
     private val setGridColumnCountUseCase: SetGridColumnCountUseCase,
     private val syncUploadRecordsUseCase: SyncUploadRecordsUseCase,
     private val prepareUploadQueueUseCase: PrepareUploadQueueUseCase,
-    private val scheduleDeleteUseCase: ScheduleDeleteUseCase
+    private val scheduleDeleteUseCase: ScheduleDeleteUseCase,
+    private val signOutUseCase: SignOutUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MediaUiState())
@@ -94,6 +97,25 @@ class MediaViewModel @Inject constructor(
                         it.copy(screenState = MediaUiState.ScreenState.Success(mediaList))
                     }
                 }
+        }
+    }
+
+    fun signOut() {
+        viewModelScope.launch {
+            if (_uiState.value.isSigningOut) return@launch
+            _uiState.update { it.copy(isSigningOut = true) }
+            try {
+                val result = signOutUseCase()
+                when (result) {
+                    is AuthResult.Success -> _effect.send(MediaEffect.NavigateToLogin)
+                    is AuthResult.Error -> _effect.send(MediaEffect.ShowSnackbar(MediaSnackbarMessage.SignOutFailed))
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                _effect.send(MediaEffect.ShowSnackbar(MediaSnackbarMessage.SignOutFailed))
+            } finally {
+                _uiState.update { it.copy(isSigningOut = false) }
+            }
         }
     }
 

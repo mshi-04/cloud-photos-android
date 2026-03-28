@@ -45,6 +45,9 @@
     <string name="settings_confirm">OK</string>
     <string name="settings_cancel">Cancel</string>
 
+    <!-- Sign Out -->
+    <string name="error_sign_out">Failed to sign out</string>
+
     <!-- Error Messages -->
     <string name="error_invalid_credentials">Incorrect email address or password</string>
     <string name="error_network">A network error has occurred</string>

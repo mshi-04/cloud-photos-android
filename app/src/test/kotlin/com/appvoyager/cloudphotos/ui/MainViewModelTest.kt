@@ -5,7 +5,6 @@ import com.appvoyager.cloudphotos.domain.auth.model.AuthResult
 import com.appvoyager.cloudphotos.domain.auth.model.AuthSession
 import com.appvoyager.cloudphotos.domain.auth.model.AuthState
 import com.appvoyager.cloudphotos.domain.auth.usecase.GetSessionUseCase
-import com.appvoyager.cloudphotos.domain.auth.usecase.SignOutUseCase
 import com.appvoyager.cloudphotos.fcm.FcmTokenRegistrar
 import io.mockk.coEvery
 import io.mockk.every
@@ -15,7 +14,6 @@ import io.mockk.runs
 import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -33,7 +31,6 @@ class MainViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
     private val getSessionUseCase = mockk<GetSessionUseCase>()
-    private val signOutUseCase = mockk<SignOutUseCase>()
     private val fcmTokenRegistrar = mockk<FcmTokenRegistrar>()
     private lateinit var viewModel: MainViewModel
 
@@ -41,7 +38,7 @@ class MainViewModelTest {
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         every { fcmTokenRegistrar.register() } just runs
-        viewModel = MainViewModel(getSessionUseCase, signOutUseCase, fcmTokenRegistrar)
+        viewModel = MainViewModel(getSessionUseCase, fcmTokenRegistrar)
     }
 
     @AfterEach
@@ -130,7 +127,8 @@ class MainViewModelTest {
     }
 
     @Test
-    fun `checkSession sets isRetrying when retrying from error`() = runTest {
+    fun `checkSession sets isRetrying to true while retrying from error`() = runTest {
+        // Arrange
         coEvery { getSessionUseCase() } returns AuthResult.Error(AuthError.Unknown())
 
         viewModel.checkSession()
@@ -141,60 +139,38 @@ class MainViewModelTest {
         val deferred = kotlinx.coroutines.CompletableDeferred<AuthResult<AuthSession>>()
         coEvery { getSessionUseCase() } coAnswers { deferred.await() }
 
+        // Act
         viewModel.checkSession()
         testScheduler.advanceTimeBy(1)
 
+        // Assert
         assertTrue(viewModel.isRetrying)
 
         deferred.complete(AuthResult.Success(AuthSession(state = AuthState.SignedIn)))
         advanceUntilIdle()
+    }
 
+    @Test
+    fun `checkSession sets isRetrying to false after retry completes`() = runTest {
+        // Arrange
+        coEvery { getSessionUseCase() } returns AuthResult.Error(AuthError.Unknown())
+
+        viewModel.checkSession()
+        advanceUntilIdle()
+
+        assertEquals(MainUiState.SessionCheckError, viewModel.uiState)
+
+        val deferred = kotlinx.coroutines.CompletableDeferred<AuthResult<AuthSession>>()
+        coEvery { getSessionUseCase() } coAnswers { deferred.await() }
+
+        // Act
+        viewModel.checkSession()
+        testScheduler.advanceTimeBy(1)
+        deferred.complete(AuthResult.Success(AuthSession(state = AuthState.SignedIn)))
+        advanceUntilIdle()
+
+        // Assert
         assertFalse(viewModel.isRetrying)
-    }
-
-    @Test
-    fun `signOut sets Unauthenticated on success`() = runTest {
-        coEvery { signOutUseCase() } returns AuthResult.Success(Unit)
-
-        viewModel.signOut()
-        advanceUntilIdle()
-
-        assertEquals(MainUiState.Unauthenticated, viewModel.uiState)
-    }
-
-    @Test
-    fun `signOut keeps Authenticated and emits SignOutFailed on error`() = runTest {
-        coEvery { signOutUseCase() } returns AuthResult.Error(AuthError.Unknown())
-
-        viewModel.signOut()
-        advanceUntilIdle()
-
-        assertEquals(MainUiState.Authenticated, viewModel.uiState)
-        val event = viewModel.uiEvent.first()
-        assertEquals(MainUiEvent.SignOutFailed, event)
-    }
-
-    @Test
-    fun `signOut keeps Authenticated and emits SignOutFailed on exception`() = runTest {
-        coEvery { signOutUseCase() } throws RuntimeException("sign out failed")
-
-        viewModel.signOut()
-        advanceUntilIdle()
-
-        assertEquals(MainUiState.Authenticated, viewModel.uiState)
-        val event = viewModel.uiEvent.first()
-        assertEquals(MainUiEvent.SignOutFailed, event)
-    }
-
-    @Test
-    fun `signOut does not run concurrently`() = runTest {
-        coEvery { signOutUseCase() } returns AuthResult.Success(Unit)
-
-        viewModel.signOut()
-        viewModel.signOut()
-        advanceUntilIdle()
-
-        io.mockk.coVerify(exactly = 1) { signOutUseCase() }
     }
 
     @Test

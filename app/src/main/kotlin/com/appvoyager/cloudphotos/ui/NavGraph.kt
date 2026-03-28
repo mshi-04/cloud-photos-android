@@ -58,11 +58,7 @@ object AuthRoute {
 }
 
 @Composable
-fun NavGraph(
-    navController: NavHostController = rememberNavController(),
-    startDestination: String,
-    onSignOut: () -> Unit = {}
-) {
+fun NavGraph(navController: NavHostController = rememberNavController(), startDestination: String) {
     NavHost(
         navController = navController,
         startDestination = startDestination,
@@ -174,8 +170,10 @@ fun NavGraph(
                 onNavigateToCamera = {
                     navController.navigate(AuthRoute.CAMERA)
                 },
-                onSignOut = {
-                    onSignOut()
+                onNavigateToLogin = {
+                    navController.navigate(AuthRoute.login()) {
+                        popUpTo(AuthRoute.HOME) { inclusive = true }
+                    }
                 },
                 onMediaClick = { mediaId, _ ->
                     navController.navigate(MediaRoute.detail(mediaId))
@@ -206,7 +204,7 @@ fun NavGraph(
             popExitTransition = { exitBack() }
         ) { backStackEntry ->
             val rawMediaId = backStackEntry.arguments?.getString("mediaId")
-            val homeEntry = remember(navController) {
+            val homeEntry = remember(backStackEntry) {
                 navController.getBackStackEntry(AuthRoute.HOME)
             }
             val mediaViewModel: MediaViewModel = hiltViewModel(homeEntry)

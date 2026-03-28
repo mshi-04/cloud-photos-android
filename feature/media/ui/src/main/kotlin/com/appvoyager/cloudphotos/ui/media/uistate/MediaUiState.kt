@@ -6,7 +6,8 @@ import com.appvoyager.cloudphotos.domain.settings.valueobject.GridColumnCount
 data class MediaUiState(
     val screenState: ScreenState = ScreenState.None,
     val gridColumnCount: GridColumnCount = GridColumnCount.of(3),
-    val isSettingsDialogVisible: Boolean = false
+    val isSettingsDialogVisible: Boolean = false,
+    val isSigningOut: Boolean = false
 ) {
     sealed class ScreenState {
         data object None : ScreenState()
