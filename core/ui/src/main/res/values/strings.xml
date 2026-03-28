@@ -45,7 +45,7 @@
     <string name="settings_cancel">キャンセル</string>
 
     <!-- サインアウト -->
-    <string name="error_sign_out">サインアウトに失敗しました</string>
+    <string name="error_sign_out">ログアウトに失敗しました</string>
 
     <!-- エラーメッセージ -->
     <string name="error_invalid_credentials">メールアドレスまたはパスワードが正しくありません</string>

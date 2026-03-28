@@ -127,7 +127,8 @@ class MainViewModelTest {
     }
 
     @Test
-    fun `checkSession sets isRetrying when retrying from error`() = runTest {
+    fun `checkSession sets isRetrying to true while retrying from error`() = runTest {
+        // Arrange
         coEvery { getSessionUseCase() } returns AuthResult.Error(AuthError.Unknown())
 
         viewModel.checkSession()
@@ -138,14 +139,37 @@ class MainViewModelTest {
         val deferred = kotlinx.coroutines.CompletableDeferred<AuthResult<AuthSession>>()
         coEvery { getSessionUseCase() } coAnswers { deferred.await() }
 
+        // Act
         viewModel.checkSession()
         testScheduler.advanceTimeBy(1)
 
+        // Assert
         assertTrue(viewModel.isRetrying)
 
         deferred.complete(AuthResult.Success(AuthSession(state = AuthState.SignedIn)))
         advanceUntilIdle()
+    }
 
+    @Test
+    fun `checkSession sets isRetrying to false after retry completes`() = runTest {
+        // Arrange
+        coEvery { getSessionUseCase() } returns AuthResult.Error(AuthError.Unknown())
+
+        viewModel.checkSession()
+        advanceUntilIdle()
+
+        assertEquals(MainUiState.SessionCheckError, viewModel.uiState)
+
+        val deferred = kotlinx.coroutines.CompletableDeferred<AuthResult<AuthSession>>()
+        coEvery { getSessionUseCase() } coAnswers { deferred.await() }
+
+        // Act
+        viewModel.checkSession()
+        testScheduler.advanceTimeBy(1)
+        deferred.complete(AuthResult.Success(AuthSession(state = AuthState.SignedIn)))
+        advanceUntilIdle()
+
+        // Assert
         assertFalse(viewModel.isRetrying)
     }
 

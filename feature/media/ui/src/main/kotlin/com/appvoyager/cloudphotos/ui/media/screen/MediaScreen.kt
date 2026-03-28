@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -61,6 +62,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -109,6 +111,7 @@ fun MediaScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
     val latestContext = rememberUpdatedState(context)
+    val latestOnNavigateToLogin = rememberUpdatedState(onNavigateToLogin)
     val lifecycleOwner = LocalLifecycleOwner.current
     var permissionCheckKey by remember { mutableIntStateOf(0) }
     var notificationPermissionRequested by remember { mutableStateOf(false) }
@@ -123,7 +126,7 @@ fun MediaScreen(
                     is MediaEffect.ShowSnackbar -> {
                         snackbarHostState.showSnackbar(effect.message.toMessage(latestContext.value))
                     }
-                    is MediaEffect.NavigateToLogin -> onNavigateToLogin()
+                    is MediaEffect.NavigateToLogin -> latestOnNavigateToLogin.value()
                 }
             }
         }
@@ -184,11 +187,20 @@ fun MediaScreen(
         )
     }
 
+    BackHandler(enabled = uiState.isSigningOut) {}
+
     if (uiState.isSigningOut) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.4f))
+                .pointerInput(Unit) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            awaitPointerEvent()
+                        }
+                    }
+                }
                 .clearAndSetSemantics { },
             contentAlignment = Alignment.Center
         ) {
@@ -216,8 +228,7 @@ private fun MediaContent(
         WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val appBarHeight = 64.dp
 
-    val showAppBar = screenState is MediaUiState.ScreenState.Success &&
-        screenState.mediaList.isNotEmpty()
+    val showAppBar = screenState is MediaUiState.ScreenState.Success
 
     Box(
         modifier = Modifier

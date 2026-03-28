@@ -81,7 +81,7 @@ class MediaViewModelTest {
     )
 
     @Test
-    fun `initial state has default values`() = runTest {
+    fun `init sets screenState to None when created`() = runTest {
         // Arrange
         every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
 
@@ -95,7 +95,7 @@ class MediaViewModelTest {
     }
 
     @Test
-    fun `loadMediaList success updates screenState to Success`() = runTest {
+    fun `loadMediaList sets screenState to Success when use case returns media list`() = runTest {
         // Arrange
         every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
         val expectedList = listOf(
@@ -121,7 +121,7 @@ class MediaViewModelTest {
     }
 
     @Test
-    fun `loadMediaList success contains expected media list`() = runTest {
+    fun `loadMediaList sets mediaList when use case returns media list`() = runTest {
         // Arrange
         every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
         val expectedList = listOf(
@@ -147,7 +147,7 @@ class MediaViewModelTest {
     }
 
     @Test
-    fun `loadMediaList error sets screenState to Error`() = runTest {
+    fun `loadMediaList sets screenState to Error when use case throws`() = runTest {
         // Arrange
         every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
         every { getMediaListUseCase() } returns flow { throw RuntimeException("load failed") }
@@ -164,7 +164,7 @@ class MediaViewModelTest {
     }
 
     @Test
-    fun `loadMediaList error sends snackbar effect`() = runTest {
+    fun `loadMediaList emits ShowSnackbar when use case throws`() = runTest {
         // Arrange
         every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
         every { getMediaListUseCase() } returns flow { throw RuntimeException("load failed") }
@@ -185,7 +185,7 @@ class MediaViewModelTest {
     }
 
     @Test
-    fun `init collects grid column count from use case`() = runTest {
+    fun `init sets gridColumnCount when use case emits value`() = runTest {
         // Arrange
         every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(5))
 
@@ -198,7 +198,7 @@ class MediaViewModelTest {
     }
 
     @Test
-    fun `grid column count flow error sends snackbar effect`() = runTest {
+    fun `init emits ShowSnackbar when grid column count flow throws`() = runTest {
         // Arrange
         every { getGridColumnCountUseCase() } returns flow {
             emit(GridColumnCount.of(3))
@@ -214,7 +214,7 @@ class MediaViewModelTest {
     }
 
     @Test
-    fun `onGridColumnCountChanged calls setGridColumnCountUseCase`() = runTest {
+    fun `onGridColumnCountChanged calls setGridColumnCountUseCase when called with new count`() = runTest {
         // Arrange
         every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
         coEvery { setGridColumnCountUseCase(any()) } returns Unit
@@ -231,7 +231,7 @@ class MediaViewModelTest {
     }
 
     @Test
-    fun `onGridColumnCountChanged error sends snackbar effect`() = runTest {
+    fun `onGridColumnCountChanged emits ShowSnackbar when use case throws`() = runTest {
         // Arrange
         every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
         coEvery { setGridColumnCountUseCase(any()) } throws RuntimeException("save failed")
@@ -249,7 +249,7 @@ class MediaViewModelTest {
     }
 
     @Test
-    fun `onShowSettingsDialog sets isSettingsDialogVisible to true`() = runTest {
+    fun `onShowSettingsDialog sets isSettingsDialogVisible to true when called`() = runTest {
         // Arrange
         every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
         val viewModel = createViewModel()
@@ -263,7 +263,7 @@ class MediaViewModelTest {
     }
 
     @Test
-    fun `onPermissionDenied sets screenState to PermissionRequired`() = runTest {
+    fun `onPermissionDenied sets screenState to PermissionRequired when called`() = runTest {
         // Arrange
         every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
         val viewModel = createViewModel()
@@ -277,7 +277,7 @@ class MediaViewModelTest {
     }
 
     @Test
-    fun `onDismissSettingsDialog sets isSettingsDialogVisible to false`() = runTest {
+    fun `onDismissSettingsDialog sets isSettingsDialogVisible to false when called`() = runTest {
         // Arrange
         every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
         val viewModel = createViewModel()
@@ -292,7 +292,7 @@ class MediaViewModelTest {
     }
 
     @Test
-    fun `onScreenResumed calls syncUploadRecordsUseCase`() = runTest {
+    fun `onScreenResumed calls syncUploadRecordsUseCase when interval has elapsed`() = runTest {
         // Arrange
         every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
         coEvery { syncUploadRecordsUseCase() } returns Unit
@@ -312,7 +312,7 @@ class MediaViewModelTest {
     }
 
     @Test
-    fun `onScreenResumed calls prepareUploadQueueUseCase`() = runTest {
+    fun `onScreenResumed calls prepareUploadQueueUseCase when interval has elapsed`() = runTest {
         // Arrange
         every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
         coEvery { syncUploadRecordsUseCase() } returns Unit
@@ -332,7 +332,7 @@ class MediaViewModelTest {
     }
 
     @Test
-    fun `onScreenResumed calls scheduleDeleteUseCase`() = runTest {
+    fun `onScreenResumed calls scheduleDeleteUseCase when interval has elapsed`() = runTest {
         // Arrange
         every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
         coEvery { syncUploadRecordsUseCase() } returns Unit
@@ -352,7 +352,7 @@ class MediaViewModelTest {
     }
 
     @Test
-    fun `onScreenResumed throttling limits syncUploadRecordsUseCase to one call`() = runTest {
+    fun `onScreenResumed ignores syncUploadRecordsUseCase when interval has not elapsed`() = runTest {
         // Arrange
         every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
         coEvery { syncUploadRecordsUseCase() } returns Unit
@@ -374,7 +374,7 @@ class MediaViewModelTest {
     }
 
     @Test
-    fun `onScreenResumed throttling limits prepareUploadQueueUseCase to one call`() = runTest {
+    fun `onScreenResumed ignores prepareUploadQueueUseCase when interval has not elapsed`() = runTest {
         // Arrange
         every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
         coEvery { syncUploadRecordsUseCase() } returns Unit
@@ -396,7 +396,7 @@ class MediaViewModelTest {
     }
 
     @Test
-    fun `onScreenResumed throttling limits scheduleDeleteUseCase to one call`() = runTest {
+    fun `onScreenResumed ignores scheduleDeleteUseCase when interval has not elapsed`() = runTest {
         // Arrange
         every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
         coEvery { syncUploadRecordsUseCase() } returns Unit
@@ -418,7 +418,7 @@ class MediaViewModelTest {
     }
 
     @Test
-    fun `onScreenResumed syncRemote failure sends snackbar effect`() = runTest {
+    fun `onScreenResumed emits ShowSnackbar when syncUploadRecordsUseCase throws`() = runTest {
         // Arrange
         every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
         coEvery { syncUploadRecordsUseCase() } throws RuntimeException("sync failed")
@@ -439,7 +439,7 @@ class MediaViewModelTest {
     }
 
     @Test
-    fun `signOut emits NavigateToLogin on success`() = runTest {
+    fun `signOut emits NavigateToLogin when sign out succeeds`() = runTest {
         // Arrange
         every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
         coEvery { signOutUseCase() } returns AuthResult.Success(Unit)
@@ -457,7 +457,7 @@ class MediaViewModelTest {
     }
 
     @Test
-    fun `signOut emits SignOutFailed snackbar on error`() = runTest {
+    fun `signOut emits ShowSnackbar when sign out returns error`() = runTest {
         // Arrange
         every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
         coEvery { signOutUseCase() } returns AuthResult.Error(AuthError.Unknown())
@@ -475,7 +475,7 @@ class MediaViewModelTest {
     }
 
     @Test
-    fun `signOut emits SignOutFailed snackbar on exception`() = runTest {
+    fun `signOut emits ShowSnackbar when sign out throws`() = runTest {
         // Arrange
         every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
         coEvery { signOutUseCase() } throws RuntimeException("sign out failed")
@@ -493,7 +493,7 @@ class MediaViewModelTest {
     }
 
     @Test
-    fun `signOut sets isSigningOut to false after completion`() = runTest {
+    fun `signOut sets isSigningOut to false when completed`() = runTest {
         // Arrange
         every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
         coEvery { signOutUseCase() } returns AuthResult.Success(Unit)
@@ -510,7 +510,7 @@ class MediaViewModelTest {
     }
 
     @Test
-    fun `signOut does not run while isSigningOut is true`() = runTest {
+    fun `signOut ignores concurrent call when already signing out`() = runTest {
         // Arrange
         every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
         val deferred = kotlinx.coroutines.CompletableDeferred<AuthResult<Unit>>()
