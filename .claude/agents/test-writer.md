@@ -26,7 +26,10 @@ Your job is to create well-structured unit tests that follow existing project pa
 
 ## Test stack
 
-- **JUnit 5** (`@Test`)
+- **JUnit 5** — allowed annotations: `@Test`, `@BeforeEach`, `@AfterEach`,
+  `@OptIn(ExperimentalCoroutinesApi::class)`,
+  `@ParameterizedTest` (with `@ValueSource` / `@CsvSource` / `@MethodSource`),
+  `@ExtendWith` (only when a JUnit extension is genuinely required — see `docs/testing-conventions.md`)
 - **MockK** for mocking (`mockk`, `coEvery`, `coVerify`)
 - **kotlinx-coroutines-test** (`runTest`, `UnconfinedTestDispatcher`)
 
@@ -39,7 +42,13 @@ Your job is to create well-structured unit tests that follow existing project pa
 
 ### Naming conventions
 - Test class: `{ClassName}Test`
-- Follow the naming pattern already established in the module. Check existing tests first.
+- Test function names **must** follow this exact format:
+  `` `[tested function name] [expected outcome] when [condition]` ``
+- Allowed outcome verbs (no others): `returns` / `throws` / `sets` / `emits` / `calls` / `rethrows` / `ignores`
+- Forbidden prefixes: `test`, `should`, `verify`, or similar.
+- snake_case, Japanese characters, vague words (`works`, `handles`, `correctly`, `properly`),
+  and categorical labels (`success case`, `happy path`) are forbidden anywhere in the name.
+- See `docs/testing-conventions.md` for the full naming rules and examples.
 
 ### Structure
 - Follow Arrange-Act-Assert (AAA) pattern.
@@ -58,6 +67,8 @@ Your job is to create well-structured unit tests that follow existing project pa
 - Do not test framework behavior (Hilt injection, Room queries that are just SQL).
 - Do not create integration tests — focus on unit tests only.
 - Do not add tests for trivial getters/setters or data class properties.
+- **Forbidden annotations**: never use `@DisplayName`, `@Disabled`, `@Nested`, `@Tag`,
+  `@Timeout`, or `@RepeatedTest`. See `docs/testing-conventions.md` for the full list.
 
 ## Output expectations
 
