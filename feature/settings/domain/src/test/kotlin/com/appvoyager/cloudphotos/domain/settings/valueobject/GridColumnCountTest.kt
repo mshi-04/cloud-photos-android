@@ -7,7 +7,7 @@ import org.junit.jupiter.api.assertThrows
 class GridColumnCountTest {
 
     @Test
-    fun `of creates GridColumnCount when value is within range`() {
+    fun `of returns GridColumnCount when value is within range`() {
         // Arrange
         val raw = 3
 
@@ -19,7 +19,7 @@ class GridColumnCountTest {
     }
 
     @Test
-    fun `of creates GridColumnCount when value is MIN`() {
+    fun `of returns GridColumnCount when value is MIN`() {
         // Arrange
         val raw = GridColumnCount.MIN
 
@@ -31,7 +31,7 @@ class GridColumnCountTest {
     }
 
     @Test
-    fun `of creates GridColumnCount when value is MAX`() {
+    fun `of returns GridColumnCount when value is MAX`() {
         // Arrange
         val raw = GridColumnCount.MAX
 

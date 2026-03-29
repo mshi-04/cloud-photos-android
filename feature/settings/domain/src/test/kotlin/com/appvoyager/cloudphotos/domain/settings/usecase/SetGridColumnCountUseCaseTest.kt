@@ -21,7 +21,7 @@ class SetGridColumnCountUseCaseTest {
     }
 
     @Test
-    fun `invoke calls setGridColumnCount on repository with correct value`() = runTest {
+    fun `invoke calls setGridColumnCount when invoked with a value`() = runTest {
         // Arrange
         val countToSet = GridColumnCount.of(4)
         coEvery { settingsRepository.setGridColumnCount(any()) } returns Unit

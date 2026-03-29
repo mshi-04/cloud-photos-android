@@ -6,27 +6,27 @@ import org.junit.jupiter.api.Test
 class MediaTypeTest {
 
     @Test
-    fun `from content type returns image for image jpeg`() {
+    fun `fromContentType returns image when content type is image jpeg`() {
         assertEquals(MediaType.IMAGE, MediaType.fromContentType("image/jpeg"))
     }
 
     @Test
-    fun `from content type returns image for image png`() {
+    fun `fromContentType returns image when content type is image png`() {
         assertEquals(MediaType.IMAGE, MediaType.fromContentType("image/png"))
     }
 
     @Test
-    fun `from content type returns video for video mp4`() {
+    fun `fromContentType returns video when content type is video mp4`() {
         assertEquals(MediaType.VIDEO, MediaType.fromContentType("video/mp4"))
     }
 
     @Test
-    fun `from content type returns video for video quicktime`() {
+    fun `fromContentType returns video when content type is video quicktime`() {
         assertEquals(MediaType.VIDEO, MediaType.fromContentType("video/quicktime"))
     }
 
     @Test
-    fun `from content type returns image for unknown content type`() {
+    fun `fromContentType returns image when content type is unknown`() {
         assertEquals(MediaType.IMAGE, MediaType.fromContentType("application/octet-stream"))
     }
 }

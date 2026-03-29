@@ -7,7 +7,7 @@ import org.junit.jupiter.api.assertThrows
 class UserIdTest {
 
     @Test
-    fun `of keeps value when non blank`() {
+    fun `of returns UserId when input is non blank`() {
         // Arrange
         val raw = "user-id"
 
@@ -19,7 +19,7 @@ class UserIdTest {
     }
 
     @Test
-    fun `of trims whitespace from input`() {
+    fun `of returns UserId with trimmed value when input has surrounding whitespace`() {
         // Arrange
         val raw = "  user-id  "
 

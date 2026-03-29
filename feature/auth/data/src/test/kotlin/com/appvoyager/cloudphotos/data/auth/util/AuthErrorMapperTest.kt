@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test
 class AuthErrorMapperTest {
 
     @Test
-    fun `map returns InvalidCredentials for session expired exception`() {
+    fun `map returns InvalidCredentials when throwable is SessionExpiredException`() {
         // Arrange
         val throwable = SessionExpiredException("session expired", "retry")
 
@@ -24,7 +24,7 @@ class AuthErrorMapperTest {
     }
 
     @Test
-    fun `map returns InvalidCredentials for signed out exception`() {
+    fun `map returns InvalidCredentials when throwable is SignedOutException`() {
         // Arrange
         val throwable = SignedOutException("signed out", "retry")
 
@@ -60,7 +60,7 @@ class AuthErrorMapperTest {
     }
 
     @Test
-    fun `map returns Unknown for service exception with unmapped cause`() {
+    fun `map returns Unknown when throwable is ServiceException`() {
         // Arrange
         val throwable =
             ServiceException("service unavailable", "retry", IllegalStateException("boom"))
@@ -73,7 +73,7 @@ class AuthErrorMapperTest {
     }
 
     @Test
-    fun `map returns Network for io exception`() {
+    fun `map returns Network when throwable is IOException`() {
         // Arrange
         val throwable = IOException("timeout")
 
@@ -85,7 +85,7 @@ class AuthErrorMapperTest {
     }
 
     @Test
-    fun `map returns Unknown for unexpected throwable`() {
+    fun `map returns Unknown when throwable is unexpected type`() {
         // Arrange
         val throwable = IllegalArgumentException("unexpected")
 

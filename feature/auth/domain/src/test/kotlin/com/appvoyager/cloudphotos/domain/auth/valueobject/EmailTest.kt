@@ -7,7 +7,7 @@ import org.junit.jupiter.api.assertThrows
 class EmailTest {
 
     @Test
-    fun `of trims and creates email when valid format`() {
+    fun `of returns Email with trimmed value when input has surrounding whitespace`() {
         // Arrange
         val raw = "  user@example.com  "
 

@@ -47,12 +47,12 @@ class MainViewModelTest {
     }
 
     @Test
-    fun `initial state is None`() {
+    fun `uiState returns None when viewModel is created`() {
         assertEquals(MainUiState.None, viewModel.uiState)
     }
 
     @Test
-    fun `initial isCheckingSession is true`() {
+    fun `isCheckingSession returns true when viewModel is created`() {
         assertTrue(viewModel.isCheckingSession)
     }
 
@@ -81,7 +81,7 @@ class MainViewModelTest {
     }
 
     @Test
-    fun `checkSession sets SessionCheckError on AuthResult Error`() = runTest {
+    fun `checkSession sets SessionCheckError when getSessionUseCase returns Error`() = runTest {
         coEvery { getSessionUseCase() } returns AuthResult.Error(AuthError.Unknown())
 
         viewModel.checkSession()
@@ -91,7 +91,7 @@ class MainViewModelTest {
     }
 
     @Test
-    fun `checkSession sets SessionCheckError on exception`() = runTest {
+    fun `checkSession sets SessionCheckError when getSessionUseCase throws`() = runTest {
         coEvery { getSessionUseCase() } throws RuntimeException("network error")
 
         viewModel.checkSession()
@@ -101,7 +101,7 @@ class MainViewModelTest {
     }
 
     @Test
-    fun `checkSession sets isCheckingSession to false after completion`() = runTest {
+    fun `checkSession sets isCheckingSession to false when completed`() = runTest {
         coEvery { getSessionUseCase() } returns AuthResult.Success(
             AuthSession(state = AuthState.SignedIn)
         )
@@ -113,7 +113,7 @@ class MainViewModelTest {
     }
 
     @Test
-    fun `checkSession does not run concurrently`() = runTest {
+    fun `checkSession ignores concurrent call when already running`() = runTest {
         coEvery { getSessionUseCase() } returns AuthResult.Success(
             AuthSession(state = AuthState.SignedIn)
         )
@@ -127,7 +127,7 @@ class MainViewModelTest {
     }
 
     @Test
-    fun `checkSession sets isRetrying to true while retrying from error`() = runTest {
+    fun `checkSession sets isRetrying to true when retrying after error`() = runTest {
         // Arrange
         coEvery { getSessionUseCase() } returns AuthResult.Error(AuthError.Unknown())
 
@@ -151,7 +151,7 @@ class MainViewModelTest {
     }
 
     @Test
-    fun `checkSession sets isRetrying to false after retry completes`() = runTest {
+    fun `checkSession sets isRetrying to false when retry completes`() = runTest {
         // Arrange
         coEvery { getSessionUseCase() } returns AuthResult.Error(AuthError.Unknown())
 
@@ -174,7 +174,7 @@ class MainViewModelTest {
     }
 
     @Test
-    fun `registerFcmToken delegates to FcmTokenRegistrar`() {
+    fun `registerFcmToken calls FcmTokenRegistrar register when called`() {
         viewModel.registerFcmToken()
 
         verify(exactly = 1) { fcmTokenRegistrar.register() }

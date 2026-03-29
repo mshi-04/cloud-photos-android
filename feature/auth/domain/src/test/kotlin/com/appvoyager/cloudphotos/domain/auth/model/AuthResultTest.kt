@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test
 class AuthResultTest {
 
     @Test
-    fun `getOrNull returns value for success`() {
+    fun `getOrNull returns value when result is Success`() {
         // Arrange
         val result: AuthResult<String> = AuthResult.Success("ok")
 
@@ -19,7 +19,7 @@ class AuthResultTest {
     }
 
     @Test
-    fun `getOrNull returns null for error`() {
+    fun `getOrNull returns null when result is Error`() {
         // Arrange
         val result: AuthResult<String> = AuthResult.Error(AuthError.Network("offline"))
 
@@ -31,7 +31,7 @@ class AuthResultTest {
     }
 
     @Test
-    fun `errorOrNull returns error for error result`() {
+    fun `errorOrNull returns error when result is Error`() {
         // Arrange
         val error = AuthError.InvalidCredentials("invalid")
         val result: AuthResult<String> = AuthResult.Error(error)
@@ -44,7 +44,7 @@ class AuthResultTest {
     }
 
     @Test
-    fun `map transforms success value`() {
+    fun `map returns transformed value when result is Success`() {
         // Arrange
         val result: AuthResult<Int> = AuthResult.Success(10)
 
@@ -56,7 +56,7 @@ class AuthResultTest {
     }
 
     @Test
-    fun `map keeps same error without transform`() {
+    fun `map returns Error unchanged when result is Error`() {
         // Arrange
         val error = AuthError.Unknown("boom")
         val result: AuthResult<Int> = AuthResult.Error(error)
@@ -69,7 +69,7 @@ class AuthResultTest {
     }
 
     @Test
-    fun `flatMap transforms success into next result`() {
+    fun `flatMap returns next result when result is Success`() {
         // Arrange
         val result: AuthResult<Int> = AuthResult.Success(3)
 
@@ -81,7 +81,7 @@ class AuthResultTest {
     }
 
     @Test
-    fun `flatMap keeps error and does not execute transform`() {
+    fun `flatMap returns Error unchanged when result is Error`() {
         // Arrange
         val error = AuthError.Network("offline")
         val result: AuthResult<Int> = AuthResult.Error(error)
@@ -94,7 +94,7 @@ class AuthResultTest {
     }
 
     @Test
-    fun `errorOrNull returns null for success result`() {
+    fun `errorOrNull returns null when result is Success`() {
         // Arrange
         val result: AuthResult<String> = AuthResult.Success("ok")
 

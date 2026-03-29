@@ -29,6 +29,11 @@ Do not duplicate detailed architectural policy here unless there is a Claude-spe
 - `.agent/skills/android-testing/SKILL.md`
 - `.agent/skills/android-media-upload/SKILL.md`
 
+## Subagents
+- `.claude/agents/reviewer.md` — read-only code reviewer (architecture, security, conventions)
+- `.claude/agents/test-writer.md` — unit test generator (JUnit 5 + MockK patterns)
+- `.claude/agents/arch-checker.md` — architecture validator (module boundaries, dependency direction)
+
 ## Claude quick-start
 
 Before making changes:
@@ -51,10 +56,6 @@ Before making changes:
 
 ## Testing entrypoint
 
-For CI-aligned verification, prefer the repository's existing test entrypoint when appropriate:
-
-```bash
-bundle exec fastlane test
-```
-
-Use narrower Gradle module tests for focused local validation, following `AGENTS.md`.
+For local verification, use the smallest relevant Gradle command (e.g.,
+`./gradlew :feature:<name>:<layer>:test`).
+See `docs/verification-policy.md` for the overall verification policy including CI gates.

@@ -29,7 +29,7 @@ class GetMediaListUseCaseTest {
     }
 
     @Test
-    fun `invoke returns flow of media list from repository`() = runTest {
+    fun `invoke returns flow of media list when repository provides list`() = runTest {
         // Arrange
         val expectedMediaList = listOf(
             Media(
@@ -50,7 +50,7 @@ class GetMediaListUseCaseTest {
     }
 
     @Test
-    fun `invoke propagates exception from repository`() = runTest {
+    fun `invoke rethrows exception when repository throws`() = runTest {
         // Arrange
         val expected = RuntimeException("repository failure")
         every { localMediaRepository.getMediaListFlow() } returns flow { throw expected }

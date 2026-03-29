@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test
 class UploadRecordDaoSyncStatusTest {
 
     @Test
-    fun `pending upload status exists`() {
+    fun `SyncStatus entries returns PENDING_UPLOAD entry when enum is defined`() {
         val enumNames = SyncStatus.entries.map { it.name }
         val name = "PENDING_UPLOAD"
         assertTrue(name in enumNames) {
@@ -17,7 +17,7 @@ class UploadRecordDaoSyncStatusTest {
     }
 
     @Test
-    fun `pending delete status exists`() {
+    fun `SyncStatus entries returns PENDING_DELETE entry when enum is defined`() {
         val enumNames = SyncStatus.entries.map { it.name }
         val name = "PENDING_DELETE"
         assertTrue(name in enumNames) {
