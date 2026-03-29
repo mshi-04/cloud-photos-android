@@ -12,12 +12,16 @@ This feature is split into:
 - `feature/media/data`
 - `feature/media/ui`
 
+The former `feature/settings` module has been merged into this feature.
+Settings domain contracts, use cases, value objects, and persistence now live inside the media
+module layers.
+
 ## Intent of this feature
 
 This feature owns media listing, upload, delete, upload-record persistence, sync status handling,
-and background scheduling related to media operations.
+background scheduling related to media operations, and lightweight user settings.
 This is one of the highest-risk areas in the repository because it mixes domain rules, local
-persistence, remote sync, and background workers.
+persistence, remote sync, background workers, and user-facing settings.
 
 ## Domain rules
 
@@ -28,6 +32,10 @@ Keep `feature/media/domain` focused on:
 - repository contracts
 - scheduler contracts
 - value objects for validated media concepts
+- settings repository contracts
+- settings use cases
+- settings value objects
+- settings-specific validation rules
 
 Do not place here:
 
@@ -42,6 +50,9 @@ Rules:
 - Preserve the distinction between upload orchestration, sync, local record management, and
   scheduling.
 - Do not move worker behavior into domain use cases.
+- Keep validated settings concepts in value objects when that pattern already exists.
+- If a setting starts being shared by multiple features, be explicit about whether it still belongs
+  here or should move to a shared/core location.
 
 ## Data rules
 
@@ -53,6 +64,9 @@ Rules:
 - repository implementations
 - worker/scheduler implementations
 - mapping between database/remote/data models and domain models
+- reading/writing persisted settings values
+- implementing settings repository contracts
+- translating persistence models into domain-facing settings values
 
 Rules:
 
@@ -62,6 +76,9 @@ Rules:
 - Repository implementations should delegate to data sources and mapper objects.
 - Keep sync-status translation and error translation localized.
 - Re-throw `CancellationException` in coroutine error handling.
+- Keep settings persistence details in data; do not let UI or unrelated features access storage
+  details directly.
+- Prefer small repository implementations and focused data source code for settings.
 
 ## Worker and scheduler guardrails
 
@@ -119,11 +136,15 @@ Prefer targeted media tests first:
 ```
 
 Run broader tests if changes affect app wiring, shared modules, or multiple media layers.
+If only settings logic changed, `:feature:media:domain:test` and `:feature:media:data:test` are
+sufficient as a first pass.
 
 ## Report back with
 
 - which media layer changed
 - whether worker/scheduler behavior changed
 - whether sync status or upload/delete flow semantics changed
+- whether any settings semantics or validation changed
 - tests run
 - remaining risks around background execution or record consistency
+- any follow-up if a setting may outgrow this feature and should move to core

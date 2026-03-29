@@ -25,8 +25,7 @@ Sub-agent policy:
 Feature-local guidance:
 
 - `feature/auth/AGENTS.md` — auth-specific rules and guardrails
-- `feature/media/AGENTS.md` — media-specific rules and guardrails
-- `feature/settings/AGENTS.md` — settings-specific rules and guardrails
+- `feature/media/AGENTS.md` — media-specific rules and guardrails (includes former settings rules)
 
 ## Objective
 
@@ -59,9 +58,9 @@ conservative.
 - `build-logic` = shared Gradle convention plugins; avoid touching unless the task is about build
   structure
 
-Current features include `auth`, `media`, and `settings`.
-Note: `settings` has `domain` and `data` submodules only — there is no `:feature:settings:ui`
-module.
+Current features include `auth` and `media`.
+Note: the former `settings` feature has been merged into `media`.
+`media` has `domain`, `data`, and `ui` submodules.
 
 ## Layer placement rules
 

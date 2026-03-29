@@ -106,12 +106,9 @@ feature/
     data/                     # Amplify Cognito 連携・認証エラーマッパー
     ui/                       # Login / VerificationCode / ForgotPassword / ResetPassword 画面・ViewModel
   media/
-    domain/                   # メディアモデル（Media, MediaType）・SyncStatus・アップロード/削除ユースケース
-    data/                     # S3 アップロード・Room DB（UploadRecordDao）・Worker・Scheduler
+    domain/                   # メディアモデル（Media, MediaType）・SyncStatus・アップロード/削除ユースケース・設定ユースケース（GridColumnCount など）
+    data/                     # S3 アップロード・Room DB（UploadRecordDao）・Worker・Scheduler・DataStore（設定永続化）
     ui/                       # MediaScreen / CameraScreen / MediaDetailScreen・CameraPreviewManager・ViewModel
-  settings/
-    domain/                   # GridColumnCount 値オブジェクト・設定ユースケース
-    data/                     # DataStore によるグリッド列数の永続化
 build-logic/                  # 共有 Gradle コンベンションプラグイン（cloudphotos.lint 等）
 ```
 
@@ -196,8 +193,6 @@ bundle exec fastlane build_prod
 ./gradlew :feature:media:domain:test
 ./gradlew :feature:media:data:test
 ./gradlew :feature:media:ui:test
-./gradlew :feature:settings:domain:test
-./gradlew :feature:settings:data:test
 
 # Fastlane 経由（CI と同一環境）
 bundle exec fastlane test
