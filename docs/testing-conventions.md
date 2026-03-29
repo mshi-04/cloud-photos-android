@@ -40,9 +40,9 @@ ViewModels.
 
 - `test`, `should`, `verify`, or similar prefixes are forbidden.
 - snake_case is forbidden anywhere in the name.
-- camelCase is allowed only in the `tested function name` segment (e.g., `onSignIn`, `fetchMedia`).
-  In the expected outcome and condition segments, camelCase is forbidden — use natural lowercase
-  words or PascalCase type names (e.g., `SignedInState`, `NetworkError`) only.
+- camelCase in backtick-enclosed test names is allowed when it improves readability
+  (especially for Kotlin symbol names under test).
+  PascalCase class names (e.g., `SignedInState`, `NetworkError`) are also permitted.
 - Japanese characters are forbidden.
 - Vague outcome words (`works`, `handles`, `correctly`, `properly`) are forbidden.
 - Categorical labels (`success case`, `failure case`, `happy path`, `error case`) are forbidden.
