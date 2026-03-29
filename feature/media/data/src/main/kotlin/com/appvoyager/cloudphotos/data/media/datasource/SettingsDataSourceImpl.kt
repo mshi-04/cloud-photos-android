@@ -1,4 +1,4 @@
-package com.appvoyager.cloudphotos.data.settings.datasource
+package com.appvoyager.cloudphotos.data.media.datasource
 
 import android.content.Context
 import androidx.datastore.core.DataStore

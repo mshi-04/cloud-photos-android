@@ -121,8 +121,10 @@ class AuthDataSourceImpl @Inject constructor(private val deviceTokenDataSource: 
             is AWSCognitoAuthSignOutResult.PartialSignOut -> {
                 AuthResult.Success(Unit)
             }
+
             is AWSCognitoAuthSignOutResult.FailedSignOut ->
                 AuthResult.Error(AuthErrorMapper.map(result.exception))
+
             else -> AuthResult.Error(
                 AuthErrorMapper.map(IllegalStateException("Unknown sign-out result: ${result::class}"))
             )

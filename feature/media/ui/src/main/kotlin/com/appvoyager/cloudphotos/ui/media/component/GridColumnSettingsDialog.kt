@@ -20,7 +20,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.appvoyager.cloudphotos.core.ui.R
-import com.appvoyager.cloudphotos.domain.settings.valueobject.GridColumnCount
+import com.appvoyager.cloudphotos.domain.media.valueobject.GridColumnCount
 import com.appvoyager.cloudphotos.ui.theme.CloudPhotosTheme
 import kotlin.math.roundToInt
 

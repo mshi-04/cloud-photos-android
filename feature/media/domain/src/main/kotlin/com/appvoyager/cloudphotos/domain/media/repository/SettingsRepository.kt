@@ -1,6 +1,6 @@
-package com.appvoyager.cloudphotos.domain.settings.repository
+package com.appvoyager.cloudphotos.domain.media.repository
 
-import com.appvoyager.cloudphotos.domain.settings.valueobject.GridColumnCount
+import com.appvoyager.cloudphotos.domain.media.valueobject.GridColumnCount
 import kotlinx.coroutines.flow.Flow
 
 interface SettingsRepository {

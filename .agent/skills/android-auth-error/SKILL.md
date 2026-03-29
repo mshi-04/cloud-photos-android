@@ -8,6 +8,7 @@ description: "Use when adding or modifying auth error types, auth error mappers,
 ## Primary references
 
 Read these first before using this skill:
+
 1. `AGENTS.md`
 2. `feature/auth/AGENTS.md`
 
@@ -22,6 +23,7 @@ Provider-specific auth behavior must stay inside the auth data layer.
 ## Structure
 
 Typical ownership in this repository:
+
 - `feature/auth/domain/...` = domain-facing auth error/result models
 - `feature/auth/data/...` = Cognito/Amplify exception mapping and provider translation
 - `feature/auth/ui/...` = UI-facing rendering/effect decisions based on domain auth errors
@@ -45,11 +47,13 @@ Typical ownership in this repository:
 ## Security guidance
 
 Be careful with mappings that reveal whether a user/account exists.
-Preserve existing protections that intentionally collapse provider errors into safer domain-level errors.
+Preserve existing protections that intentionally collapse provider errors into safer domain-level
+errors.
 
 ## Output expectations
 
 When using this skill, report:
+
 - which auth mapper/model changed
 - whether user-visible auth error behavior changed
 - whether security-sensitive mapping behavior changed

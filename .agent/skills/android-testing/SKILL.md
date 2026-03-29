@@ -8,6 +8,7 @@ description: "Use when creating or modifying unit tests, ViewModel tests, use ca
 ## Primary references
 
 Read these first before using this skill:
+
 1. `AGENTS.md`
 2. local module guidance such as `feature/<target>/AGENTS.md`, `core/AGENTS.md`, or `app/AGENTS.md`
 
@@ -25,7 +26,8 @@ If it conflicts with repository guidance, prefer the repository guidance.
 ## Rules
 
 1. Prefer targeted tests for the changed module first.
-2. Prioritize testing use cases, ViewModels, mappers, repositories, and worker behavior where risk is highest.
+2. Prioritize testing use cases, ViewModels, mappers, repositories, and worker behavior where risk
+   is highest.
 3. Use `mockk<>()` directly; do not introduce unnecessary test framework ceremony.
 4. For coroutine tests, use repository-consistent dispatcher setup patterns.
 5. Follow Arrange / Act / Assert structure.
@@ -40,13 +42,14 @@ All test function names must use exactly this format:
 `[tested function name] [expected outcome] when [condition]`
 ```
 
-| Element | Rule |
-|---------|------|
-| `tested function name` | The exact function, property, or event handler under test. Always placed first. |
-| `expected outcome` | One observable verb phrase. Allowed verbs: `returns`, `throws`, `sets`, `emits`, `calls`, `rethrows`, `ignores`. |
-| `when [condition]` | The scenario or input state. Never omit. |
+| Element                | Rule                                                                                                             |
+|------------------------|------------------------------------------------------------------------------------------------------------------|
+| `tested function name` | The exact function, property, or event handler under test. Always placed first.                                  |
+| `expected outcome`     | One observable verb phrase. Allowed verbs: `returns`, `throws`, `sets`, `emits`, `calls`, `rethrows`, `ignores`. |
+| `when [condition]`     | The scenario or input state. Never omit.                                                                         |
 
-This format applies to every layer — value objects, use cases, repositories, mappers, workers, and ViewModels.
+This format applies to every layer — value objects, use cases, repositories, mappers, workers, and
+ViewModels.
 
 ### Examples
 
@@ -73,9 +76,11 @@ fun `onSignIn sets passwordError when credentials are invalid`()
 
 ### Annotations
 
-Allowed: `@Test`, `@BeforeEach`, `@AfterEach`, `@OptIn(ExperimentalCoroutinesApi::class)`, `@ParameterizedTest` (with `@ValueSource` / `@CsvSource` / `@MethodSource`), `@ExtendWith`.
+Allowed: `@Test`, `@BeforeEach`, `@AfterEach`, `@OptIn(ExperimentalCoroutinesApi::class)`,
+`@ParameterizedTest` (with `@ValueSource` / `@CsvSource` / `@MethodSource`), `@ExtendWith`.
 
-Forbidden: `@DisplayName` (backtick name is sufficient), `@Disabled` (fix or delete — do not commit disabled tests), `@Nested`, `@Tag`, `@Timeout`, `@RepeatedTest`.
+Forbidden: `@DisplayName` (backtick name is sufficient), `@Disabled` (fix or delete — do not commit
+disabled tests), `@Nested`, `@Tag`, `@Timeout`, `@RepeatedTest`.
 
 ## ViewModel test guidance
 
@@ -92,8 +97,10 @@ Forbidden: `@DisplayName` (backtick name is sufficient), `@Disabled` (fix or del
 ## Mapper / data test guidance
 
 - Test provider/data translation at the mapper boundary.
-- When changing auth or media translation, verify domain-facing output rather than SDK-internal behavior.
-- For persistence-related code, test the semantics that matter to the feature, not just field copying.
+- When changing auth or media translation, verify domain-facing output rather than SDK-internal
+  behavior.
+- For persistence-related code, test the semantics that matter to the feature, not just field
+  copying.
 
 ## Verification guidance
 
@@ -119,6 +126,7 @@ bundle exec fastlane test
 ## Output expectations
 
 When using this skill, report:
+
 - which test scope was run
 - which layers were covered
 - tests not run, if any

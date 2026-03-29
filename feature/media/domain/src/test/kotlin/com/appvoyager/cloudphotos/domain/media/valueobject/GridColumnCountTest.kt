@@ -1,4 +1,4 @@
-package com.appvoyager.cloudphotos.domain.settings.valueobject
+package com.appvoyager.cloudphotos.domain.media.valueobject
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test

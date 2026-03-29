@@ -7,6 +7,7 @@ If this file conflicts with root `AGENTS.md`, prefer the root file and keep the 
 ## Scope
 
 This folder currently includes:
+
 - `core/common`
 - `core/data`
 - `core/ui`
@@ -20,36 +21,46 @@ Do not move code into `core` just because it feels generic.
 ## Placement rules
 
 ### `core/common`
+
 Use for:
+
 - cross-cutting abstractions
 - common contracts used by multiple features
 - domain-common concepts that are not owned by a single feature
 
 Rules:
+
 - Keep this framework-light whenever possible.
 - Do not dump unrelated helpers here.
 - If a concept is owned by a single feature, keep it in that feature.
 
 ### `core/data`
+
 Use for:
+
 - shared data-side implementations that are genuinely cross-feature
 - infrastructure code needed by more than one feature
 
 Rules:
+
 - Keep shared data code focused and reusable.
 - Do not move feature-specific repository logic here.
 - If the code depends on one feature's business meaning, it probably does not belong in `core/data`.
 
 ### `core/ui`
+
 Use for:
+
 - shared theme
 - shared strings/resources
 - common UI elements used across multiple features
 
 Rules:
+
 - Keep feature-specific screens and effects out of `core/ui`.
 - Do not move a component here unless reuse is real.
-- Preserve repository-wide UI conventions such as `CloudPhotosTheme` usage and resource-driven strings.
+- Preserve repository-wide UI conventions such as `CloudPhotosTheme` usage and resource-driven
+  strings.
 
 ## Guardrails
 

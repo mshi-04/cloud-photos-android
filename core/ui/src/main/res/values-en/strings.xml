@@ -32,7 +32,14 @@
 
     <!-- Media Screen -->
     <string name="media_grid_settings">Grid settings</string>
-    <string name="media_sign_out">Sign out</string>
+    <string name="media_logout_confirm_button">Log out</string>
+    <string name="media_logout_confirm_cancel">Cancel</string>
+    <string name="media_menu_open">Open menu</string>
+    <string name="media_menu_display_column_settings">Display column count settings</string>
+    <string name="media_menu_notification_settings">Notification settings</string>
+    <string name="media_menu_logout">Logout</string>
+    <string name="media_logout_confirm_title">Log out?</string>
+    <string name="media_logout_confirm_message">You will need to log in again after logging out.</string>
     <string name="media_empty">No photos found</string>
     <string name="media_retry">Retry</string>
     <string name="media_content_description_image">Image</string>

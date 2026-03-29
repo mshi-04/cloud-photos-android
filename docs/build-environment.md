@@ -12,6 +12,7 @@ This project uses build flavors and required environment properties.
 Be careful not to break flavored builds.
 
 Each flavor must define the following required properties:
+
 - `COGNITO_CLIENT_ID`
 - `API_BASE_URL`
 - `S3_BUCKET_NAME`
@@ -35,10 +36,10 @@ Properties are resolved in this priority order:
 
 3. **CI environment**: Pass `DEV_*` / `PROD_*` values **as Gradle project properties**,
    which is what `findProperty` resolves. Two equivalent ways:
-   - Command-line: `-PDEV_COGNITO_CLIENT_ID=xxxxx`
-   - Environment variable mapped to Gradle property:
-     `ORG_GRADLE_PROJECT_DEV_COGNITO_CLIENT_ID=xxxxx`
-     (Gradle automatically maps `ORG_GRADLE_PROJECT_*`-prefixed env vars to project properties)
+    - Command-line: `-PDEV_COGNITO_CLIENT_ID=xxxxx`
+    - Environment variable mapped to Gradle property:
+      `ORG_GRADLE_PROJECT_DEV_COGNITO_CLIENT_ID=xxxxx`
+      (Gradle automatically maps `ORG_GRADLE_PROJECT_*`-prefixed env vars to project properties)
 
    The root `build.gradle.kts` reads `local.properties` first, then falls back to
    `findProperty` (Gradle project properties), so either method above works in CI.
@@ -47,6 +48,7 @@ Properties are resolved in this priority order:
 > Example: `DEV_COGNITO_CLIENT_ID`, `PROD_API_BASE_URL`.
 
 Rules:
+
 - Do not hardcode secrets, endpoints, client IDs, or bucket names in Kotlin source.
 - Do not commit environment-specific values outside the intended configuration mechanism.
 - Be careful when touching `app/build.gradle.kts`, flavor logic, manifest configuration, or CI
