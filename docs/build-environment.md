@@ -1,4 +1,4 @@
-# Build and Environment
+﻿# Build and Environment
 
 Referenced from `AGENTS.md` (source of truth for all rules).
 Source-of-truth order: `AGENTS.md` → feature-local patterns → `CLAUDE.md` → `.agent/skills/*`.
@@ -15,6 +15,31 @@ Each flavor must define the following required properties:
 - `COGNITO_CLIENT_ID`
 - `API_BASE_URL`
 - `S3_BUCKET_NAME`
+
+### Where to set properties
+
+Properties are resolved in this priority order:
+
+1. **`local.properties`** (local development — never commit this file):
+   ```properties
+   DEV_COGNITO_CLIENT_ID=xxxxx
+   DEV_API_BASE_URL=https://dev.example.com/
+   DEV_S3_BUCKET_NAME=my-dev-bucket
+   PROD_COGNITO_CLIENT_ID=yyyyy
+   PROD_API_BASE_URL=https://api.example.com/
+   PROD_S3_BUCKET_NAME=my-prod-bucket
+   ```
+
+2. **Gradle project properties** (e.g., `-PDEV_COGNITO_CLIENT_ID=xxxxx` on the command line
+   or via `gradle.properties`).
+
+3. **CI environment**: Set the same `DEV_*` / `PROD_*` keys as CI environment variables or
+   secrets. The root `build.gradle.kts` reads `local.properties` first, then falls back to
+   Gradle properties (`findProperty`), so CI variables passed as Gradle properties work
+   automatically.
+
+> **Key naming**: prefix the base name with the flavor prefix — `DEV_` or `PROD_`.
+> Example: `DEV_COGNITO_CLIENT_ID`, `PROD_API_BASE_URL`.
 
 Rules:
 - Do not hardcode secrets, endpoints, client IDs, or bucket names in Kotlin source.

@@ -26,7 +26,7 @@ Your job is to create well-structured unit tests that follow existing project pa
 
 ## Test stack
 
-- **JUnit 5** (`@Test`, `@Nested`, `@DisplayName`)
+- **JUnit 5** (`@Test`)
 - **MockK** for mocking (`mockk`, `coEvery`, `coVerify`)
 - **kotlinx-coroutines-test** (`runTest`, `UnconfinedTestDispatcher`)
 - **Turbine** for Flow testing when applicable
@@ -41,7 +41,6 @@ Your job is to create well-structured unit tests that follow existing project pa
 ### Naming conventions
 - Test class: `{ClassName}Test`
 - Follow the naming pattern already established in the module. Check existing tests first.
-- Use `@Nested` inner classes to group related scenarios when appropriate.
 
 ### Structure
 - Follow Arrange-Act-Assert (AAA) pattern.
@@ -72,7 +71,7 @@ When generating tests, report:
 ## Verification
 
 After writing tests, run them with:
-```
+```bash
 ./gradlew :feature:<name>:<layer>:test
 ```
 Report the result (pass/fail count).
