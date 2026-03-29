@@ -41,7 +41,7 @@ class UploadMediaUseCaseTest {
     }
 
     @Test
-    fun `invoke returns success when repository succeeds`() = runTest {
+    fun `invoke returns Success when repository succeeds`() = runTest {
         // Arrange
         val request = UploadMediaRequest(
             localUri = MediaUrl.of("content://media/external/images/media/1"),
@@ -58,7 +58,7 @@ class UploadMediaUseCaseTest {
     }
 
     @Test
-    fun `invoke returns error when repository fails`() = runTest {
+    fun `invoke returns Error when repository fails`() = runTest {
         // Arrange
         val request = UploadMediaRequest(
             localUri = MediaUrl.of("content://media/external/images/media/1"),

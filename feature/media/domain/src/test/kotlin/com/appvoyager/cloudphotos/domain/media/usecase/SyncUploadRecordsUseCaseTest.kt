@@ -33,7 +33,7 @@ class SyncUploadRecordsUseCaseTest {
     }
 
     @Test
-    fun `saves remote records to local repository when no pending records`() = runTest {
+    fun `invoke calls saveUploadRecords with all remote records when no pending records exist`() = runTest {
         // Arrange
         val remoteRecords = listOf(
             createUploadRecord("1"),
@@ -52,7 +52,7 @@ class SyncUploadRecordsUseCaseTest {
     }
 
     @Test
-    fun `saves empty list when remote returns no records`() = runTest {
+    fun `invoke calls saveUploadRecords with empty list when remote returns no records`() = runTest {
         // Arrange
         coEvery { remoteRepository.fetchUploadRecords() } returns emptyList()
         coEvery { localRepository.getPendingRecordMediaIds() } returns emptySet()
@@ -67,7 +67,7 @@ class SyncUploadRecordsUseCaseTest {
     }
 
     @Test
-    fun `excludes remote records whose mediaId is pending locally`() = runTest {
+    fun `invoke calls saveUploadRecords excluding pending records when remote has pending mediaIds`() = runTest {
         // Arrange
         val remoteRecords = listOf(
             createUploadRecord("1"),
@@ -90,7 +90,7 @@ class SyncUploadRecordsUseCaseTest {
     }
 
     @Test
-    fun `propagates exception from remote repository`() = runTest {
+    fun `invoke rethrows exception when remote repository throws`() = runTest {
         // Arrange
         val expected = RuntimeException("network error")
         coEvery { remoteRepository.fetchUploadRecords() } throws expected
@@ -103,7 +103,7 @@ class SyncUploadRecordsUseCaseTest {
     }
 
     @Test
-    fun `does not save to local when remote fetch fails`() = runTest {
+    fun `invoke ignores saveUploadRecords when remote repository throws`() = runTest {
         // Arrange
         coEvery { remoteRepository.fetchUploadRecords() } throws RuntimeException("network error")
 

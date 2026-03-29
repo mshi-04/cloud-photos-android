@@ -20,7 +20,7 @@ class SignUpUseCaseTest {
     private val useCase = SignUpUseCase(repository)
 
     @Test
-    fun `invoke returns success when repository succeeds`() = runTest(StandardTestDispatcher()) {
+    fun `invoke returns Success when repository succeeds`() = runTest(StandardTestDispatcher()) {
         // Arrange
         val request = signUpRequest()
         val expected = AuthResult.Success(Unit)
@@ -35,7 +35,7 @@ class SignUpUseCaseTest {
     }
 
     @Test
-    fun `invoke returns error when repository fails`() = runTest(StandardTestDispatcher()) {
+    fun `invoke returns Error when repository fails`() = runTest(StandardTestDispatcher()) {
         // Arrange
         val request = signUpRequest()
         val expected = AuthResult.Error(AuthError.UsernameAlreadyExists("already exists"))

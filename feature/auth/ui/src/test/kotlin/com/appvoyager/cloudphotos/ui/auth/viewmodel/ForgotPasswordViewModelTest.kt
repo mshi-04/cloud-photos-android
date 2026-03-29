@@ -46,7 +46,7 @@ class ForgotPasswordViewModelTest {
     }
 
     @Test
-    fun `initial state has empty email`() {
+    fun `uiState sets email to empty when viewModel is initialized`() {
         val state = viewModel.uiState.value
         assertEquals("", state.email)
         assertFalse(state.isLoading)
@@ -54,7 +54,7 @@ class ForgotPasswordViewModelTest {
     }
 
     @Test
-    fun `onEmailChanged updates email and clears error`() {
+    fun `onEmailChanged sets email when called`() {
         viewModel.onEmailChanged("test@example.com")
         val state = viewModel.uiState.value
         assertEquals("test@example.com", state.email)
@@ -62,14 +62,14 @@ class ForgotPasswordViewModelTest {
     }
 
     @Test
-    fun `onClearEmail resets email`() {
+    fun `onClearEmail sets email to empty when called`() {
         viewModel.onEmailChanged("test@example.com")
         viewModel.onClearEmail()
         assertEquals("", viewModel.uiState.value.email)
     }
 
     @Test
-    fun `onSubmit with invalid email sets emailError`() = runTest(testDispatcher) {
+    fun `onSubmit sets emailError when email is invalid`() = runTest(testDispatcher) {
         viewModel.onEmailChanged("invalid-email")
         viewModel.onSubmit()
         advanceUntilIdle()
@@ -80,7 +80,7 @@ class ForgotPasswordViewModelTest {
     }
 
     @Test
-    fun `onSubmit success emits NavigateToResetPassword`() = runTest(testDispatcher) {
+    fun `onSubmit emits NavigateToResetPassword when reset password succeeds`() = runTest(testDispatcher) {
         viewModel.onEmailChanged("test@example.com")
         coEvery { resetPasswordUseCase(any()) } returns AuthResult.Success(Unit)
 
@@ -99,7 +99,7 @@ class ForgotPasswordViewModelTest {
     }
 
     @Test
-    fun `onSubmit with Network error emits ShowSnackbar with Network`() = runTest(testDispatcher) {
+    fun `onSubmit emits ShowSnackbar when resetPasswordUseCase returns Network error`() = runTest(testDispatcher) {
         viewModel.onEmailChanged("test@example.com")
         coEvery { resetPasswordUseCase(any()) } returns AuthResult.Error(
             AuthError.Network()
@@ -119,90 +119,94 @@ class ForgotPasswordViewModelTest {
     }
 
     @Test
-    fun `onSubmit with TooManyRequests emits ShowSnackbar with TooManyRequests`() = runTest(testDispatcher) {
-        viewModel.onEmailChanged("test@example.com")
-        coEvery { resetPasswordUseCase(any()) } returns AuthResult.Error(
-            AuthError.TooManyRequests()
-        )
+    fun `onSubmit emits ShowSnackbar when resetPasswordUseCase returns TooManyRequests error`() =
+        runTest(testDispatcher) {
+            viewModel.onEmailChanged("test@example.com")
+            coEvery { resetPasswordUseCase(any()) } returns AuthResult.Error(
+                AuthError.TooManyRequests()
+            )
 
-        var effect: ForgotPasswordEffect? = null
-        val job = launch { effect = viewModel.effect.first() }
-        viewModel.onSubmit()
-        advanceUntilIdle()
+            var effect: ForgotPasswordEffect? = null
+            val job = launch { effect = viewModel.effect.first() }
+            viewModel.onSubmit()
+            advanceUntilIdle()
 
-        assertTrue(effect is ForgotPasswordEffect.ShowSnackbar)
-        assertEquals(
-            AuthSnackbarMessage.TooManyRequests,
-            (effect as ForgotPasswordEffect.ShowSnackbar).message
-        )
-        job.cancel()
-    }
-
-    @Test
-    fun `onSubmit with UserNotConfirmed emits NavigateToVerification`() = runTest(testDispatcher) {
-        viewModel.onEmailChanged("test@example.com")
-        coEvery { resetPasswordUseCase(any()) } returns AuthResult.Error(
-            AuthError.UserNotConfirmed()
-        )
-
-        val effects = mutableListOf<ForgotPasswordEffect>()
-        val job = launch {
-            viewModel.effect.collect { effects.add(it) }
+            assertTrue(effect is ForgotPasswordEffect.ShowSnackbar)
+            assertEquals(
+                AuthSnackbarMessage.TooManyRequests,
+                (effect as ForgotPasswordEffect.ShowSnackbar).message
+            )
+            job.cancel()
         }
-        viewModel.onSubmit()
-        advanceUntilIdle()
-
-        assertEquals(1, effects.size)
-        assertTrue(effects[0] is ForgotPasswordEffect.NavigateToVerification)
-        assertEquals(
-            Email.of("test@example.com"),
-            (effects[0] as ForgotPasswordEffect.NavigateToVerification).email
-        )
-        job.cancel()
-    }
 
     @Test
-    fun `onSubmit with InvalidCredentials emits ShowSnackbar with InvalidCredentials`() = runTest(testDispatcher) {
-        viewModel.onEmailChanged("test@example.com")
-        coEvery { resetPasswordUseCase(any()) } returns AuthResult.Error(
-            AuthError.InvalidCredentials()
-        )
+    fun `onSubmit emits NavigateToVerification when resetPasswordUseCase returns UserNotConfirmed error`() =
+        runTest(testDispatcher) {
+            viewModel.onEmailChanged("test@example.com")
+            coEvery { resetPasswordUseCase(any()) } returns AuthResult.Error(
+                AuthError.UserNotConfirmed()
+            )
 
-        var effect: ForgotPasswordEffect? = null
-        val job = launch { effect = viewModel.effect.first() }
-        viewModel.onSubmit()
-        advanceUntilIdle()
+            val effects = mutableListOf<ForgotPasswordEffect>()
+            val job = launch {
+                viewModel.effect.collect { effects.add(it) }
+            }
+            viewModel.onSubmit()
+            advanceUntilIdle()
 
-        assertTrue(effect is ForgotPasswordEffect.ShowSnackbar)
-        assertEquals(
-            AuthSnackbarMessage.InvalidCredentials,
-            (effect as ForgotPasswordEffect.ShowSnackbar).message
-        )
-        job.cancel()
-    }
-
-    @Test
-    fun `onSubmit with InvalidPassword emits ShowSnackbar with InvalidPassword`() = runTest(testDispatcher) {
-        viewModel.onEmailChanged("test@example.com")
-        coEvery { resetPasswordUseCase(any()) } returns AuthResult.Error(
-            AuthError.InvalidPassword()
-        )
-
-        var effect: ForgotPasswordEffect? = null
-        val job = launch { effect = viewModel.effect.first() }
-        viewModel.onSubmit()
-        advanceUntilIdle()
-
-        assertTrue(effect is ForgotPasswordEffect.ShowSnackbar)
-        assertEquals(
-            AuthSnackbarMessage.InvalidPassword,
-            (effect as ForgotPasswordEffect.ShowSnackbar).message
-        )
-        job.cancel()
-    }
+            assertEquals(1, effects.size)
+            assertTrue(effects[0] is ForgotPasswordEffect.NavigateToVerification)
+            assertEquals(
+                Email.of("test@example.com"),
+                (effects[0] as ForgotPasswordEffect.NavigateToVerification).email
+            )
+            job.cancel()
+        }
 
     @Test
-    fun `onSubmit with CodeExpired emits ShowSnackbar with CodeExpired`() = runTest(testDispatcher) {
+    fun `onSubmit emits ShowSnackbar when resetPasswordUseCase returns InvalidCredentials error`() =
+        runTest(testDispatcher) {
+            viewModel.onEmailChanged("test@example.com")
+            coEvery { resetPasswordUseCase(any()) } returns AuthResult.Error(
+                AuthError.InvalidCredentials()
+            )
+
+            var effect: ForgotPasswordEffect? = null
+            val job = launch { effect = viewModel.effect.first() }
+            viewModel.onSubmit()
+            advanceUntilIdle()
+
+            assertTrue(effect is ForgotPasswordEffect.ShowSnackbar)
+            assertEquals(
+                AuthSnackbarMessage.InvalidCredentials,
+                (effect as ForgotPasswordEffect.ShowSnackbar).message
+            )
+            job.cancel()
+        }
+
+    @Test
+    fun `onSubmit emits ShowSnackbar when resetPasswordUseCase returns InvalidPassword error`() =
+        runTest(testDispatcher) {
+            viewModel.onEmailChanged("test@example.com")
+            coEvery { resetPasswordUseCase(any()) } returns AuthResult.Error(
+                AuthError.InvalidPassword()
+            )
+
+            var effect: ForgotPasswordEffect? = null
+            val job = launch { effect = viewModel.effect.first() }
+            viewModel.onSubmit()
+            advanceUntilIdle()
+
+            assertTrue(effect is ForgotPasswordEffect.ShowSnackbar)
+            assertEquals(
+                AuthSnackbarMessage.InvalidPassword,
+                (effect as ForgotPasswordEffect.ShowSnackbar).message
+            )
+            job.cancel()
+        }
+
+    @Test
+    fun `onSubmit emits ShowSnackbar when resetPasswordUseCase returns CodeExpired error`() = runTest(testDispatcher) {
         viewModel.onEmailChanged("test@example.com")
         coEvery { resetPasswordUseCase(any()) } returns AuthResult.Error(
             AuthError.CodeExpired()
@@ -222,7 +226,7 @@ class ForgotPasswordViewModelTest {
     }
 
     @Test
-    fun `onSubmit with CodeMismatch emits ShowSnackbar with CodeMismatch`() = runTest(testDispatcher) {
+    fun `onSubmit emits ShowSnackbar when resetPasswordUseCase returns CodeMismatch error`() = runTest(testDispatcher) {
         viewModel.onEmailChanged("test@example.com")
         coEvery { resetPasswordUseCase(any()) } returns AuthResult.Error(
             AuthError.CodeMismatch()
@@ -242,7 +246,7 @@ class ForgotPasswordViewModelTest {
     }
 
     @Test
-    fun `onSubmit with Unknown error emits ShowSnackbar with Unknown`() = runTest(testDispatcher) {
+    fun `onSubmit emits ShowSnackbar when resetPasswordUseCase returns Unknown error`() = runTest(testDispatcher) {
         viewModel.onEmailChanged("test@example.com")
         coEvery { resetPasswordUseCase(any()) } returns AuthResult.Error(
             AuthError.Unknown()
@@ -262,21 +266,22 @@ class ForgotPasswordViewModelTest {
     }
 
     @Test
-    fun `onSubmit with UsernameAlreadyExists emits ShowSnackbar with Unknown`() = runTest(testDispatcher) {
-        viewModel.onEmailChanged("test@example.com")
-        coEvery { resetPasswordUseCase(any()) } returns AuthResult.Error(
-            AuthError.UsernameAlreadyExists()
-        )
+    fun `onSubmit emits ShowSnackbar when resetPasswordUseCase returns UsernameAlreadyExists error`() =
+        runTest(testDispatcher) {
+            viewModel.onEmailChanged("test@example.com")
+            coEvery { resetPasswordUseCase(any()) } returns AuthResult.Error(
+                AuthError.UsernameAlreadyExists()
+            )
 
-        var effect: ForgotPasswordEffect? = null
-        val job = launch { effect = viewModel.effect.first() }
-        viewModel.onSubmit()
-        advanceUntilIdle()
-        assertTrue(effect is ForgotPasswordEffect.ShowSnackbar)
-        assertEquals(
-            AuthSnackbarMessage.Unknown,
-            (effect as ForgotPasswordEffect.ShowSnackbar).message
-        )
-        job.cancel()
-    }
+            var effect: ForgotPasswordEffect? = null
+            val job = launch { effect = viewModel.effect.first() }
+            viewModel.onSubmit()
+            advanceUntilIdle()
+            assertTrue(effect is ForgotPasswordEffect.ShowSnackbar)
+            assertEquals(
+                AuthSnackbarMessage.Unknown,
+                (effect as ForgotPasswordEffect.ShowSnackbar).message
+            )
+            job.cancel()
+        }
 }

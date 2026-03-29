@@ -39,7 +39,7 @@ class UploadRepositoryImplTest {
     }
 
     @Test
-    fun `uploadMedia returns success as is`() = runTest(testDispatcher) {
+    fun `uploadMedia returns Success when data source returns Success`() = runTest(testDispatcher) {
         // Arrange
         val request = uploadMediaRequestFixture()
         val expected = UploadResult.Success(cloudStoragePathFixture())
@@ -53,7 +53,7 @@ class UploadRepositoryImplTest {
     }
 
     @Test
-    fun `uploadMedia delegates to dataSource once on success`() = runTest(testDispatcher) {
+    fun `uploadMedia calls dataSource when result is Success`() = runTest(testDispatcher) {
         // Arrange
         val request = uploadMediaRequestFixture()
         val expected = UploadResult.Success(cloudStoragePathFixture())
@@ -67,7 +67,7 @@ class UploadRepositoryImplTest {
     }
 
     @Test
-    fun `uploadMedia returns error as is`() = runTest(testDispatcher) {
+    fun `uploadMedia returns Error when data source returns Error`() = runTest(testDispatcher) {
         // Arrange
         val request = uploadMediaRequestFixture()
         val expected = UploadResult.Error(UploadError.Network("connection failed"))
@@ -81,7 +81,7 @@ class UploadRepositoryImplTest {
     }
 
     @Test
-    fun `uploadMedia delegates to dataSource once on error`() = runTest(testDispatcher) {
+    fun `uploadMedia calls dataSource when result is Error`() = runTest(testDispatcher) {
         // Arrange
         val request = uploadMediaRequestFixture()
         val expected = UploadResult.Error(UploadError.Network("connection failed"))

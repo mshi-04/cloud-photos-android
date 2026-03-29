@@ -45,7 +45,7 @@ class PasswordTest {
     }
 
     @Test
-    fun `of trims whitespace from input`() {
+    fun `of returns Password with trimmed value when input has surrounding whitespace`() {
         // Arrange
         val raw = "  12345678  "
 

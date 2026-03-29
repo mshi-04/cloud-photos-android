@@ -70,7 +70,7 @@ class UploadMediaWorkerTest {
     }
 
     @Test
-    fun `returns success when no pending upload records`() = runTest {
+    fun `doWork returns success when no pending upload records`() = runTest {
         // Arrange
         coEvery { localRepository.getPendingUploadRecords() } returns emptyList()
 
@@ -82,7 +82,7 @@ class UploadMediaWorkerTest {
     }
 
     @Test
-    fun `uploads to S3 then saves synced record on successful api call`() = runTest {
+    fun `doWork sets syncStatus to SYNCED when upload and api call succeed`() = runTest {
         // Arrange
         val record = createPendingRecord()
         val uploadedPath = CloudStoragePath.of("private/identity123/uuid.jpg")
@@ -104,12 +104,11 @@ class UploadMediaWorkerTest {
     }
 
     @Test
-    fun `skips S3 upload when cloudStoragePath already set`() = runTest {
+    fun `doWork ignores uploadMedia when cloudStoragePath is present`() = runTest {
         // Arrange
         val record = createUploadRecord()
-        val createdRecord = record.copy(syncStatus = SyncStatus.SYNCED)
         arrangePendingUploads(record)
-        coEvery { remoteRepository.createUploadRecord(any()) } returns createdRecord
+        coEvery { remoteRepository.createUploadRecord(any()) } returns record.copy(syncStatus = SyncStatus.SYNCED)
 
         // Act
         worker.doWork()
@@ -119,12 +118,10 @@ class UploadMediaWorkerTest {
     }
 
     @Test
-    fun `does not call uploadMedia when already synced`() = runTest {
+    fun `doWork ignores uploadMedia when syncStatus is SYNCED`() = runTest {
         // Arrange
-        val record = createUploadRecord()
-        val createdRecord = record.copy(syncStatus = SyncStatus.SYNCED)
+        val record = createPendingRecord().copy(syncStatus = SyncStatus.SYNCED)
         arrangePendingUploads(record)
-        coEvery { remoteRepository.createUploadRecord(any()) } returns createdRecord
 
         // Act
         worker.doWork()
@@ -134,7 +131,7 @@ class UploadMediaWorkerTest {
     }
 
     @Test
-    fun `marks record as error when file not found in mediastore`() = runTest {
+    fun `doWork sets syncStatus to ERROR when content type is null`() = runTest {
         // Arrange
         val record = createPendingRecord()
         val slot = slot<List<UploadRecord>>()
@@ -149,7 +146,7 @@ class UploadMediaWorkerTest {
     }
 
     @Test
-    fun `marks record as error when resolveUri returns null`() = runTest {
+    fun `doWork sets syncStatus to ERROR when resolved uri is null`() = runTest {
         // Arrange
         val record = createPendingRecord()
         val slot = slot<List<UploadRecord>>()
@@ -164,7 +161,7 @@ class UploadMediaWorkerTest {
     }
 
     @Test
-    fun `marks record as error on S3 permanent failure`() = runTest {
+    fun `doWork sets syncStatus to ERROR when S3 upload returns permanent failure`() = runTest {
         // Arrange
         val record = createPendingRecord()
         val slot = slot<List<UploadRecord>>()
@@ -181,7 +178,7 @@ class UploadMediaWorkerTest {
     }
 
     @Test
-    fun `returns retry on S3 network failure`() = runTest {
+    fun `doWork returns retry when S3 upload returns network failure`() = runTest {
         // Arrange
         val record = createPendingRecord()
         arrangePendingUploads(record)
@@ -196,7 +193,7 @@ class UploadMediaWorkerTest {
     }
 
     @Test
-    fun `marks record as error on permanent api failure`() = runTest {
+    fun `doWork sets syncStatus to ERROR when api returns permanent failure`() = runTest {
         // Arrange
         val record = createUploadRecord()
         val slot = slot<List<UploadRecord>>()
@@ -214,7 +211,7 @@ class UploadMediaWorkerTest {
     }
 
     @Test
-    fun `returns retry on temporary api failure`() = runTest {
+    fun `doWork returns retry when api returns temporary failure`() = runTest {
         // Arrange
         val record = createUploadRecord()
         arrangePendingUploads(record)
@@ -228,7 +225,7 @@ class UploadMediaWorkerTest {
     }
 
     @Test
-    fun `invokes cleanup on permanent api failure`() = runTest {
+    fun `doWork calls deleteUploadedObject when api returns permanent failure`() = runTest {
         // Arrange
         val record = createUploadRecord()
         arrangePendingUploads(record)
@@ -244,7 +241,7 @@ class UploadMediaWorkerTest {
     }
 
     @Test
-    fun `does not invoke cleanup on temporary api failure`() = runTest {
+    fun `doWork ignores deleteUploadedObject when api returns temporary failure`() = runTest {
         // Arrange
         val record = createUploadRecord()
         arrangePendingUploads(record)
@@ -258,7 +255,7 @@ class UploadMediaWorkerTest {
     }
 
     @Test
-    fun `passes image media type for image content type`() = runTest {
+    fun `doWork calls createUploadRecord with IMAGE mediaType when content type is image`() = runTest {
         // Arrange
         val record = createUploadRecord()
         val createdRecord = record.copy(syncStatus = SyncStatus.SYNCED)
@@ -274,7 +271,7 @@ class UploadMediaWorkerTest {
     }
 
     @Test
-    fun `passes video media type for video content type`() = runTest {
+    fun `doWork calls createUploadRecord with VIDEO mediaType when content type is video`() = runTest {
         // Arrange
         val record = createUploadRecord()
         val createdRecord = record.copy(syncStatus = SyncStatus.SYNCED)
@@ -290,7 +287,7 @@ class UploadMediaWorkerTest {
     }
 
     @Test
-    fun `processes all records even when one fails permanently`() = runTest {
+    fun `doWork calls saveUploadRecords for each record when one fails permanently`() = runTest {
         // Arrange
         val record1 = createUploadRecord("external_primary_1")
         val record2 = createUploadRecord("external_primary_2")
@@ -310,7 +307,7 @@ class UploadMediaWorkerTest {
     }
 
     @Test
-    fun `returns success when all permanent failures are processed`() = runTest {
+    fun `doWork returns success when all failures are permanent`() = runTest {
         // Arrange
         val record = createUploadRecord()
         arrangePendingUploads(record)
@@ -326,7 +323,7 @@ class UploadMediaWorkerTest {
     }
 
     @Test
-    fun `calls completeUpload with success count when all records upload successfully`() = runTest {
+    fun `doWork calls completeUpload with success count when all records upload successfully`() = runTest {
         // Arrange
         val record = createUploadRecord()
         val createdRecord = record.copy(syncStatus = SyncStatus.SYNCED)
@@ -344,7 +341,7 @@ class UploadMediaWorkerTest {
     }
 
     @Test
-    fun `does not call completeUpload when successCount is zero`() = runTest {
+    fun `doWork ignores completeUpload when successCount is zero`() = runTest {
         // Arrange
         val record = createUploadRecord()
         arrangePendingUploads(record)
@@ -360,7 +357,7 @@ class UploadMediaWorkerTest {
     }
 
     @Test
-    fun `does not call completeUpload when hasTemporaryFailure is true`() = runTest {
+    fun `doWork ignores completeUpload when hasTemporaryFailure is true`() = runTest {
         // Arrange
         val record = createPendingRecord()
         arrangePendingUploads(record)
@@ -375,7 +372,7 @@ class UploadMediaWorkerTest {
     }
 
     @Test
-    fun `returns success even when completeUpload throws`() = runTest {
+    fun `doWork returns success when completeUpload throws`() = runTest {
         // Arrange
         val record = createUploadRecord()
         val createdRecord = record.copy(syncStatus = SyncStatus.SYNCED)

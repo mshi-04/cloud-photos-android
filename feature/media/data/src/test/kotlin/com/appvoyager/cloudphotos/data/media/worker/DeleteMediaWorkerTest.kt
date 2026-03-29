@@ -62,7 +62,7 @@ class DeleteMediaWorkerTest {
     }
 
     @Test
-    fun `returns success when no pending delete records`() = runTest {
+    fun `doWork returns success when no pending delete records`() = runTest {
         // Arrange
         coEvery { localRepository.getPendingDeleteRecords() } returns emptyList()
 
@@ -74,7 +74,7 @@ class DeleteMediaWorkerTest {
     }
 
     @Test
-    fun `deletes from api s3 and room in order on success`() = runTest {
+    fun `doWork calls remote s3 and local delete in order when deletion succeeds`() = runTest {
         // Arrange
         val record = createUploadRecord("media-1")
         val cloudStoragePath = record.cloudStoragePath!!
@@ -95,7 +95,7 @@ class DeleteMediaWorkerTest {
     }
 
     @Test
-    fun `marks record as error on permanent api failure`() = runTest {
+    fun `doWork sets syncStatus to ERROR when api returns permanent failure`() = runTest {
         // Arrange
         val record = createUploadRecord("media-1")
         coEvery { localRepository.getPendingDeleteRecords() } returns listOf(record)
@@ -112,7 +112,7 @@ class DeleteMediaWorkerTest {
     }
 
     @Test
-    fun `returns retry on temporary api failure`() = runTest {
+    fun `doWork returns retry when api returns temporary failure`() = runTest {
         // Arrange
         val record = createUploadRecord("media-1")
         coEvery { localRepository.getPendingDeleteRecords() } returns listOf(record)
@@ -126,7 +126,7 @@ class DeleteMediaWorkerTest {
     }
 
     @Test
-    fun `does not delete from s3 or room when api fails`() = runTest {
+    fun `doWork ignores deleteUploadedObject when api fails`() = runTest {
         // Arrange
         val record = createUploadRecord("media-1")
         coEvery { localRepository.getPendingDeleteRecords() } returns listOf(record)
@@ -140,7 +140,7 @@ class DeleteMediaWorkerTest {
     }
 
     @Test
-    fun `still deletes local record when s3 fails`() = runTest {
+    fun `doWork calls deleteUploadRecord when s3 delete fails`() = runTest {
         // Arrange
         val record = createUploadRecord("media-1")
         coEvery { localRepository.getPendingDeleteRecords() } returns listOf(record)
@@ -156,7 +156,7 @@ class DeleteMediaWorkerTest {
     }
 
     @Test
-    fun `processes remaining records when one fails temporarily`() = runTest {
+    fun `doWork calls deleteUploadRecord for remaining records when one record fails temporarily`() = runTest {
         // Arrange
         val record1 = createUploadRecord("media-1")
         val record2 = createUploadRecord("media-2")
@@ -174,7 +174,7 @@ class DeleteMediaWorkerTest {
     }
 
     @Test
-    fun `returns retry when at least one record has temporary failure`() = runTest {
+    fun `doWork returns retry when at least one record has temporary failure`() = runTest {
         // Arrange
         val record1 = createUploadRecord("media-1")
         val record2 = createUploadRecord("media-2")
@@ -192,7 +192,7 @@ class DeleteMediaWorkerTest {
     }
 
     @Test
-    fun `returns success when all records deleted successfully`() = runTest {
+    fun `doWork returns success when all records are deleted`() = runTest {
         // Arrange
         val record1 = createUploadRecord("media-1")
         val record2 = createUploadRecord("media-2")
@@ -209,7 +209,7 @@ class DeleteMediaWorkerTest {
     }
 
     @Test
-    fun `deletes local record when cloudStoragePath is null`() = runTest {
+    fun `doWork calls deleteUploadRecord when cloudStoragePath is null`() = runTest {
         // Arrange
         val record = UploadRecord(
             mediaId = MediaId.of("media-1"),
@@ -229,7 +229,7 @@ class DeleteMediaWorkerTest {
     }
 
     @Test
-    fun `does not delete storage file when cloudStoragePath is null`() = runTest {
+    fun `doWork ignores deleteUploadedObject when cloudStoragePath is null`() = runTest {
         // Arrange
         val record = UploadRecord(
             mediaId = MediaId.of("media-1"),
@@ -249,7 +249,7 @@ class DeleteMediaWorkerTest {
     }
 
     @Test
-    fun `does not delete remote record when cloudStoragePath is null`() = runTest {
+    fun `doWork ignores remoteRepository deleteUploadRecord when cloudStoragePath is null`() = runTest {
         // Arrange
         val record = UploadRecord(
             mediaId = MediaId.of("media-1"),
@@ -269,7 +269,7 @@ class DeleteMediaWorkerTest {
     }
 
     @Test
-    fun `returns success when cloudStoragePath is null`() = runTest {
+    fun `doWork returns success when cloudStoragePath is null`() = runTest {
         // Arrange
         val record = UploadRecord(
             mediaId = MediaId.of("media-1"),
@@ -289,7 +289,7 @@ class DeleteMediaWorkerTest {
     }
 
     @Test
-    fun `rethrows CancellationException`() = runTest {
+    fun `doWork rethrows CancellationException when thrown during deletion`() = runTest {
         // Arrange
         val record = createUploadRecord("media-1")
         coEvery { localRepository.getPendingDeleteRecords() } returns listOf(record)

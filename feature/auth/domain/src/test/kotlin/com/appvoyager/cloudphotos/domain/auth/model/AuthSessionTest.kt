@@ -9,22 +9,38 @@ import org.junit.jupiter.api.Test
 class AuthSessionTest {
 
     @Test
-    fun `isSignedIn true and isGuest false when state is SignedIn`() {
+    fun `isSignedIn returns true when state is SignedIn`() {
         // Arrange
         val session = signedInSession()
 
         // Act & Assert
         assertTrue(session.isSignedIn)
+    }
+
+    @Test
+    fun `isGuest returns false when state is SignedIn`() {
+        // Arrange
+        val session = signedInSession()
+
+        // Act & Assert
         assertFalse(session.isGuest)
     }
 
     @Test
-    fun `isGuest true and isSignedIn false when state is Guest`() {
+    fun `isGuest returns true when state is Guest`() {
         // Arrange
         val session = guestSession()
 
         // Act & Assert
         assertTrue(session.isGuest)
+    }
+
+    @Test
+    fun `isSignedIn returns false when state is Guest`() {
+        // Arrange
+        val session = guestSession()
+
+        // Act & Assert
         assertFalse(session.isSignedIn)
     }
 }

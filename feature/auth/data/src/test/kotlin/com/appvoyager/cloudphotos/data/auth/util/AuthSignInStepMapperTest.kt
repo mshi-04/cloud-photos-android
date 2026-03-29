@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test
 class AuthSignInStepMapperTest {
 
     @Test
-    fun `mapSignInStep maps known steps to corresponding domain step`() {
+    fun `mapSignInStep returns corresponding domain step when step is known`() {
         // Arrange
         val cases = listOf(
             AuthSignInStep.CONFIRM_SIGN_IN_WITH_CUSTOM_CHALLENGE to SignInStep.CONFIRM_SIGN_IN_WITH_CUSTOM_CHALLENGE,
@@ -27,7 +27,7 @@ class AuthSignInStepMapperTest {
     }
 
     @Test
-    fun `mapSignInStep returns UNKNOWN for unmapped step`() {
+    fun `mapSignInStep returns UNKNOWN when step is not mapped`() {
         // Arrange
         val source = AuthSignInStep.RESET_PASSWORD
 
