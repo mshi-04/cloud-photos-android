@@ -32,6 +32,12 @@
     <!-- メディア画面 -->
     <string name="media_grid_settings">グリッド設定</string>
     <string name="media_sign_out">ログアウト</string>
+    <string name="media_menu_open">メニューを開く</string>
+    <string name="media_menu_display_column_settings">表示列数設定</string>
+    <string name="media_menu_notification_settings">通知設定</string>
+    <string name="media_menu_logout">ログアウト</string>
+    <string name="media_logout_confirm_title">ログアウトしますか？</string>
+    <string name="media_logout_confirm_message">ログアウトすると、再度ログインが必要になります。</string>
     <string name="media_empty">写真がありません</string>
     <string name="media_retry">再試行</string>
     <string name="media_content_description_image">画像</string>
