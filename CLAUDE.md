@@ -58,4 +58,5 @@ Before making changes:
 
 For local verification, use the smallest relevant Gradle command (e.g.,
 `./gradlew :feature:<name>:<layer>:test`).
+For CI-aligned verification (DEV/Debug configuration unit tests), use `bundle exec fastlane test`. Note that this command is scoped to CI-aligned validation and does not necessarily cover all modules. In contrast, `./gradlew test` is responsible for building and testing each module (providing broader module-level coverage). Use `bundle exec fastlane test` for CI-synchronized checks and `./gradlew test` for comprehensive module-wide testing.
 See `docs/verification-policy.md` for the overall verification policy including CI gates.

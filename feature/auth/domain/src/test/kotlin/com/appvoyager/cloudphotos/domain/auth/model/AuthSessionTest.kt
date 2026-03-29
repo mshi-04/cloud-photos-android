@@ -15,6 +15,14 @@ class AuthSessionTest {
 
         // Act & Assert
         assertTrue(session.isSignedIn)
+    }
+
+    @Test
+    fun `isGuest returns false when state is SignedIn`() {
+        // Arrange
+        val session = signedInSession()
+
+        // Act & Assert
         assertFalse(session.isGuest)
     }
 
@@ -25,6 +33,14 @@ class AuthSessionTest {
 
         // Act & Assert
         assertTrue(session.isGuest)
+    }
+
+    @Test
+    fun `isSignedIn returns false when state is Guest`() {
+        // Arrange
+        val session = guestSession()
+
+        // Act & Assert
         assertFalse(session.isSignedIn)
     }
 }
