@@ -31,7 +31,8 @@
 
     <!-- メディア画面 -->
     <string name="media_grid_settings">グリッド設定</string>
-    <string name="media_sign_out">ログアウト</string>
+    <string name="media_logout_confirm_button">ログアウト</string>
+    <string name="media_logout_confirm_cancel">キャンセル</string>
     <string name="media_menu_open">メニューを開く</string>
     <string name="media_menu_display_column_settings">表示列数設定</string>
     <string name="media_menu_notification_settings">通知設定</string>

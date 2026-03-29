@@ -82,5 +82,5 @@ Optional improvements (readability, alternative approaches, minor style).
 
 Highlight well-written code worth noting.
 
-Always reference the specific file and line, and explain **why** something is an issue with
-reference to project conventions.
+Always reference the specific file and line, and explain **why** something is an issue per project
+conventions.

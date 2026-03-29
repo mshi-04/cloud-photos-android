@@ -51,8 +51,8 @@ internal fun ZoomableContainer(
                             val newScale = DOUBLE_TAP_SCALE
                             val centerX = containerSize.width / 2f
                             val centerY = containerSize.height / 2f
-                            val maxX = (containerSize.width * (newScale - 1)) / 2f
-                            val maxY = (containerSize.height * (newScale - 1)) / 2f
+                            val maxX = computeMaxBound(containerSize.width, newScale)
+                            val maxY = computeMaxBound(containerSize.height, newScale)
                             scale = newScale
                             offset = Offset(
                                 x = (-(tapPosition.x - centerX) * newScale).coerceIn(-maxX, maxX),
@@ -75,8 +75,8 @@ internal fun ZoomableContainer(
                                 val zoomChange = event.calculateZoom()
                                 val panChange = event.calculatePan()
                                 val newScale = (scale * zoomChange).coerceIn(MIN_SCALE, MAX_SCALE)
-                                val maxX = (containerSize.width * (newScale - 1)) / 2f
-                                val maxY = (containerSize.height * (newScale - 1)) / 2f
+                                val maxX = computeMaxBound(containerSize.width, newScale)
+                                val maxY = computeMaxBound(containerSize.height, newScale)
                                 offset = Offset(
                                     x = (offset.x + panChange.x).coerceIn(-maxX, maxX),
                                     y = (offset.y + panChange.y).coerceIn(-maxY, maxY)
@@ -90,8 +90,8 @@ internal fun ZoomableContainer(
                                 val change = event.changes.first()
                                 if (change.positionChanged()) {
                                     val panDelta = change.position - change.previousPosition
-                                    val maxX = (containerSize.width * (scale - 1)) / 2f
-                                    val maxY = (containerSize.height * (scale - 1)) / 2f
+                                    val maxX = computeMaxBound(containerSize.width, scale)
+                                    val maxY = computeMaxBound(containerSize.height, scale)
                                     offset = Offset(
                                         x = (offset.x + panDelta.x).coerceIn(-maxX, maxX),
                                         y = (offset.y + panDelta.y).coerceIn(-maxY, maxY)
@@ -114,3 +114,5 @@ internal fun ZoomableContainer(
         content()
     }
 }
+
+private fun computeMaxBound(containerDimension: Int, scale: Float): Float = (containerDimension * (scale - 1)) / 2f

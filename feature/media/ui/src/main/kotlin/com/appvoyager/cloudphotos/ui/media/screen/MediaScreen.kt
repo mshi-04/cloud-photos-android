@@ -2,6 +2,7 @@ package com.appvoyager.cloudphotos.ui.media.screen
 
 import android.Manifest
 import android.content.ActivityNotFoundException
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -40,6 +41,7 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.PlayCircleOutline
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -56,6 +58,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
@@ -104,6 +107,7 @@ import com.appvoyager.cloudphotos.ui.theme.CloudPhotosTheme
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 private const val URI_SCHEME_PACKAGE = "package"
@@ -238,64 +242,19 @@ private fun MediaContent(
     val appBarHeight = TopAppBarDefaults.TopAppBarExpandedHeight
 
     val showAppBar = screenState is MediaUiState.ScreenState.Success
-    val drawerState = androidx.compose.material3.rememberDrawerState(initialValue = DrawerValue.Closed)
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val coroutineScope = rememberCoroutineScope()
     var showLogoutDialog by remember { mutableStateOf(false) }
-    val context = LocalContext.current
 
-    if (drawerState.isOpen) {
-        BackHandler {
-            coroutineScope.launch { drawerState.close() }
-        }
+    BackHandler(enabled = drawerState.isOpen) {
+        coroutineScope.launch { drawerState.close() }
     }
 
-    ModalNavigationDrawer(
+    MediaMenuDrawer(
         drawerState = drawerState,
-        gesturesEnabled = false,
-        drawerContent = {
-            ModalDrawerSheet {
-                Column(modifier = Modifier.padding(top = 12.dp, bottom = 12.dp)) {
-                    NavigationDrawerItem(
-                        label = { Text(text = stringResource(R.string.media_menu_display_column_settings)) },
-                        selected = false,
-                        onClick = {
-                            coroutineScope.launch {
-                                drawerState.close()
-                                onGridSettingsClick()
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    NavigationDrawerItem(
-                        label = { Text(text = stringResource(R.string.media_menu_notification_settings)) },
-                        selected = false,
-                        onClick = {
-                            coroutineScope.launch {
-                                drawerState.close()
-                                openNotificationSettings(context)
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    NavigationDrawerItem(
-                        label = {
-                            Text(
-                                text = stringResource(R.string.media_menu_logout),
-                                color = MaterialTheme.colorScheme.error
-                            )
-                        },
-                        selected = false,
-                        onClick = {
-                            coroutineScope.launch {
-                                drawerState.close()
-                                showLogoutDialog = true
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            }
-        }
+        coroutineScope = coroutineScope,
+        onGridSettingsClick = onGridSettingsClick,
+        onSignOut = { showLogoutDialog = true }
     ) {
         Box(
             modifier = Modifier
@@ -354,33 +313,100 @@ private fun MediaContent(
     }
 
     if (showLogoutDialog) {
-        AlertDialog(
-            onDismissRequest = { showLogoutDialog = false },
-            title = { Text(text = stringResource(R.string.media_logout_confirm_title)) },
-            text = { Text(text = stringResource(R.string.media_logout_confirm_message)) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showLogoutDialog = false
-                        onSignOut()
-                    }
-                ) {
-                    Text(
-                        text = stringResource(R.string.media_menu_logout),
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
+        LogoutConfirmDialog(
+            onConfirm = {
+                showLogoutDialog = false
+                onSignOut()
             },
-            dismissButton = {
-                TextButton(onClick = { showLogoutDialog = false }) {
-                    Text(text = stringResource(R.string.settings_cancel))
-                }
-            }
+            onDismiss = { showLogoutDialog = false }
         )
     }
 }
 
-private fun openNotificationSettings(context: android.content.Context) {
+@Composable
+private fun MediaMenuDrawer(
+    drawerState: DrawerState,
+    coroutineScope: CoroutineScope,
+    onGridSettingsClick: () -> Unit,
+    onSignOut: () -> Unit,
+    content: @Composable () -> Unit
+) {
+    val context = LocalContext.current
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        gesturesEnabled = false,
+        drawerContent = {
+            ModalDrawerSheet {
+                Column(modifier = Modifier.padding(top = 12.dp, bottom = 12.dp)) {
+                    NavigationDrawerItem(
+                        label = { Text(text = stringResource(R.string.media_menu_display_column_settings)) },
+                        selected = false,
+                        onClick = {
+                            coroutineScope.launch {
+                                drawerState.close()
+                                onGridSettingsClick()
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    NavigationDrawerItem(
+                        label = { Text(text = stringResource(R.string.media_menu_notification_settings)) },
+                        selected = false,
+                        onClick = {
+                            coroutineScope.launch {
+                                drawerState.close()
+                                openNotificationSettings(context)
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    NavigationDrawerItem(
+                        label = {
+                            Text(
+                                text = stringResource(R.string.media_menu_logout),
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        },
+                        selected = false,
+                        onClick = {
+                            coroutineScope.launch {
+                                drawerState.close()
+                                onSignOut()
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+        }
+    ) {
+        content()
+    }
+}
+
+@Composable
+private fun LogoutConfirmDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(text = stringResource(R.string.media_logout_confirm_title)) },
+        text = { Text(text = stringResource(R.string.media_logout_confirm_message)) },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(
+                    text = stringResource(R.string.media_logout_confirm_button),
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(text = stringResource(R.string.media_logout_confirm_cancel))
+            }
+        }
+    )
+}
+
+private fun openNotificationSettings(context: Context) {
     val packageUri = Uri.fromParts(URI_SCHEME_PACKAGE, context.packageName, null)
     val appNotificationSettingsIntent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
         putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
