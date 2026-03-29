@@ -13,6 +13,7 @@ Escalate scope only when the change crosses module or layer boundaries.
 
 Gradle sync is **not required** after every source-only change.
 Run Gradle sync only when you have changed:
+
 - `build.gradle.kts` files
 - `libs.versions.toml`
 - `settings.gradle.kts`
@@ -52,14 +53,14 @@ Run lint and tests for all changed modules:
 
 ### Test scope by change type
 
-| Change type | Test command |
-|---|---|
-| Single feature layer (`feature:<name>:<layer>`) | `./gradlew :feature:<name>:<layer>:test` |
-| Multiple layers in one feature | `./gradlew :feature:<name>:domain:test :feature:<name>:data:test :feature:<name>:ui:test` |
-| `core:*` module | `./gradlew test` (all modules) |
-| `app` wiring, navigation, top-level DI | `./gradlew test` |
-| Gradle / `build-logic` / dependency changes | `./gradlew test` |
-| Documentation only | No test run required |
+| Change type                                     | Test command                                                                              |
+|-------------------------------------------------|-------------------------------------------------------------------------------------------|
+| Single feature layer (`feature:<name>:<layer>`) | `./gradlew :feature:<name>:<layer>:test`                                                  |
+| Multiple layers in one feature                  | `./gradlew :feature:<name>:domain:test :feature:<name>:data:test :feature:<name>:ui:test` |
+| `core:*` module                                 | `./gradlew test` (all modules)                                                            |
+| `app` wiring, navigation, top-level DI          | `./gradlew test`                                                                          |
+| Gradle / `build-logic` / dependency changes     | `./gradlew test`                                                                          |
+| Documentation only                              | No test run required                                                                      |
 
 When in doubt about scope, run `./gradlew test`.
 
@@ -89,6 +90,7 @@ If CI fails after your PR is opened, investigate and fix before merging.
 ## Reporting
 
 If you did not run tests, state it explicitly in the report:
+
 ```
 tests not run: <command> — reason: <why>
 ```

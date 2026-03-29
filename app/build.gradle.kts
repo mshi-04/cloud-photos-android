@@ -79,8 +79,6 @@ dependencies {
     implementation(project(":feature:media:domain"))
     implementation(project(":feature:media:data"))
     implementation(project(":feature:media:ui"))
-    implementation(project(":feature:settings:domain"))
-    implementation(project(":feature:settings:data"))
 
     // Core modules
     implementation(project(":core:common"))

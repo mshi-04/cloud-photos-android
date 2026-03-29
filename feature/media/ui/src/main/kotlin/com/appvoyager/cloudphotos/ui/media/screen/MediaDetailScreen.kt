@@ -143,6 +143,7 @@ private fun MediaDetailContent(mediaList: List<Media>, initialIndex: Int, onNavi
                     onZoomChanged = { isZoomed -> isPagerScrollEnabled = !isZoomed },
                     modifier = Modifier.fillMaxSize()
                 )
+
                 MediaType.VIDEO -> VideoDetailContent(
                     media = media,
                     isCurrentPage = page == pagerState.currentPage,

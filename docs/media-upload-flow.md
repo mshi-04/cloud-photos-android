@@ -8,7 +8,8 @@ so that AI agents can reason about change impact without having to trace the ent
 
 The `media` feature is the highest-risk area in the repository.
 It mixes domain rules, local persistence, remote sync, background workers, and cancellation logic.
-Misunderstanding the flow leads to broken retry behavior, inconsistent sync states, or orphaned records.
+Misunderstanding the flow leads to broken retry behavior, inconsistent sync states, or orphaned
+records.
 
 ---
 
@@ -108,11 +109,11 @@ This runs on resume to pull down records uploaded from other devices or sessions
 
 Workers distinguish between permanent and temporary failures to decide retry behavior.
 
-| Failure type | Worker response | SyncStatus |
-|---|---|---|
-| Permanent (e.g., HTTP 4xx) | No retry; clean up and mark ERROR | `ERROR` |
-| Temporary (e.g., network, HTTP 5xx) | Set `hasTemporaryFailure = true` → `Result.retry()` | unchanged |
-| CancellationException | Re-throw immediately | unchanged |
+| Failure type                        | Worker response                                     | SyncStatus |
+|-------------------------------------|-----------------------------------------------------|------------|
+| Permanent (e.g., HTTP 4xx)          | No retry; clean up and mark ERROR                   | `ERROR`    |
+| Temporary (e.g., network, HTTP 5xx) | Set `hasTemporaryFailure = true` → `Result.retry()` | unchanged  |
+| CancellationException               | Re-throw immediately                                | unchanged  |
 
 ---
 

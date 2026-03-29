@@ -8,7 +8,8 @@ It is a workflow guide, not a rule set. Rules live in `AGENTS.md`.
 Read files in this order before making any change:
 
 1. `AGENTS.md` — source of truth for all rules
-2. `app/AGENTS.md`, `core/AGENTS.md`, `feature/<name>/AGENTS.md` — local refinements for the area you are touching
+2. `app/AGENTS.md`, `core/AGENTS.md`, `feature/<name>/AGENTS.md` — local refinements for the area
+   you are touching
 3. `CLAUDE.md` — Claude-specific entry guidance and stack overview
 4. `.agent/skills/*` — skill files for the pattern category you need
 
@@ -25,13 +26,13 @@ If guidance conflicts, prefer the higher item in the list and stay conservative.
 
 Use this decision tree:
 
-| What it is | Where it goes |
-|---|---|
-| Business rule, use case, value object | `feature:<name>:domain` |
-| Repository implementation, data source, mapper, DAO, worker | `feature:<name>:data` |
-| ViewModel, UI state, Compose screen | `feature:<name>:ui` |
-| Cross-feature shared abstraction (reuse already justified) | `core:*` |
-| App entry, navigation, Hilt wiring | `app` |
+| What it is                                                  | Where it goes           |
+|-------------------------------------------------------------|-------------------------|
+| Business rule, use case, value object                       | `feature:<name>:domain` |
+| Repository implementation, data source, mapper, DAO, worker | `feature:<name>:data`   |
+| ViewModel, UI state, Compose screen                         | `feature:<name>:ui`     |
+| Cross-feature shared abstraction (reuse already justified)  | `core:*`                |
+| App entry, navigation, Hilt wiring                          | `app`                   |
 
 When in doubt, keep the change in the feature layer you are already in.
 
@@ -47,6 +48,7 @@ When in doubt, keep the change in the feature layer you are already in.
 See `docs/verification-policy.md` for the full policy.
 
 Short version:
+
 - **During development**: run the single affected module's tests.
 - **Before PR**: run `ktlintCheck detekt` and affected module tests.
 - **CI is the final gate**: all repository CI checks must pass before merge.
@@ -83,11 +85,11 @@ If you did not run tests, say so explicitly.
 
 Consult these when relevant:
 
-| Document | When to read |
-|---|---|
-| `docs/media-upload-flow.md` | Before changing workers, schedulers, SyncStatus, or upload/delete use cases |
-| `docs/error-handling-guide.md` | Before writing any `catch` block or `runCatching` in this repo |
-| `docs/architecture-decisions.md` | When uncertain why the structure is as it is |
+| Document                         | When to read                                                                |
+|----------------------------------|-----------------------------------------------------------------------------|
+| `docs/media-upload-flow.md`      | Before changing workers, schedulers, SyncStatus, or upload/delete use cases |
+| `docs/error-handling-guide.md`   | Before writing any `catch` block or `runCatching` in this repo              |
+| `docs/architecture-decisions.md` | When uncertain why the structure is as it is                                |
 
 ## 9. Things not to do
 
@@ -123,6 +125,7 @@ The following applies when the user explicitly requests Git operations:
 ## 12. Change strategy (quick reference)
 
 When asked to implement something, follow this order:
+
 1. Identify the smallest affected module.
 2. Confirm the correct layer for the logic.
 3. Reuse existing patterns in the same feature first.
@@ -183,10 +186,10 @@ Sub-agents are a support tool for reducing mistakes, not a way to parallelize im
 
 Project-level sub-agent definitions live in `.claude/agents/`:
 
-| Agent | Purpose | Write access |
-|---|---|---|
-| `reviewer` | Architecture, security, and convention review | No (read-only) |
-| `test-writer` | Unit test generation following project patterns | Yes |
+| Agent          | Purpose                                             | Write access   |
+|----------------|-----------------------------------------------------|----------------|
+| `reviewer`     | Architecture, security, and convention review       | No (read-only) |
+| `test-writer`  | Unit test generation following project patterns     | Yes            |
 | `arch-checker` | Module boundary and dependency direction validation | No (read-only) |
 
 These agents reference `AGENTS.md` and `docs/` internally. They are pre-scoped to this

@@ -1,4 +1,4 @@
-package com.appvoyager.cloudphotos.data.settings.datasource
+package com.appvoyager.cloudphotos.data.media.datasource
 
 import kotlinx.coroutines.flow.Flow
 

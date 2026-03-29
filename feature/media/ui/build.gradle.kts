@@ -9,7 +9,6 @@ android {
 dependencies {
     implementation(project(":feature:auth:domain"))
     implementation(project(":feature:media:domain"))
-    implementation(project(":feature:settings:domain"))
     implementation(project(":core:ui"))
 
     implementation(libs.coil.compose)

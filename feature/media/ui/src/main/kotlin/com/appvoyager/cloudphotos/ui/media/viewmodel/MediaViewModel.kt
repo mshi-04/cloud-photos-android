@@ -5,13 +5,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.appvoyager.cloudphotos.domain.auth.model.AuthResult
 import com.appvoyager.cloudphotos.domain.auth.usecase.SignOutUseCase
+import com.appvoyager.cloudphotos.domain.media.usecase.GetGridColumnCountUseCase
 import com.appvoyager.cloudphotos.domain.media.usecase.GetMediaListUseCase
 import com.appvoyager.cloudphotos.domain.media.usecase.PrepareUploadQueueUseCase
 import com.appvoyager.cloudphotos.domain.media.usecase.ScheduleDeleteUseCase
+import com.appvoyager.cloudphotos.domain.media.usecase.SetGridColumnCountUseCase
 import com.appvoyager.cloudphotos.domain.media.usecase.SyncUploadRecordsUseCase
-import com.appvoyager.cloudphotos.domain.settings.usecase.GetGridColumnCountUseCase
-import com.appvoyager.cloudphotos.domain.settings.usecase.SetGridColumnCountUseCase
-import com.appvoyager.cloudphotos.domain.settings.valueobject.GridColumnCount
+import com.appvoyager.cloudphotos.domain.media.valueobject.GridColumnCount
 import com.appvoyager.cloudphotos.ui.media.effect.MediaEffect
 import com.appvoyager.cloudphotos.ui.media.effect.MediaSnackbarMessage
 import com.appvoyager.cloudphotos.ui.media.uistate.MediaUiState

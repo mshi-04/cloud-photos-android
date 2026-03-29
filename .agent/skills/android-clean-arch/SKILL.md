@@ -8,6 +8,7 @@ description: "Use when creating or modifying UseCase, Repository interface, Repo
 ## Primary references
 
 Read these first before using this skill:
+
 1. `AGENTS.md`
 2. `core/AGENTS.md` or `app/AGENTS.md` when relevant
 3. `feature/<target>/AGENTS.md`
@@ -30,7 +31,9 @@ feature/<name>/ui/      # ViewModels, UI state/effect, Compose screens
 ## Placement rules
 
 ### Domain
+
 Place here:
+
 - use cases
 - repository interfaces
 - domain models
@@ -39,6 +42,7 @@ Place here:
 - pure validation/business rules
 
 Do not place here:
+
 - Android framework types
 - Compose APIs
 - Room/DAO/entity code
@@ -46,7 +50,9 @@ Do not place here:
 - concrete repository/data source implementations
 
 ### Data
+
 Place here:
+
 - repository implementations
 - local/remote data sources
 - mapper objects
@@ -54,19 +60,23 @@ Place here:
 - provider/framework integration code
 
 Rules:
+
 - RepositoryImpl should delegate to data sources and mappers.
 - Keep business rules out of data unless they are purely translation/integration concerns.
 - Error mapping belongs in data-layer mappers.
 - Re-throw `CancellationException` in coroutine error handling.
 
 ### UI
+
 Place here:
+
 - ViewModels
 - UI state/effect models
 - Compose screens/components
 - screen-level input handling
 
 Rules:
+
 - UI talks to use cases or domain-facing abstractions.
 - UI must not talk directly to repository implementations, DAOs, or provider SDKs.
 
@@ -92,6 +102,7 @@ Rules:
 ## Decision checklist
 
 Before adding code, ask:
+
 1. Which feature owns this concept?
 2. Is this domain, data, or UI responsibility?
 3. Is there already an equivalent pattern in the same feature?
@@ -101,6 +112,7 @@ Before adding code, ask:
 ## Output expectations
 
 When using this skill, report:
+
 - touched module(s)
 - why the file belongs in that layer
 - whether a new abstraction was introduced

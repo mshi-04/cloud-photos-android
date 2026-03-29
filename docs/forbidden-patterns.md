@@ -132,6 +132,7 @@ Swallowing it prevents coroutine scopes from cancelling cleanly, leading to leak
 and broken cancellation chains.
 
 Always re-throw:
+
 ```kotlin
 }.onFailure { e ->
     if (e is CancellationException) throw e

@@ -1,7 +1,7 @@
 package com.appvoyager.cloudphotos.ui.media.uistate
 
 import com.appvoyager.cloudphotos.domain.media.model.Media
-import com.appvoyager.cloudphotos.domain.settings.valueobject.GridColumnCount
+import com.appvoyager.cloudphotos.domain.media.valueobject.GridColumnCount
 
 data class MediaUiState(
     val screenState: ScreenState = ScreenState.None,
