@@ -38,14 +38,25 @@ feature/<name>/ui/      # ViewModels, UI state/effect, Compose screens
 
 ### 1. Module boundary violations
 Scan for imports that cross forbidden boundaries:
-- `domain` must NOT import: Android framework types (`android.*`), Compose (`androidx.compose.*`), Room (`androidx.room.*`), Amplify (`com.amplifyframework.*`), Firebase, WorkManager
-- `ui` must NOT import: Room DAOs, Amplify clients, WorkManager classes, repository implementations
+- `domain` must NOT import:
+  - Android framework types (`android.*`)
+  - Compose (`androidx.compose.*`)
+  - Room (`androidx.room.*`)
+  - Amplify (`com.amplifyframework.*`)
+  - Firebase (`com.google.firebase.*`)
+  - WorkManager (`androidx.work.*`)
+- `ui` must NOT import:
+  - Room DAOs
+  - Amplify clients
+  - WorkManager classes
+  - Repository implementations
 - `domain` must NOT depend on `data` or `ui` modules
 
 ### 2. Dependency direction violations
 - No reverse dependencies (data → ui, domain → data)
 - No cross-feature dependencies (feature A → feature B) unless via `core:*`
 - Check `build.gradle.kts` `dependencies` blocks for violations
+- `ui` must NOT call repository implementations, Room DAOs, Amplify clients, or WorkManager directly (must use UseCases or domain abstractions)
 
 ### 3. Layer placement violations
 - Business logic in data layer (should be in domain)
@@ -70,11 +81,13 @@ Scan for imports that cross forbidden boundaries:
 Useful commands for validation:
 ```bash
 # Check domain layer for forbidden imports
-grep -rn "import android\.\|import androidx\.compose\.\|import androidx\.room\.\|import com\.amplifyframework\." feature/*/domain/src/main/
+grep -rn "import android\.\|import androidx\.compose\.\|import androidx\.room\.\|import com\.amplifyframework\.\|import com\.google\.firebase\.\|import androidx\.work\." feature/*/domain/src/main/
+# Check UI layer for direct repository/DAO/SDK access
+grep -rn "Repository\|DAO\|Amplify\|WorkManager" feature/*/ui/src/main/
+# Check for domain-to-data/ui dependency violations in build files
+grep -rn "data\"\|ui\"" feature/*/domain/build.gradle.kts
 # Check for cross-feature dependencies in build files
 grep -rn "feature:" feature/*/build.gradle.kts
-# Check for direct repository calls from ViewModels
-grep -rn "Repository" feature/*/ui/src/main/
 # List module dependency graph
 ./gradlew :feature:<name>:<layer>:dependencies --configuration implementation
 ```

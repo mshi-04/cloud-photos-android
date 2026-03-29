@@ -68,7 +68,7 @@ class LocalMediaDataSourceImplTest {
     }
 
     @Test
-    fun `getLocalMediaList returns Media list when cursor contains image data`() = runTest {
+    fun `getLocalMediaList returns media list when cursor contains image data`() = runTest {
         // Arrange
         every {
             mockContentResolver.query(any(), any(), any(), any(), any())
@@ -97,7 +97,7 @@ class LocalMediaDataSourceImplTest {
     }
 
     @Test
-    fun `getLocalMediaList returns Media list when cursor contains video data`() = runTest {
+    fun `getLocalMediaList returns media list when cursor contains video data`() = runTest {
         // Arrange
         every {
             mockContentResolver.query(any(), any(), any(), any(), any())

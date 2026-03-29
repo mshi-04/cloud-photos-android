@@ -104,12 +104,24 @@ class UploadMediaWorkerTest {
     }
 
     @Test
-    fun `doWork ignores uploadMedia when record has cloudStoragePath or syncStatus is SYNCED`() = runTest {
+    fun `doWork ignores uploadMedia when cloudStoragePath is present`() = runTest {
         // Arrange
         val record = createUploadRecord()
-        val createdRecord = record.copy(syncStatus = SyncStatus.SYNCED)
         arrangePendingUploads(record)
-        coEvery { remoteRepository.createUploadRecord(any()) } returns createdRecord
+        coEvery { remoteRepository.createUploadRecord(any()) } returns record.copy(syncStatus = SyncStatus.SYNCED)
+
+        // Act
+        worker.doWork()
+
+        // Assert
+        coVerify(exactly = 0) { uploadDataSource.uploadMedia(any()) }
+    }
+
+    @Test
+    fun `doWork ignores uploadMedia when syncStatus is SYNCED`() = runTest {
+        // Arrange
+        val record = createPendingRecord().copy(syncStatus = SyncStatus.SYNCED)
+        arrangePendingUploads(record)
 
         // Act
         worker.doWork()

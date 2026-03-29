@@ -58,4 +58,5 @@ Before making changes:
 
 For local verification, use the smallest relevant Gradle command (e.g.,
 `./gradlew :feature:<name>:<layer>:test`).
+For CI-aligned verification across the repository, use `bundle exec fastlane test`.
 See `docs/verification-policy.md` for the overall verification policy including CI gates.

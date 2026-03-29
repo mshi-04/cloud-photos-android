@@ -55,7 +55,7 @@ Gradle sync is not required after every source-only change.
 
 ## 6. Before opening a PR
 
-- [ ] Lint passes: `./gradlew ktlintCheck detekt`
+- [ ] Lint passes: `./gradlew ktlintFormat && ./gradlew ktlintCheck detekt`
 - [ ] Tests pass for changed modules
 - [ ] No hardcoded secrets, endpoints, or bucket names
 - [ ] No committed debug logs or `android.util.Log` calls
