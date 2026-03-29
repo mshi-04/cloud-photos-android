@@ -1,4 +1,4 @@
-﻿# Build and Environment
+# Build and Environment
 
 Referenced from `AGENTS.md` (source of truth for all rules).
 Source-of-truth order: `AGENTS.md` → feature-local patterns → `CLAUDE.md` → `.agent/skills/*`.
@@ -33,10 +33,15 @@ Properties are resolved in this priority order:
 2. **Gradle project properties** (e.g., `-PDEV_COGNITO_CLIENT_ID=xxxxx` on the command line
    or via `gradle.properties`).
 
-3. **CI environment**: Set the same `DEV_*` / `PROD_*` keys as CI environment variables or
-   secrets. The root `build.gradle.kts` reads `local.properties` first, then falls back to
-   Gradle properties (`findProperty`), so CI variables passed as Gradle properties work
-   automatically.
+3. **CI environment**: Pass `DEV_*` / `PROD_*` values **as Gradle project properties**,
+   which is what `findProperty` resolves. Two equivalent ways:
+   - Command-line: `-PDEV_COGNITO_CLIENT_ID=xxxxx`
+   - Environment variable mapped to Gradle property:
+     `ORG_GRADLE_PROJECT_DEV_COGNITO_CLIENT_ID=xxxxx`
+     (Gradle automatically maps `ORG_GRADLE_PROJECT_*`-prefixed env vars to project properties)
+
+   The root `build.gradle.kts` reads `local.properties` first, then falls back to
+   `findProperty` (Gradle project properties), so either method above works in CI.
 
 > **Key naming**: prefix the base name with the flavor prefix — `DEV_` or `PROD_`.
 > Example: `DEV_COGNITO_CLIENT_ID`, `PROD_API_BASE_URL`.

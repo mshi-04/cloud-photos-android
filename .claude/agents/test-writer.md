@@ -29,7 +29,6 @@ Your job is to create well-structured unit tests that follow existing project pa
 - **JUnit 5** (`@Test`)
 - **MockK** for mocking (`mockk`, `coEvery`, `coVerify`)
 - **kotlinx-coroutines-test** (`runTest`, `UnconfinedTestDispatcher`)
-- **Turbine** for Flow testing when applicable
 
 ## Rules
 
@@ -72,6 +71,11 @@ When generating tests, report:
 
 After writing tests, run them with:
 ```bash
-./gradlew :feature:<name>:<layer>:test
+# Replace <module-path> with the actual module (e.g. feature:auth:domain, core:common)
+./gradlew :<module-path>:test
+
+# Examples:
+./gradlew :feature:auth:domain:test
+./gradlew :core:common:test
 ```
 Report the result (pass/fail count).
