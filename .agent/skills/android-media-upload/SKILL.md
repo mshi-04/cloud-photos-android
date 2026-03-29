@@ -8,6 +8,7 @@ description: "Use when creating or modifying upload workers, delete workers, upl
 ## Primary references
 
 Read these first before using this skill:
+
 1. `AGENTS.md`
 2. `feature/media/AGENTS.md`
 3. `docs/media-upload-flow.md` — full flow sequence and SyncStatus transitions
@@ -25,16 +26,16 @@ or orphan remote records.
 
 ## Class responsibilities — do not collapse these
 
-| Class | Layer | Responsibility |
-|---|---|---|
-| `UploadSchedulerImpl` | Data | Enqueue `UploadMediaWorker` via WorkManager |
-| `DeleteSchedulerImpl` | Data | Enqueue `DeleteMediaWorker` via WorkManager |
-| `UploadMediaWorker` | Data | Execute per-record upload: S3 + remote registration + DB update |
-| `DeleteMediaWorker` | Data | Execute per-record delete: remote → S3 → local DB |
-| `UploadDataSourceImpl` | Data | S3 stream upload / S3 delete via Amplify.Storage |
-| `UploadRecordLocalDataSourceImpl` | Data | Room DAO operations for upload records |
-| `UploadRecordRemoteDataSourceImpl` | Data | REST API calls via Amplify.API |
-| `UploadRepositoryImpl` | Data | Delegate upload execution to data sources |
+| Class                              | Layer | Responsibility                                                  |
+|------------------------------------|-------|-----------------------------------------------------------------|
+| `UploadSchedulerImpl`              | Data  | Enqueue `UploadMediaWorker` via WorkManager                     |
+| `DeleteSchedulerImpl`              | Data  | Enqueue `DeleteMediaWorker` via WorkManager                     |
+| `UploadMediaWorker`                | Data  | Execute per-record upload: S3 + remote registration + DB update |
+| `DeleteMediaWorker`                | Data  | Execute per-record delete: remote → S3 → local DB               |
+| `UploadDataSourceImpl`             | Data  | S3 stream upload / S3 delete via Amplify.Storage                |
+| `UploadRecordLocalDataSourceImpl`  | Data  | Room DAO operations for upload records                          |
+| `UploadRecordRemoteDataSourceImpl` | Data  | REST API calls via Amplify.API                                  |
+| `UploadRepositoryImpl`             | Data  | Delegate upload execution to data sources                       |
 
 Do not merge these responsibilities into one class. Each has a different lifecycle and
 testability profile.
@@ -81,6 +82,7 @@ If you change a transition, update `docs/media-upload-flow.md`.
 ## Output expectations
 
 When using this skill, report:
+
 - which media layer changed (domain / data / ui)
 - whether worker or scheduler behavior changed
 - whether SyncStatus transitions changed

@@ -54,28 +54,28 @@ Firebase Cloud Messaging（FCM）によるプッシュ通知を受信します�
 
 ## 技術スタック
 
-| カテゴリ | ライブラリ / バージョン |
-|---|---|
-| 言語 | Kotlin 2.3 |
-| UI | Jetpack Compose BOM 2026.02 + Material 3 |
-| アーキテクチャ | Clean Architecture（domain / data / ui） |
-| DI | Hilt 2.59 + KSP |
-| ナビゲーション | Navigation Compose 2.9 |
-| カメラ | CameraX 1.5 |
-| 画像読み込み | Coil 3.4（Compose 連携） |
-| 動画再生 | Media3 ExoPlayer 1.9 |
-| 認証 | AWS Amplify Cognito 2.33 |
-| ストレージ | AWS Amplify S3 2.33 |
-| 分析 | Firebase Analytics（BOM 34.9） |
-| プッシュ通知 | Firebase Cloud Messaging |
-| バックグラウンド処理 | WorkManager 2.11 |
-| ローカル DB | Room 2.8 |
-| 設定保存 | DataStore Preferences 1.2 |
-| Lint | ktlint 14.2 + detekt 2.0-alpha |
-| テスト | JUnit 5 + MockK 1.14 + kotlinx-coroutines-test |
-| Min SDK | 29（Android 10） |
-| Compile SDK | 36 |
-| JDK | 17 |
+| カテゴリ        | ライブラリ / バージョン                                  |
+|-------------|------------------------------------------------|
+| 言語          | Kotlin 2.3                                     |
+| UI          | Jetpack Compose BOM 2026.02 + Material 3       |
+| アーキテクチャ     | Clean Architecture（domain / data / ui）         |
+| DI          | Hilt 2.59 + KSP                                |
+| ナビゲーション     | Navigation Compose 2.9                         |
+| カメラ         | CameraX 1.5                                    |
+| 画像読み込み      | Coil 3.4（Compose 連携）                           |
+| 動画再生        | Media3 ExoPlayer 1.9                           |
+| 認証          | AWS Amplify Cognito 2.33                       |
+| ストレージ       | AWS Amplify S3 2.33                            |
+| 分析          | Firebase Analytics（BOM 34.9）                   |
+| プッシュ通知      | Firebase Cloud Messaging                       |
+| バックグラウンド処理  | WorkManager 2.11                               |
+| ローカル DB     | Room 2.8                                       |
+| 設定保存        | DataStore Preferences 1.2                      |
+| Lint        | ktlint 14.2 + detekt 2.0-alpha                 |
+| テスト         | JUnit 5 + MockK 1.14 + kotlinx-coroutines-test |
+| Min SDK     | 29（Android 10）                                 |
+| Compile SDK | 36                                             |
+| JDK         | 17                                             |
 
 ## 画面構成
 
@@ -162,10 +162,10 @@ bundle exec fastlane build_prod
 
 ### ビルドフレーバー
 
-| フレーバー | 用途 | applicationId サフィックス |
-|---|---|---|
-| `dev` | 開発・テスト環境 | `.dev` |
-| `prod` | 本番環境 | なし |
+| フレーバー  | 用途       | applicationId サフィックス |
+|--------|----------|----------------------|
+| `dev`  | 開発・テスト環境 | `.dev`               |
+| `prod` | 本番環境     | なし                   |
 
 各フレーバーは `local.properties` の `DEV_*` / `PROD_*` プレフィックス付きプロパティを参照します。
 
@@ -209,9 +209,9 @@ bundle exec fastlane test
 
 `main`・`develop` へのプッシュおよびすべての PR で GitHub Actions が実行されます。
 
-| ステップ | コマンド | 内容 |
-|---|---|---|
-| Lint | `bundle exec fastlane lint` | ktlint + detekt |
+| ステップ | コマンド                        | 内容                |
+|------|-----------------------------|-------------------|
+| Lint | `bundle exec fastlane lint` | ktlint + detekt   |
 | Test | `bundle exec fastlane test` | dev フレーバーのユニットテスト |
 
 CI がパスしない PR はマージできません。フォーク PR ではダミーシークレットが自動設定されます。
@@ -223,7 +223,8 @@ CI がパスしない PR はマージできません。フォーク PR ではダ
 
 ## アーキテクチャ
 
-本プロジェクトは Clean Architecture を採用し、各フィーチャーを `domain` / `data` / `ui` の 3 レイヤーに分割しています。
+本プロジェクトは Clean Architecture を採用し、各フィーチャーを `domain` / `data` / `ui` の 3
+レイヤーに分割しています。
 
 - **domain** — フレームワーク非依存。ユースケース・リポジトリインターフェース・値オブジェクト・ビジネスルール
 - **data** — SDK / DB / ネットワーク等のフレームワーク実装。エラーマッピングはこのレイヤーで行う
@@ -234,8 +235,10 @@ CI がパスしない PR はマージできません。フォーク PR ではダ
 詳細は以下のドキュメントを参照してください。
 
 - [`docs/architecture-decisions.md`](docs/architecture-decisions.md) — アーキテクチャ上の意思決定と理由
-- [`docs/media-upload-flow.md`](docs/media-upload-flow.md) — アップロード / 削除フローと SyncStatus 遷移
-- [`docs/error-handling-guide.md`](docs/error-handling-guide.md) — CancellationException とエラーマッピングのパターン
+- [`docs/media-upload-flow.md`](docs/media-upload-flow.md) — アップロード / 削除フローと SyncStatus
+  遷移
+- [`docs/error-handling-guide.md`](docs/error-handling-guide.md) — CancellationException
+  とエラーマッピングのパターン
 - [`docs/forbidden-patterns.md`](docs/forbidden-patterns.md) — 禁止パターンとその理由
 - [`AGENTS.md`](AGENTS.md) — 開発ルール（人間・AI エージェント共通）
 

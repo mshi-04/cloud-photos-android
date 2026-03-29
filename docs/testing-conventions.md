@@ -28,11 +28,11 @@ ViewModels.
 
 **Segment definitions:**
 
-| Segment | Rule |
-|---|---|
+| Segment                | Rule                                                                                      |
+|------------------------|-------------------------------------------------------------------------------------------|
 | `tested function name` | The exact Kotlin function, property, or event-handler name under test. Must appear first. |
-| `expected outcome` | A verb phrase using one of the allowed verbs only (see below). |
-| `when [condition]` | The scenario or input state. Must always be present — never omit. |
+| `expected outcome`     | A verb phrase using one of the allowed verbs only (see below).                            |
+| `when [condition]`     | The scenario or input state. Must always be present — never omit.                         |
 
 **Allowed verbs:** `returns` / `throws` / `sets` / `emits` / `calls` / `rethrows` / `ignores`
 
@@ -40,7 +40,10 @@ ViewModels.
 
 - `test`, `should`, `verify`, or similar prefixes are forbidden.
 - snake_case is forbidden anywhere in the name.
-- camelCase is permitted for any identifier (e.g., `onSignIn`, `fetchMedia`) within the backtick-enclosed test name. For symbolic names (class names or types), use PascalCase (e.g., `SignedInState`, `NetworkError`) when helpful. For the natural language parts that describe conditions or expectations, prefer using lowercase words separated by spaces.
+- camelCase is permitted for any identifier (e.g., `onSignIn`, `fetchMedia`) within the
+  backtick-enclosed test name. For symbolic names (class names or types), use PascalCase (e.g.,
+  `SignedInState`, `NetworkError`) when helpful. For the natural language parts that describe
+  conditions or expectations, prefer using lowercase words separated by spaces.
 - Japanese characters are forbidden.
 - Vague outcome words (`works`, `handles`, `correctly`, `properly`) are forbidden.
 - Categorical labels (`success case`, `failure case`, `happy path`, `error case`) are forbidden.
@@ -77,11 +80,11 @@ lifecycle extension or a third-party library extension that has no MockK equival
 
 ## Verification timing
 
-| Timing | Executor | Content |
-|---|---|---|
+| Timing             | Executor | Content                                                |
+|--------------------|----------|--------------------------------------------------------|
 | On task completion | AI agent | `./gradlew ktlintCheck detekt` → affected module tests |
-| Push / PR creation | Human | push, PR creation, merge decision |
-| PR / merge gate | CI | lint checks (ktlintCheck + detekt) + all unit tests |
+| Push / PR creation | Human    | push, PR creation, merge decision                      |
+| PR / merge gate    | CI       | lint checks (ktlintCheck + detekt) + all unit tests    |
 
 See `docs/verification-policy.md` for the full policy including Gradle sync rules and test scope
 by change type.

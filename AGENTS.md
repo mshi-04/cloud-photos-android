@@ -6,6 +6,7 @@ Follow these rules when proposing or making changes.
 ## Supplementary documents
 
 Detailed guidance in `docs/`:
+
 - `docs/ai-playbook.md` — workflow guide: how to approach changes, change strategy, PR workflow
 - `docs/architecture-decisions.md` — why the structure is what it is
 - `docs/verification-policy.md` — when and how much to verify
@@ -18,9 +19,11 @@ Detailed guidance in `docs/`:
 - `docs/error-handling-guide.md` — CancellationException and error mapping patterns
 
 Sub-agent policy:
+
 - `docs/ai-playbook.md` § 13 — sub-agent usage rules, delegation scope, parent agent ownership
 
 Feature-local guidance:
+
 - `feature/auth/AGENTS.md` — auth-specific rules and guardrails
 - `feature/media/AGENTS.md` — media-specific rules and guardrails
 - `feature/settings/AGENTS.md` — settings-specific rules and guardrails
@@ -34,6 +37,7 @@ Prefer the smallest safe change that matches existing feature patterns.
 ## Source-of-truth order
 
 When multiple guidance files exist, follow them in this order:
+
 1. `AGENTS.md`
 2. feature-local conventions and existing code patterns
 3. `CLAUDE.md`
@@ -62,7 +66,9 @@ module.
 ## Layer placement rules
 
 ### `app`
+
 Put code here only when it is truly app-wide:
+
 - application startup
 - top-level navigation composition
 - Hilt bootstrap/wiring modules that assemble feature implementations
@@ -72,7 +78,9 @@ Do not place feature business logic here.
 Do not reintroduce code that belongs in `feature/*` modules.
 
 ### `feature:<name>:domain`
+
 Allowed here:
+
 - use cases
 - repository interfaces
 - domain models
@@ -80,6 +88,7 @@ Allowed here:
 - pure validation and business rules
 
 Not allowed here:
+
 - Android framework types
 - Compose APIs
 - Room APIs
@@ -87,7 +96,9 @@ Not allowed here:
 - concrete data source or repository implementations
 
 ### `feature:<name>:data`
+
 Allowed here:
+
 - repository implementations
 - DTO/entity mapping
 - remote/local data sources
@@ -96,17 +107,21 @@ Allowed here:
 - framework integration details
 
 Rules:
+
 - Business rules belong in domain; this layer handles data translation and framework integration.
 - Error mapping belongs here via mapper objects.
 
 ### `feature:<name>:ui`
+
 Allowed here:
+
 - ViewModels
 - UI state/effect models
 - Compose screens/components
 - input event handling and view-facing formatting
 
 Rules:
+
 - UI/ViewModels call use cases or domain-facing abstractions.
 - UI must not call repository implementations, Room DAOs, Amplify clients, or WorkManager
   directly.
@@ -115,33 +130,33 @@ Rules:
 ## Architectural rules
 
 1. Respect module boundaries.
-   - `ui` may depend on its `domain` module and shared UI/common modules.
-   - `data` may depend on its own `domain` and shared modules.
-   - `domain` must stay framework-light.
+    - `ui` may depend on its `domain` module and shared UI/common modules.
+    - `data` may depend on its own `domain` and shared modules.
+    - `domain` must stay framework-light.
 
 2. Preserve dependency direction.
-   - Do not introduce reverse dependencies between layers.
-   - Do not make one feature depend on an unrelated sibling feature.
-   - Prefer extracting shared abstractions to `core:*` only when reuse is real and already
-     justified by more than one feature.
+    - Do not introduce reverse dependencies between layers.
+    - Do not make one feature depend on an unrelated sibling feature.
+    - Prefer extracting shared abstractions to `core:*` only when reuse is real and already
+      justified by more than one feature.
 
 3. Do not bypass use cases.
-   - ViewModels should normally call use cases.
-   - If a ViewModel interacts with a repository-facing abstraction directly, the reason must be
-     explicit and local.
+    - ViewModels should normally call use cases.
+    - If a ViewModel interacts with a repository-facing abstraction directly, the reason must be
+      explicit and local.
 
 4. Keep data models separated by layer.
-   - Do not expose DTOs, entities, DAO models, or network response models directly to UI.
-   - Use mappers at data boundaries.
+    - Do not expose DTOs, entities, DAO models, or network response models directly to UI.
+    - Use mappers at data boundaries.
 
 5. Prefer additive, local changes.
-   - Avoid broad package moves or cross-feature rewrites unless the task explicitly requires them.
-   - Touch the fewest files necessary.
+    - Avoid broad package moves or cross-feature rewrites unless the task explicitly requires them.
+    - Touch the fewest files necessary.
 
 6. Reuse existing patterns first.
-   - Before introducing a new abstraction, inspect the same feature for an existing equivalent
-     pattern.
-   - Match naming, folder placement, and test style already present in that feature.
+    - Before introducing a new abstraction, inspect the same feature for an existing equivalent
+      pattern.
+    - Match naming, folder placement, and test style already present in that feature.
 
 ## Git rules for AI agents
 
@@ -152,6 +167,7 @@ Rules:
 ## Required reporting format for AI-generated changes
 
 When making a code change in this repository, report back with:
+
 - touched modules
 - architectural reason for file placement
 - summary of what changed and why

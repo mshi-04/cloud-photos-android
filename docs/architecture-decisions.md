@@ -2,7 +2,8 @@
 
 This document explains why the repository is structured the way it is.
 It is not a rule file — rules live in `AGENTS.md`.
-The goal is to make the reasoning visible so that both humans and AI agents can make consistent decisions.
+The goal is to make the reasoning visible so that both humans and AI agents can make consistent
+decisions.
 
 ## Why modular? Why `app / core / feature`?
 
@@ -12,7 +13,8 @@ The goal is to make the reasoning visible so that both humans and AI agents can 
 Module boundaries enforce dependency direction at compile time, not just by convention.
 They also allow faster incremental builds and more targeted testing.
 
-**What we avoid**: a flat structure where anything can call anything, leading to tangled dependencies
+**What we avoid**: a flat structure where anything can call anything, leading to tangled
+dependencies
 that are expensive to untangle later.
 
 ## Why split each feature into `domain / data / ui`?
@@ -20,8 +22,10 @@ that are expensive to untangle later.
 **Decision**: each feature has three layers with explicit allowed-dependency directions.
 
 **Reason**: this is the clean architecture principle applied to Android features.
+
 - `domain` stays framework-free, making business rules testable without device or Android context.
-- `data` isolates all SDK and persistence concerns so they can change without touching business logic.
+- `data` isolates all SDK and persistence concerns so they can change without touching business
+  logic.
 - `ui` remains declarative and state-driven, making it easier to test and swap renderers.
 
 **What we avoid**: ViewModels that call Room DAOs directly, or use cases that import Amplify SDKs.
@@ -43,7 +47,8 @@ models that accept unvalidated input.
 
 ## Why keep provider-specific code inside `data`?
 
-**Decision**: Cognito, Amplify, Firebase, Room, and WorkManager details must not cross out of `data`.
+**Decision**: Cognito, Amplify, Firebase, Room, and WorkManager details must not cross out of
+`data`.
 
 **Reason**: provider SDKs change. Auth providers are replaced. Storage backends evolve.
 Confining SDK details to `data` means a provider migration requires only `data` changes — domain
@@ -58,6 +63,7 @@ Compose screens. When that happens, a provider change becomes a cross-repo refac
 schedulers, repositories, and data sources rather than a single coordinating class.
 
 **Reason**: each responsibility has a different lifecycle and testability profile.
+
 - Workers manage WorkManager execution context.
 - Schedulers decide when to enqueue and with what constraints.
 - Repositories expose domain contracts.

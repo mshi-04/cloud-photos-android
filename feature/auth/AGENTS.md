@@ -7,6 +7,7 @@ If this file conflicts with root `AGENTS.md`, prefer the root file and keep the 
 ## Scope
 
 This feature is split into:
+
 - `feature/auth/domain`
 - `feature/auth/data`
 - `feature/auth/ui`
@@ -20,12 +21,14 @@ It should contain auth-specific models, value objects, use cases, data translati
 
 Keep `feature/auth/domain` pure Kotlin.
 Allowed here:
+
 - auth use cases
 - auth repository interfaces
 - auth domain models
 - auth value objects such as validated user-facing credentials and identifiers
 
 Do not place here:
+
 - Cognito SDK specifics
 - Android framework types
 - Compose/UI types
@@ -35,6 +38,7 @@ Do not place here:
 
 Preserve value object usage for validated auth concepts.
 Prefer existing patterns for:
+
 - `Email`
 - `Password`
 - `UserId`
@@ -46,12 +50,14 @@ If a new validated auth concept is introduced, prefer a value object over a prim
 ## Data rules
 
 `feature/auth/data` is responsible for:
+
 - integrating with Cognito/Amplify auth behavior
 - translating SDK errors and states into domain-friendly models
 - implementing repository contracts
 - mapping provider-specific auth steps/errors into domain results
 
 Rules:
+
 - Keep Cognito-specific translation in data mappers and data source implementations.
 - Do not leak provider-specific error/state models to domain or UI.
 - Repository implementations should delegate to data sources and mappers.
@@ -61,12 +67,14 @@ Rules:
 ## UI rules
 
 `feature/auth/ui` is responsible for:
+
 - auth screens
 - auth ViewModels
 - UI state/effect classes
 - user input handling and screen-level validation wiring
 
 Rules:
+
 - ViewModels should call auth use cases.
 - Keep screen state in UI state classes / ViewModels.
 - Keep one-shot navigation/snackbar/etc. in effect models following existing patterns.
@@ -76,6 +84,7 @@ Rules:
 ## Flow-specific guardrails
 
 When editing login, signup, forgot-password, reset-password, or verification flows:
+
 - preserve the separation between input validation, domain execution, and UI effects
 - keep auth-step branching readable and localized
 - prefer updating existing effect/state models instead of inventing parallel ones

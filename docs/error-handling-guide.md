@@ -11,7 +11,8 @@ Kotlin coroutines signal cooperative cancellation via `CancellationException`.
 Swallowing it prevents coroutine scopes from cancelling cleanly, causes coroutine leaks,
 and breaks structured concurrency.
 
-**Every `catch` block that handles `Exception` or `Throwable` must re-throw `CancellationException`.**
+**Every `catch` block that handles `Exception` or `Throwable` must re-throw `CancellationException`.
+**
 
 ### With try/catch
 
@@ -102,6 +103,7 @@ sealed class UploadResult<out T> {
 ```
 
 Prefer sealed result types over throwing exceptions when:
+
 - the caller must handle both success and failure paths
 - the error is a domain-level expected outcome (not a programming error)
 - the operation crosses the data/domain boundary
@@ -115,10 +117,10 @@ Do not return sealed results *and* also throw exceptions for the same operation.
 `UploadMediaWorker` and `DeleteMediaWorker` classify errors to decide retry behavior.
 This classification lives in a private helper such as `isPermanentFailure()`.
 
-| Condition | Behavior |
-|---|---|
-| `CancellationException` | Re-throw immediately |
-| Permanent failure (e.g., HTTP 4xx) | Mark record as `ERROR`; do not retry |
+| Condition                                   | Behavior                                    |
+|---------------------------------------------|---------------------------------------------|
+| `CancellationException`                     | Re-throw immediately                        |
+| Permanent failure (e.g., HTTP 4xx)          | Mark record as `ERROR`; do not retry        |
 | Temporary failure (e.g., network, HTTP 5xx) | Set retry flag; `Result.retry()` at the end |
 
 When changing this classification, verify that the SyncStatus transitions described in
