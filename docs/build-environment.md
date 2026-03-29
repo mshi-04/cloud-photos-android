@@ -11,7 +11,7 @@ When this file and `AGENTS.md` conflict, prefer `AGENTS.md`.
 This project uses build flavors and required environment properties.
 Be careful not to break flavored builds.
 
-Required flavor properties include values such as:
+Each flavor must define the following required properties:
 - `COGNITO_CLIENT_ID`
 - `API_BASE_URL`
 - `S3_BUCKET_NAME`

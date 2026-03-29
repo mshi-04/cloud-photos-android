@@ -17,6 +17,9 @@ Detailed guidance in `docs/`:
 - `docs/media-upload-flow.md` — upload/delete flow sequence and SyncStatus transitions
 - `docs/error-handling-guide.md` — CancellationException and error mapping patterns
 
+Sub-agent policy:
+- `docs/ai-playbook.md` § 13 — sub-agent usage rules, delegation scope, parent agent ownership
+
 Feature-local guidance:
 - `feature/auth/AGENTS.md` — auth-specific rules and guardrails
 - `feature/media/AGENTS.md` — media-specific rules and guardrails

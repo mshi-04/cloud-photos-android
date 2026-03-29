@@ -67,7 +67,8 @@ When in doubt about scope, run `./gradlew test`.
 
 CI is the final gate. Do not merge if CI is red.
 
-CI runs lint checks (ktlintCheck + detekt) and all unit tests.
+CI runs lint checks (`bundle exec fastlane lint` → `ktlintCheck detekt`) and unit tests for the
+DEV Debug variant (`bundle exec fastlane test` → `testDevDebugUnitTest`).
 
 A passing local run does not substitute for a passing CI run.
 If CI fails after your PR is opened, investigate and fix before merging.

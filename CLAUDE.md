@@ -29,6 +29,11 @@ Do not duplicate detailed architectural policy here unless there is a Claude-spe
 - `.agent/skills/android-testing/SKILL.md`
 - `.agent/skills/android-media-upload/SKILL.md`
 
+## Subagents
+- `.claude/agents/reviewer.md` — read-only code reviewer (architecture, security, conventions)
+- `.claude/agents/test-writer.md` — unit test generator (JUnit 5 + MockK patterns)
+- `.claude/agents/arch-checker.md` — architecture validator (module boundaries, dependency direction)
+
 ## Claude quick-start
 
 Before making changes:

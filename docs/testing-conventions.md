@@ -41,12 +41,15 @@ ViewModels.
 - `test`, `should`, `verify`, or similar prefixes are forbidden.
 - snake_case is forbidden anywhere in the name.
 - camelCase is forbidden outside the tested function name segment.
+  PascalCase class names (e.g., `SignedInState`, `NetworkError`) are permitted in the expected
+  outcome and condition segments.
 - Japanese characters are forbidden.
 - Vague outcome words (`works`, `handles`, `correctly`, `properly`) are forbidden.
 - Categorical labels (`success case`, `failure case`, `happy path`, `error case`) are forbidden.
 - `success` or `failure` alone as the outcome is forbidden — write the concrete type, state,
   or effect name instead (e.g., `returns SignedInState`, `returns NetworkError`).
 - Multiple behaviors in one function name are forbidden.
+- `updates` is not an allowed verb; use `sets` instead.
 
 **Examples:**
 
