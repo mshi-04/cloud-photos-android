@@ -108,4 +108,4 @@ Report the result (pass/fail count).
 > If changes span `app`, `core:*`, or multiple feature modules, broaden the verification scope:
 > - Full unit test suite: `./gradlew test`
 > - CI-aligned verification: `bundle exec fastlane test`
-    > See `docs/verification-policy.md` for specific scope rules.
+> See `docs/verification-policy.md` for specific scope rules.

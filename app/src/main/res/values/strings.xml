@@ -5,6 +5,6 @@
     <string name="notification_uploading">%1$d件アップロード中です</string>
     <string name="notification_channel_upload_complete">アップロード完了</string>
     <string name="notification_channel_upload_complete_description">写真のアップロードが完了したときに通知します</string>
-<string name="error_session_check">ログインの確認に失敗しました\n再度通信してください</string>
+    <string name="error_session_check">ログインの確認に失敗しました\n再度通信してください</string>
     <string name="retry">再試行</string>
 </resources>

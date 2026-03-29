@@ -4,8 +4,7 @@
 
 <!-- このPRで何を変更するか、1〜3文で簡潔に説明してください -->
 
-- **関連Issue・チケット / Related Issue or Ticket:
-  ** <!-- 例: Fixes #123, Closes #123（GitHub Issue）/ PROJ-456（チケットID） -->
+- **関連Issue・チケット / Related Issue or Ticket:** <!-- 例: Fixes #123, Closes #123（GitHub Issue）/ PROJ-456（チケットID） -->
 
 ---
 
