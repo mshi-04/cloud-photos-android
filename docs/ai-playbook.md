@@ -101,3 +101,31 @@ Avoid these — see `docs/forbidden-patterns.md` for the full list with reasonin
 - Hardcoded secrets or endpoints
 - Swallowing `CancellationException`
 - Casual cross-feature dependencies
+
+## 10. Git operations ownership
+
+Git operations are user-owned unless explicitly requested.
+Do not commit, push, create a branch, or open a pull request unless the user explicitly asks.
+Focus on code changes, verification, and reporting.
+
+## 11. Pull request and branch workflow
+
+The following applies when the user explicitly requests Git operations:
+
+- Branch from `develop` for feature work unless explicitly told otherwise.
+- Do not push directly to protected branches.
+- Keep PR scope tight and consistent with the branch purpose.
+- Follow the repository PR template expectations, including test notes and Android-specific
+  checks when applicable.
+
+## 12. Change strategy (quick reference)
+
+When asked to implement something, follow this order:
+1. Identify the smallest affected module.
+2. Confirm the correct layer for the logic.
+3. Reuse existing patterns in the same feature first.
+4. Make the smallest safe change.
+5. Run targeted verification.
+6. Summarize exactly what changed, what was not changed, and remaining risks.
+
+For detail on each step, see sections 1–7 above.
