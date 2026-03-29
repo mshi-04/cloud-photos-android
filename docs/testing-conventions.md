@@ -44,18 +44,18 @@ ViewModels.
 - Japanese characters are forbidden.
 - Vague outcome words (`works`, `handles`, `correctly`, `properly`) are forbidden.
 - Categorical labels (`success case`, `failure case`, `happy path`, `error case`) are forbidden.
-- `success` or `failure` alone as the outcome is forbidden — write `returns Success` /
-  `returns Error` instead.
+- `success` or `failure` alone as the outcome is forbidden — write the concrete type, state,
+  or effect name instead (e.g., `returns SignedInState`, `returns NetworkError`).
 - Multiple behaviors in one function name are forbidden.
 
 **Examples:**
 
 ```kotlin
-fun `invoke returns Success when repository succeeds`()
+fun `invoke returns SignedInState when repository returns done state`()
 fun `of throws IllegalArgumentException when email is blank after trim`()
 fun `onSignIn emits NavigateToHome when credentials are valid`()
-fun `onSignIn sets passwordError when credentials are invalid`()
-fun `invoke returns Error when network is unavailable`()
+fun `onSignIn sets passwordError when password is blank`()
+fun `invoke returns NetworkError when network is unavailable`()
 fun `of returns Email when input is valid`()
 ```
 
@@ -80,7 +80,7 @@ lifecycle extension or a third-party library extension that has no MockK equival
 |---|---|---|
 | On task completion | AI agent | `./gradlew ktlintCheck detekt` → affected module tests |
 | Push / PR creation | Human | push, PR creation, merge decision |
-| PR / merge gate | CI | `bundle exec fastlane lint` + `bundle exec fastlane test` |
+| PR / merge gate | CI | lint checks (ktlintCheck + detekt) + all unit tests |
 
 See `docs/verification-policy.md` for the full policy including Gradle sync rules and test scope
 by change type.

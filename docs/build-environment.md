@@ -21,6 +21,8 @@ Rules:
 - Do not commit environment-specific values outside the intended configuration mechanism.
 - Be careful when touching `app/build.gradle.kts`, flavor logic, manifest configuration, or CI
   dummy-secret behavior.
+- Flavor-specific values must be placed in the intended property or configuration flow — do not
+  scatter them into Kotlin source.
 - Avoid changing `build-logic` unless the task is explicitly about Gradle conventions.
 
 ## Dependency rules
@@ -29,3 +31,5 @@ Rules:
 - Do not add a new library unless clearly necessary.
 - If adding a dependency is unavoidable, explain why and keep the scope minimal.
 - Prefer module-local dependencies over broad app-level additions when possible.
+- If a dependency change spans `app`, `core:*`, or multiple feature modules, treat it as a wider
+  verification scope (run `./gradlew test`).

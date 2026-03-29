@@ -51,10 +51,6 @@ Before making changes:
 
 ## Testing entrypoint
 
-For CI-aligned verification, prefer the repository's existing test entrypoint when appropriate:
-
-```bash
-bundle exec fastlane test
-```
-
-Use narrower Gradle module tests for focused local validation, following `AGENTS.md`.
+For local verification, use the smallest relevant Gradle command (e.g.,
+`./gradlew :feature:<name>:<layer>:test`).
+See `docs/verification-policy.md` for the overall verification policy including CI gates.

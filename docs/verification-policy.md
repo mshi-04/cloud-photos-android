@@ -33,8 +33,8 @@ Run the smallest scope covering what you changed:
 ./gradlew ktlintCheck
 ```
 
-Do not run `bundle exec fastlane test` on every iteration — it is the CI-level gate, not a
-local development loop.
+Do not run the full test suite on every iteration — CI is the final gate, not a local
+development loop.
 
 ## Before opening a PR
 
@@ -67,21 +67,10 @@ When in doubt about scope, run `./gradlew test`.
 
 CI is the final gate. Do not merge if CI is red.
 
-CI runs:
-```bash
-bundle exec fastlane lint   # ktlintCheck + detekt
-bundle exec fastlane test   # all unit tests
-```
+CI runs lint checks (ktlintCheck + detekt) and all unit tests.
 
 A passing local run does not substitute for a passing CI run.
 If CI fails after your PR is opened, investigate and fix before merging.
-
-## Fastlane lanes
-
-| Lane | What it runs |
-|---|---|
-| `bundle exec fastlane lint` | ktlintCheck + detekt across all modules |
-| `bundle exec fastlane test` | all Gradle unit tests |
 
 ## Module test targets reference
 

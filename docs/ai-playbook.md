@@ -49,7 +49,7 @@ See `docs/verification-policy.md` for the full policy.
 Short version:
 - **During development**: run the single affected module's tests.
 - **Before PR**: run `ktlintCheck detekt` and affected module tests.
-- **CI is the final gate**: `bundle exec fastlane lint` and `bundle exec fastlane test` must pass before merge.
+- **CI is the final gate**: all repository CI checks must pass before merge.
 
 Gradle sync is not required after every source-only change.
 
