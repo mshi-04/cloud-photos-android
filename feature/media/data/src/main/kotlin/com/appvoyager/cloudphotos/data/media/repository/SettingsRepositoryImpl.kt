@@ -1,8 +1,8 @@
-package com.appvoyager.cloudphotos.data.settings.repository
+package com.appvoyager.cloudphotos.data.media.repository
 
-import com.appvoyager.cloudphotos.data.settings.datasource.SettingsDataSource
-import com.appvoyager.cloudphotos.domain.settings.repository.SettingsRepository
-import com.appvoyager.cloudphotos.domain.settings.valueobject.GridColumnCount
+import com.appvoyager.cloudphotos.data.media.datasource.SettingsDataSource
+import com.appvoyager.cloudphotos.domain.media.repository.SettingsRepository
+import com.appvoyager.cloudphotos.domain.media.valueobject.GridColumnCount
 import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map

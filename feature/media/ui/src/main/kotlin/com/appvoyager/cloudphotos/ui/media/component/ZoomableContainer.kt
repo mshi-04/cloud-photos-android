@@ -85,6 +85,7 @@ internal fun ZoomableContainer(
                                 onZoomChanged(scale > MIN_SCALE)
                                 event.changes.forEach { it.consume() }
                             }
+
                             pointersDown == 1 && scale > MIN_SCALE -> {
                                 val change = event.changes.first()
                                 if (change.positionChanged()) {

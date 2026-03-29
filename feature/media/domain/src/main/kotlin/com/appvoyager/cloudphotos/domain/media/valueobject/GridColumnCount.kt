@@ -1,4 +1,4 @@
-package com.appvoyager.cloudphotos.domain.settings.valueobject
+package com.appvoyager.cloudphotos.domain.media.valueobject
 
 @JvmInline
 value class GridColumnCount private constructor(val value: Int) {

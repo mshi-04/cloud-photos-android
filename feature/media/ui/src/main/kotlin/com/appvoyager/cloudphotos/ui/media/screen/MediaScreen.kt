@@ -19,11 +19,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -91,10 +91,10 @@ import coil3.compose.AsyncImage
 import com.appvoyager.cloudphotos.core.ui.R
 import com.appvoyager.cloudphotos.domain.media.model.Media
 import com.appvoyager.cloudphotos.domain.media.model.MediaType
+import com.appvoyager.cloudphotos.domain.media.valueobject.GridColumnCount
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaCreatedAt
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaId
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaUrl
-import com.appvoyager.cloudphotos.domain.settings.valueobject.GridColumnCount
 import com.appvoyager.cloudphotos.ui.media.component.GridColumnSettingsDialog
 import com.appvoyager.cloudphotos.ui.media.effect.MediaEffect
 import com.appvoyager.cloudphotos.ui.media.effect.MediaSnackbarMessage
@@ -134,6 +134,7 @@ fun MediaScreen(
                     is MediaEffect.ShowSnackbar -> {
                         snackbarHostState.showSnackbar(effect.message.toMessage(latestContext.value))
                     }
+
                     is MediaEffect.NavigateToLogin -> latestOnNavigateToLogin.value()
                 }
             }
@@ -269,8 +270,10 @@ private fun MediaContent(
                         label = { Text(text = stringResource(R.string.media_menu_notification_settings)) },
                         selected = false,
                         onClick = {
-                            coroutineScope.launch { drawerState.close() }
-                            openNotificationSettings(context)
+                            coroutineScope.launch {
+                                drawerState.close()
+                                openNotificationSettings(context)
+                            }
                         },
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -283,8 +286,10 @@ private fun MediaContent(
                         },
                         selected = false,
                         onClick = {
-                            coroutineScope.launch { drawerState.close() }
-                            showLogoutDialog = true
+                            coroutineScope.launch {
+                                drawerState.close()
+                                showLogoutDialog = true
+                            }
                         },
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -402,7 +407,7 @@ private fun MediaAppBar(visible: Boolean, onOpenMenu: () -> Unit) {
     ) {
         TopAppBar(
             title = {},
-            actions = {
+            navigationIcon = {
                 IconButton(onClick = onOpenMenu) {
                     Icon(
                         imageVector = Icons.Default.Menu,
