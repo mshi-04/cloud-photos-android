@@ -82,8 +82,8 @@ Useful commands for validation:
 ```bash
 # Check domain layer for forbidden imports
 grep -rn "import android\.\|import androidx\.compose\.\|import androidx\.room\.\|import com\.amplifyframework\.\|import com\.google\.firebase\.\|import androidx\.work\." feature/*/domain/src/main/
-# Check UI layer for direct repository/DAO/SDK access
-grep -rn "Repository\|DAO\|Amplify\|WorkManager" feature/*/ui/src/main/
+# Check UI layer for direct repository/DAO/SDK access (excludes domain interfaces by targeting implementation patterns)
+grep -rnE "RepositoryImpl|@Dao|AmplifyClient|WorkerFactory" feature/*/ui/src/main/
 # Check for domain-to-data/ui dependency violations in build files
 grep -rn "data\"\|ui\"" feature/*/domain/build.gradle.kts
 # Check for cross-feature dependencies in build files

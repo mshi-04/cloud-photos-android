@@ -30,7 +30,7 @@ ViewModels.
 
 | Segment | Rule |
 |---|---|
-| `tested function name` | The exact Kotlin function, property, or event-handler name under test. Must appear first. camelCase is allowed only in this segment (e.g., `onSignIn`, `fetchMedia`). |
+| `tested function name` | The exact Kotlin function, property, or event-handler name under test. Must appear first. |
 | `expected outcome` | A verb phrase using one of the allowed verbs only (see below). |
 | `when [condition]` | The scenario or input state. Must always be present — never omit. |
 
@@ -40,9 +40,7 @@ ViewModels.
 
 - `test`, `should`, `verify`, or similar prefixes are forbidden.
 - snake_case is forbidden anywhere in the name.
-- camelCase in backtick-enclosed test names is allowed when it improves readability
-  (especially for Kotlin symbol names under test).
-  PascalCase class names (e.g., `SignedInState`, `NetworkError`) are also permitted.
+- camelCase is permitted for any identifier (e.g., `onSignIn`, `fetchMedia`) within the backtick-enclosed test name. For symbolic names (class names or types), use PascalCase (e.g., `SignedInState`, `NetworkError`) when helpful. For the natural language parts that describe conditions or expectations, prefer using lowercase words separated by spaces.
 - Japanese characters are forbidden.
 - Vague outcome words (`works`, `handles`, `correctly`, `properly`) are forbidden.
 - Categorical labels (`success case`, `failure case`, `happy path`, `error case`) are forbidden.
