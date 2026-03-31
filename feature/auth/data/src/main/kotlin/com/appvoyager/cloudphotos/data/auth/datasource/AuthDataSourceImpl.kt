@@ -248,7 +248,10 @@ class AuthDataSourceImpl @Inject constructor(private val deviceTokenDataSource: 
             }
         }.fold(
             onSuccess = { AuthResult.Success(Unit) },
-            onFailure = { AuthResult.Error(AuthErrorMapper.map(it)) }
+            onFailure = {
+                if (it is CancellationException) throw it
+                AuthResult.Error(AuthErrorMapper.map(it))
+            }
         )
     }
 
