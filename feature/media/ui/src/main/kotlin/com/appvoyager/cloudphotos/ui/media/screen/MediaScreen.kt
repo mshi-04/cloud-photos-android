@@ -140,6 +140,7 @@ fun MediaScreen(
                     }
 
                     is MediaEffect.NavigateToLogin -> latestOnNavigateToLogin.value()
+                    is MediaEffect.NavigateAfterAccountDeletion -> latestOnNavigateToLogin.value()
                 }
             }
         }
@@ -185,6 +186,7 @@ fun MediaScreen(
                 gridColumnCount = uiState.gridColumnCount,
                 onGridSettingsClick = { viewModel.onShowSettingsDialog() },
                 onSignOut = { viewModel.signOut() },
+                onDeleteUser = { viewModel.deleteUser() },
                 onMediaClick = onMediaClick,
                 onRetry = { viewModel.loadMediaList() },
                 onRetryPermissions = { permissionCheckKey++ }
@@ -200,9 +202,9 @@ fun MediaScreen(
         )
     }
 
-    BackHandler(enabled = uiState.isSigningOut) {}
+    BackHandler(enabled = uiState.isSigningOut || uiState.isDeletingUser) {}
 
-    if (uiState.isSigningOut) {
+    if (uiState.isSigningOut || uiState.isDeletingUser) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -230,6 +232,7 @@ private fun MediaContent(
     gridColumnCount: GridColumnCount,
     onGridSettingsClick: () -> Unit,
     onSignOut: () -> Unit,
+    onDeleteUser: () -> Unit,
     onMediaClick: (mediaId: MediaId, mediaList: List<Media>) -> Unit,
     onRetry: () -> Unit,
     onRetryPermissions: () -> Unit
@@ -245,6 +248,7 @@ private fun MediaContent(
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val coroutineScope = rememberCoroutineScope()
     var showLogoutDialog by remember { mutableStateOf(false) }
+    var showWithdrawDialog by remember { mutableStateOf(false) }
 
     BackHandler(enabled = drawerState.isOpen) {
         coroutineScope.launch { drawerState.close() }
@@ -254,7 +258,8 @@ private fun MediaContent(
         drawerState = drawerState,
         coroutineScope = coroutineScope,
         onGridSettingsClick = onGridSettingsClick,
-        onSignOut = { showLogoutDialog = true }
+        onSignOut = { showLogoutDialog = true },
+        onDeleteUser = { showWithdrawDialog = true }
     ) {
         Box(
             modifier = Modifier
@@ -321,6 +326,16 @@ private fun MediaContent(
             onDismiss = { showLogoutDialog = false }
         )
     }
+
+    if (showWithdrawDialog) {
+        WithdrawConfirmDialog(
+            onConfirm = {
+                showWithdrawDialog = false
+                onDeleteUser()
+            },
+            onDismiss = { showWithdrawDialog = false }
+        )
+    }
 }
 
 @Composable
@@ -329,6 +344,7 @@ private fun MediaMenuDrawer(
     coroutineScope: CoroutineScope,
     onGridSettingsClick: () -> Unit,
     onSignOut: () -> Unit,
+    onDeleteUser: () -> Unit,
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
@@ -376,6 +392,22 @@ private fun MediaMenuDrawer(
                         },
                         modifier = Modifier.fillMaxWidth()
                     )
+                    NavigationDrawerItem(
+                        label = {
+                            Text(
+                                text = stringResource(R.string.media_menu_withdraw),
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        },
+                        selected = false,
+                        onClick = {
+                            coroutineScope.launch {
+                                drawerState.close()
+                                onDeleteUser()
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
         }
@@ -385,24 +417,55 @@ private fun MediaMenuDrawer(
 }
 
 @Composable
-private fun LogoutConfirmDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
+private fun DestructiveConfirmDialog(
+    title: String,
+    message: String,
+    confirmText: String,
+    cancelText: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(text = stringResource(R.string.media_logout_confirm_title)) },
-        text = { Text(text = stringResource(R.string.media_logout_confirm_message)) },
+        title = { Text(text = title) },
+        text = { Text(text = message) },
         confirmButton = {
             TextButton(onClick = onConfirm) {
                 Text(
-                    text = stringResource(R.string.media_logout_confirm_button),
+                    text = confirmText,
                     color = MaterialTheme.colorScheme.error
                 )
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(text = stringResource(R.string.media_logout_confirm_cancel))
+                Text(text = cancelText)
             }
         }
+    )
+}
+
+@Composable
+private fun LogoutConfirmDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    DestructiveConfirmDialog(
+        title = stringResource(R.string.media_logout_confirm_title),
+        message = stringResource(R.string.media_logout_confirm_message),
+        confirmText = stringResource(R.string.media_logout_confirm_button),
+        cancelText = stringResource(R.string.media_logout_confirm_cancel),
+        onConfirm = onConfirm,
+        onDismiss = onDismiss
+    )
+}
+
+@Composable
+private fun WithdrawConfirmDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    DestructiveConfirmDialog(
+        title = stringResource(R.string.media_withdraw_confirm_title),
+        message = stringResource(R.string.media_withdraw_confirm_message),
+        confirmText = stringResource(R.string.media_withdraw_confirm_button),
+        cancelText = stringResource(R.string.media_withdraw_confirm_cancel),
+        onConfirm = onConfirm,
+        onDismiss = onDismiss
     )
 }
 
@@ -645,6 +708,7 @@ private fun MediaSnackbarMessage.toMessage(context: android.content.Context): St
     MediaSnackbarMessage.Unknown -> context.getString(R.string.error_unknown)
     MediaSnackbarMessage.MediaLoadFailed -> context.getString(R.string.error_media_load_failed)
     MediaSnackbarMessage.SignOutFailed -> context.getString(R.string.error_sign_out)
+    MediaSnackbarMessage.DeleteUserFailed -> context.getString(R.string.error_delete_user)
 }
 
 @Preview(showBackground = true)
@@ -671,6 +735,7 @@ private fun MediaContentPreview() {
             gridColumnCount = GridColumnCount.of(3),
             onGridSettingsClick = {},
             onSignOut = {},
+            onDeleteUser = {},
             onMediaClick = { _, _ -> },
             onRetry = {},
             onRetryPermissions = {}
@@ -687,6 +752,7 @@ private fun MediaContentErrorPreview() {
             gridColumnCount = GridColumnCount.of(3),
             onGridSettingsClick = {},
             onSignOut = {},
+            onDeleteUser = {},
             onMediaClick = { _, _ -> },
             onRetry = {},
             onRetryPermissions = {}
@@ -703,6 +769,7 @@ private fun MediaContentPermissionRequiredPreview() {
             gridColumnCount = GridColumnCount.of(3),
             onGridSettingsClick = {},
             onSignOut = {},
+            onDeleteUser = {},
             onMediaClick = { _, _ -> },
             onRetry = {},
             onRetryPermissions = {}

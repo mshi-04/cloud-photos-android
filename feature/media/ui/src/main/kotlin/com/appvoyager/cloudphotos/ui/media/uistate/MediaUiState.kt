@@ -7,7 +7,8 @@ data class MediaUiState(
     val screenState: ScreenState = ScreenState.None,
     val gridColumnCount: GridColumnCount = GridColumnCount.of(3),
     val isSettingsDialogVisible: Boolean = false,
-    val isSigningOut: Boolean = false
+    val isSigningOut: Boolean = false,
+    val isDeletingUser: Boolean = false
 ) {
     sealed class ScreenState {
         data object None : ScreenState()

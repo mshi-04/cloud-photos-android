@@ -87,4 +87,12 @@
     <string name="camera_cd_last_photo">最後に撮影した写真</string>
     <string name="camera_cd_close">カメラを閉じる</string>
 
+    <!-- 退会 -->
+    <string name="media_menu_withdraw">退会</string>
+    <string name="media_withdraw_confirm_title">退会しますか？</string>
+    <string name="media_withdraw_confirm_message">退会するとアカウントとすべてのデータが完全に削除され、元に戻すことはできません。</string>
+    <string name="media_withdraw_confirm_button">退会する</string>
+    <string name="media_withdraw_confirm_cancel">キャンセル</string>
+    <string name="error_delete_user">退会処理に失敗しました</string>
+
 </resources>

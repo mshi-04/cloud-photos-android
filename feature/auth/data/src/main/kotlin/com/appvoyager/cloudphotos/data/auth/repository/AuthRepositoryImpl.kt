@@ -37,4 +37,6 @@ class AuthRepositoryImpl @Inject constructor(private val dataSource: AuthDataSou
 
     override suspend fun confirmResetPassword(request: ConfirmResetPasswordRequest): AuthResult<Unit> =
         dataSource.confirmResetPassword(request)
+
+    override suspend fun deleteUser(): AuthResult<Unit> = dataSource.deleteUser()
 }
