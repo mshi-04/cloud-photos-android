@@ -88,4 +88,12 @@
     <string name="camera_cd_last_photo">Last taken photo</string>
     <string name="camera_cd_close">Close camera</string>
 
+    <!-- Withdrawal -->
+    <string name="media_menu_withdraw">Delete Account</string>
+    <string name="media_withdraw_confirm_title">Delete your account?</string>
+    <string name="media_withdraw_confirm_message">Your account and all data will be permanently deleted. This action cannot be undone.</string>
+    <string name="media_withdraw_confirm_button">Delete Account</string>
+    <string name="media_withdraw_confirm_cancel">Cancel</string>
+    <string name="error_delete_user">Failed to delete account</string>
+
 </resources>

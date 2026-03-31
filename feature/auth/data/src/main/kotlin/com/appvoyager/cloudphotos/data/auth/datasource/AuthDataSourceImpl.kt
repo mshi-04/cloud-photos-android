@@ -1,5 +1,6 @@
 package com.appvoyager.cloudphotos.data.auth.datasource
 
+import com.amplifyframework.api.rest.RestOptions
 import com.amplifyframework.auth.AuthUserAttributeKey
 import com.amplifyframework.auth.cognito.result.AWSCognitoAuthSignOutResult
 import com.amplifyframework.auth.options.AuthSignUpOptions
@@ -7,6 +8,7 @@ import com.amplifyframework.auth.result.step.AuthSignInStep
 import com.amplifyframework.core.Amplify
 import com.appvoyager.cloudphotos.data.auth.util.AuthErrorMapper
 import com.appvoyager.cloudphotos.data.auth.util.AuthSignInStepMapper
+import com.appvoyager.cloudphotos.data.common.awaitAmplifyRestCall
 import com.appvoyager.cloudphotos.data.fcm.DeviceToken
 import com.appvoyager.cloudphotos.data.fcm.DeviceTokenDataSource
 import com.appvoyager.cloudphotos.domain.auth.model.AuthResult
@@ -215,6 +217,40 @@ class AuthDataSourceImpl @Inject constructor(private val deviceTokenDataSource: 
         onSuccess = { AuthResult.Success(Unit) },
         onFailure = { AuthResult.Error(AuthErrorMapper.map(it)) }
     )
+
+    override suspend fun deleteUser(): AuthResult<Unit> {
+        runCatching { cleanUpFcmToken() }
+            .onFailure { if (it is CancellationException) throw it }
+
+        val options = RestOptions.builder()
+            .addPath("/users")
+            .build()
+        // Backend deletion must succeed before Cognito account is removed.
+        // If the order were reversed, the auth token would be invalid and the backend call would fail,
+        // leaving S3/DynamoDB data orphaned.
+        val restResult = runCatching {
+            awaitAmplifyRestCall(options) { name, opts, onResp, onErr ->
+                Amplify.API.delete(name, opts, onResp, onErr)
+            }
+        }
+        val restFailure = restResult.exceptionOrNull()
+        if (restFailure != null) {
+            if (restFailure is CancellationException) throw restFailure
+            return AuthResult.Error(AuthErrorMapper.map(restFailure))
+        }
+
+        return runCatching {
+            suspendCancellableCoroutine { coroutine ->
+                Amplify.Auth.deleteUser(
+                    { coroutine.resume(Unit) { _, _, _ -> } },
+                    { coroutine.resumeWithException(it) }
+                )
+            }
+        }.fold(
+            onSuccess = { AuthResult.Success(Unit) },
+            onFailure = { AuthResult.Error(AuthErrorMapper.map(it)) }
+        )
+    }
 
     private suspend fun cleanUpFcmToken() {
         try {
