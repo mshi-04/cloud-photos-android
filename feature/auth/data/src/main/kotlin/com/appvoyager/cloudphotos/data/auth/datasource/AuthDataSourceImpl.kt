@@ -112,7 +112,7 @@ class AuthDataSourceImpl @Inject constructor(private val deviceTokenDataSource: 
 
     override suspend fun signOut(): AuthResult<Unit> {
         runCatching { cleanUpFcmToken() }
-            .onFailure { if (it is CancellationException) throw it }
+            .onFailure { it.rethrowIfCancellation() }
 
         val result = suspendCancellableCoroutine { coroutine ->
             Amplify.Auth.signOut { coroutine.resume(it) { _, _, _ -> } }
