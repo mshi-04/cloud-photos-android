@@ -13,6 +13,7 @@ import com.amplifyframework.auth.exceptions.ServiceException
 import com.amplifyframework.auth.exceptions.SessionExpiredException
 import com.amplifyframework.auth.exceptions.SignedOutException
 import com.amplifyframework.auth.exceptions.ValidationException
+import com.appvoyager.cloudphotos.data.common.AmplifyRestException
 import com.appvoyager.cloudphotos.domain.auth.model.AuthError
 import java.io.IOException
 
@@ -25,6 +26,11 @@ internal object AuthErrorMapper {
         is IOException -> AuthError.Network(throwable.message)
         is ServiceException -> mapServiceException(throwable)
         is ValidationException -> mapValidationException(throwable)
+        is AmplifyRestException -> if (throwable.isNonServerError) {
+            AuthError.Unknown(throwable.message)
+        } else {
+            AuthError.Network(throwable.message)
+        }
         else -> AuthError.Unknown(throwable.message)
     }
 

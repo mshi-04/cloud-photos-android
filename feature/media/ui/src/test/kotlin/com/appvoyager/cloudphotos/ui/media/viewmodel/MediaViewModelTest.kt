@@ -2,6 +2,7 @@ package com.appvoyager.cloudphotos.ui.media.viewmodel
 
 import com.appvoyager.cloudphotos.domain.auth.model.AuthError
 import com.appvoyager.cloudphotos.domain.auth.model.AuthResult
+import com.appvoyager.cloudphotos.domain.auth.usecase.DeleteUserUseCase
 import com.appvoyager.cloudphotos.domain.auth.usecase.SignOutUseCase
 import com.appvoyager.cloudphotos.domain.media.model.Media
 import com.appvoyager.cloudphotos.domain.media.model.MediaType
@@ -52,6 +53,7 @@ class MediaViewModelTest {
     private lateinit var prepareUploadQueueUseCase: PrepareUploadQueueUseCase
     private lateinit var scheduleDeleteUseCase: ScheduleDeleteUseCase
     private lateinit var signOutUseCase: SignOutUseCase
+    private lateinit var deleteUserUseCase: DeleteUserUseCase
 
     @BeforeEach
     fun setup() {
@@ -63,6 +65,7 @@ class MediaViewModelTest {
         prepareUploadQueueUseCase = mockk()
         scheduleDeleteUseCase = mockk()
         signOutUseCase = mockk()
+        deleteUserUseCase = mockk()
     }
 
     @AfterEach
@@ -77,7 +80,8 @@ class MediaViewModelTest {
         syncUploadRecordsUseCase = syncUploadRecordsUseCase,
         prepareUploadQueueUseCase = prepareUploadQueueUseCase,
         scheduleDeleteUseCase = scheduleDeleteUseCase,
-        signOutUseCase = signOutUseCase
+        signOutUseCase = signOutUseCase,
+        deleteUserUseCase = deleteUserUseCase
     )
 
     @Test
@@ -529,5 +533,81 @@ class MediaViewModelTest {
 
         // Assert
         coVerify(exactly = 1) { signOutUseCase() }
+    }
+
+    @Test
+    fun `deleteUser emits NavigateAfterAccountDeletion when delete user succeeds`() = runTest {
+        // Arrange
+        every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
+        coEvery { deleteUserUseCase() } returns AuthResult.Success(Unit)
+
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // Act
+        viewModel.deleteUser()
+        advanceUntilIdle()
+
+        // Assert
+        val effect = viewModel.effect.first()
+        assertEquals(MediaEffect.NavigateAfterAccountDeletion, effect)
+    }
+
+    @Test
+    fun `deleteUser emits ShowSnackbar when delete user returns error`() = runTest {
+        // Arrange
+        every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
+        coEvery { deleteUserUseCase() } returns AuthResult.Error(AuthError.Unknown())
+
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // Act
+        viewModel.deleteUser()
+        advanceUntilIdle()
+
+        // Assert
+        val effect = viewModel.effect.first()
+        assertEquals(MediaSnackbarMessage.DeleteUserFailed, (effect as MediaEffect.ShowSnackbar).message)
+    }
+
+    @Test
+    fun `deleteUser emits ShowSnackbar when delete user throws`() = runTest {
+        // Arrange
+        every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
+        coEvery { deleteUserUseCase() } throws RuntimeException("delete user failed")
+
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // Act
+        viewModel.deleteUser()
+        advanceUntilIdle()
+
+        // Assert
+        val effect = viewModel.effect.first()
+        assertEquals(MediaSnackbarMessage.DeleteUserFailed, (effect as MediaEffect.ShowSnackbar).message)
+    }
+
+    @Test
+    fun `deleteUser ignores concurrent call when already deleting user`() = runTest {
+        // Arrange
+        every { getGridColumnCountUseCase() } returns flowOf(GridColumnCount.of(3))
+        val deferred = kotlinx.coroutines.CompletableDeferred<AuthResult<Unit>>()
+        coEvery { deleteUserUseCase() } coAnswers { deferred.await() }
+
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // Act: 1回目を開始してisDeletingUser=trueになった後、2回目を呼ぶ
+        viewModel.deleteUser()
+        testScheduler.advanceTimeBy(1)
+        viewModel.deleteUser()
+
+        deferred.complete(AuthResult.Success(Unit))
+        advanceUntilIdle()
+
+        // Assert
+        coVerify(exactly = 1) { deleteUserUseCase() }
     }
 }

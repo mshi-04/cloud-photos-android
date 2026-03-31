@@ -4,6 +4,7 @@ import android.os.SystemClock
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.appvoyager.cloudphotos.domain.auth.model.AuthResult
+import com.appvoyager.cloudphotos.domain.auth.usecase.DeleteUserUseCase
 import com.appvoyager.cloudphotos.domain.auth.usecase.SignOutUseCase
 import com.appvoyager.cloudphotos.domain.media.usecase.GetGridColumnCountUseCase
 import com.appvoyager.cloudphotos.domain.media.usecase.GetMediaListUseCase
@@ -38,7 +39,8 @@ class MediaViewModel @Inject constructor(
     private val syncUploadRecordsUseCase: SyncUploadRecordsUseCase,
     private val prepareUploadQueueUseCase: PrepareUploadQueueUseCase,
     private val scheduleDeleteUseCase: ScheduleDeleteUseCase,
-    private val signOutUseCase: SignOutUseCase
+    private val signOutUseCase: SignOutUseCase,
+    private val deleteUserUseCase: DeleteUserUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MediaUiState())
@@ -115,6 +117,25 @@ class MediaViewModel @Inject constructor(
                 _effect.send(MediaEffect.ShowSnackbar(MediaSnackbarMessage.SignOutFailed))
             } finally {
                 _uiState.update { it.copy(isSigningOut = false) }
+            }
+        }
+    }
+
+    fun deleteUser() {
+        viewModelScope.launch {
+            if (_uiState.value.isDeletingUser) return@launch
+            _uiState.update { it.copy(isDeletingUser = true) }
+            try {
+                val result = deleteUserUseCase()
+                when (result) {
+                    is AuthResult.Success -> _effect.send(MediaEffect.NavigateAfterAccountDeletion)
+                    is AuthResult.Error -> _effect.send(MediaEffect.ShowSnackbar(MediaSnackbarMessage.DeleteUserFailed))
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                _effect.send(MediaEffect.ShowSnackbar(MediaSnackbarMessage.DeleteUserFailed))
+            } finally {
+                _uiState.update { it.copy(isDeletingUser = false) }
             }
         }
     }
