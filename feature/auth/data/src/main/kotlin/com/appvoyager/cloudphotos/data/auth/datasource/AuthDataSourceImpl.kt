@@ -220,7 +220,7 @@ class AuthDataSourceImpl @Inject constructor(private val deviceTokenDataSource: 
 
     override suspend fun deleteUser(): AuthResult<Unit> {
         runCatching { cleanUpFcmToken() }
-            .onFailure { if (it is CancellationException) throw it }
+            .onFailure { it.rethrowIfCancellation() }
 
         val options = RestOptions.builder()
             .addPath("/users")
@@ -235,7 +235,7 @@ class AuthDataSourceImpl @Inject constructor(private val deviceTokenDataSource: 
         }
         val restFailure = restResult.exceptionOrNull()
         if (restFailure != null) {
-            if (restFailure is CancellationException) throw restFailure
+            restFailure.rethrowIfCancellation()
             return AuthResult.Error(AuthErrorMapper.map(restFailure))
         }
 
@@ -249,10 +249,14 @@ class AuthDataSourceImpl @Inject constructor(private val deviceTokenDataSource: 
         }.fold(
             onSuccess = { AuthResult.Success(Unit) },
             onFailure = {
-                if (it is CancellationException) throw it
+                it.rethrowIfCancellation()
                 AuthResult.Error(AuthErrorMapper.map(it))
             }
         )
+    }
+
+    private fun Throwable.rethrowIfCancellation() {
+        if (this is CancellationException) throw this
     }
 
     private suspend fun cleanUpFcmToken() {
