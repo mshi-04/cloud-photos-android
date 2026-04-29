@@ -1,89 +1,88 @@
 # core/AGENTS.md
 
-Local guidance for the `core` modules.
-Read root `AGENTS.md` first, then apply the rules below.
-If this file conflicts with root `AGENTS.md`, prefer the root file and keep the change conservative.
+`core` モジュールのローカルガイダンス。
+まずルートの `AGENTS.md` を読み、次に以下のルールを適用してください。
+このファイルとルートの `AGENTS.md` が矛盾する場合は、ルートファイルを優先し変更を保守的に保つこと。
 
-## Scope
+## スコープ
 
-This folder currently includes:
+このフォルダには現在以下が含まれます：
 
 - `core/common`
 - `core/data`
 - `core/ui`
 
-## Intent of core modules
+## core モジュールの意図
 
-`core/*` exists for truly shared concerns.
-Code belongs here only when it is meaningfully shared across features or clearly app-wide.
-Do not move code into `core` just because it feels generic.
+`core/*` は真に共有された関心事のために存在します。
+コードが複数のフィーチャーで意味のある共有をされているか、明確にアプリ全体のものである場合のみここに置く。
+汎用的に感じられるというだけの理由でコードを `core` に移動しないこと。
 
-## Placement rules
+## 配置ルール
 
 ### `core/common`
 
-Use for:
+以下に使用する：
 
-- cross-cutting abstractions
-- common contracts used by multiple features
-- domain-common concepts that are not owned by a single feature
+- 横断的な抽象化
+- 複数のフィーチャーで使用される共通コントラクト
+- 単一のフィーチャーが所有しないドメイン共通概念
 
-Rules:
+ルール：
 
-- Keep this framework-light whenever possible.
-- Do not dump unrelated helpers here.
-- If a concept is owned by a single feature, keep it in that feature.
+- できる限りフレームワーク軽量に保つ。
+- 無関係なヘルパーをここに捨てない。
+- 概念が単一のフィーチャーによって所有される場合は、そのフィーチャーに保つ。
 
 ### `core/data`
 
-Use for:
+以下に使用する：
 
-- shared data-side implementations that are genuinely cross-feature
-- infrastructure code needed by more than one feature
+- 真にフィーチャー横断で共有されるデータサイドの実装
+- 複数のフィーチャーに必要なインフラコード
 
-Rules:
+ルール：
 
-- Keep shared data code focused and reusable.
-- Do not move feature-specific repository logic here.
-- If the code depends on one feature's business meaning, it probably does not belong in `core/data`.
+- 共有データコードを集中させ再利用可能に保つ。
+- フィーチャー固有のリポジトリロジックをここに移動しない。
+- コードが一つのフィーチャーのビジネス上の意味に依存している場合、おそらく `core/data` には属さない。
 
 ### `core/ui`
 
-Use for:
+以下に使用する：
 
-- shared theme
-- shared strings/resources
-- common UI elements used across multiple features
+- 共有テーマ
+- 共有文字列/リソース
+- 複数のフィーチャーで使用される共通UI要素
 
-Rules:
+ルール：
 
-- Keep feature-specific screens and effects out of `core/ui`.
-- Do not move a component here unless reuse is real.
-- Preserve repository-wide UI conventions such as `CloudPhotosTheme` usage and resource-driven
-  strings.
+- フィーチャー固有のスクリーンとエフェクトを `core/ui` から除外する。
+- 実際の再利用がない限り、コンポーネントをここに移動しない。
+- `CloudPhotosTheme` の使用やリソース駆動の文字列など、リポジトリ全体のUI規約を維持する。
 
-## Guardrails
+## ガードレール
 
-- Prefer feature-local ownership by default.
-- Move code into `core` only when it is clearly shared by multiple features or app-wide.
-- Avoid creating a vague "misc" shared layer.
-- Be conservative when editing `core`, because changes here often affect multiple modules.
+- デフォルトではフィーチャーローカルな所有権を優先する。
+- コードを `core` に移動するのは、複数のフィーチャーやアプリ全体で明確に共有されている場合のみ。
+- 曖昧な「雑多な」共有レイヤーを作らない。
+- ここでの変更は複数のモジュールに影響することが多いため、`core` の編集は保守的に行う。
 
-## Testing guidance
+## テストガイダンス
 
-If `core` changes, prefer broader verification because multiple modules may be affected:
+`core` の変更では、複数のモジュールが影響を受ける可能性があるため、より広い検証を優先する：
 
 ```bash
 ./gradlew test
 bundle exec fastlane test
 ```
 
-If the change is narrowly isolated, still call out which downstream modules may be impacted.
+変更が狭く限定されている場合でも、影響を受ける可能性のある下流モジュールを明示すること。
 
-## Report back with
+## レポート内容
 
-- which core module changed
-- why the code belongs in `core` instead of a feature module
-- downstream modules/features that may be affected
-- tests run
-- follow-up risks from shared impact
+- 変更された core モジュール
+- フィーチャーモジュールではなく `core` にコードが属する理由
+- 影響を受ける可能性のある下流モジュール/フィーチャー
+- 実行したテスト
+- 共有影響によるフォローアップリスク

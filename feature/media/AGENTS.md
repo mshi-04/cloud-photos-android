@@ -1,133 +1,129 @@
 # feature/media/AGENTS.md
 
-Local guidance for the `media` feature.
-Read root `AGENTS.md` first, then apply the rules below.
-If this file conflicts with root `AGENTS.md`, prefer the root file and keep the change conservative.
+`media` フィーチャーのローカルガイダンス。
+まずルートの `AGENTS.md` を読み、次に以下のルールを適用してください。
+このファイルとルートの `AGENTS.md` が矛盾する場合は、ルートファイルを優先し変更を保守的に保つこと。
 
-## Scope
+## スコープ
 
-This feature is split into:
+このフィーチャーは以下に分割されています：
 
 - `feature/media/domain`
 - `feature/media/data`
 - `feature/media/ui`
 
-The former `feature/settings` module has been merged into this feature.
-Settings domain contracts, use cases, value objects, and persistence now live inside the media
-module layers.
+旧 `feature/settings` モジュールはこのフィーチャーに統合済みです。
+設定のドメインコントラクト、ユースケース、値オブジェクト、永続化は
+mediaモジュールの各レイヤー内に存在します。
 
-## Intent of this feature
+## このフィーチャーの意図
 
-This feature owns media listing, upload, delete, upload-record persistence, sync status handling,
-background scheduling related to media operations, and lightweight user settings.
-This is one of the highest-risk areas in the repository because it mixes domain rules, local
-persistence, remote sync, background workers, and user-facing settings.
+このフィーチャーはメディア一覧表示、アップロード、削除、アップロードレコードの永続化、
+同期ステータス管理、メディア操作に関するバックグラウンドスケジューリング、
+および軽量なユーザー設定を所有します。
+ドメインルール、ローカル永続化、リモート同期、バックグラウンドワーカー、
+ユーザー向け設定が混在するため、リポジトリ内で最もリスクの高い領域の一つです。
 
-## Domain rules
+## ドメインルール
 
-Keep `feature/media/domain` focused on:
+`feature/media/domain` を以下に集中させる：
 
-- media domain models
-- upload/delete-related use cases
-- repository contracts
-- scheduler contracts
-- value objects for validated media concepts
-- settings repository contracts
-- settings use cases
-- settings value objects
-- settings-specific validation rules
+- メディアドメインモデル
+- アップロード/削除関連のユースケース
+- リポジトリコントラクト
+- スケジューラコントラクト
+- バリデーション済みメディア概念の値オブジェクト
+- 設定リポジトリコントラクト
+- 設定ユースケース
+- 設定値オブジェクト
+- 設定固有のバリデーションルール
 
-Do not place here:
+ここに置かないもの：
 
-- Android framework types
-- Room/DAO/entity code
-- Amplify/API/storage SDK specifics
-- WorkManager implementation details
+- Androidフレームワーク型
+- Room/DAO/エンティティコード
+- Amplify/API/ストレージSDKの詳細
+- WorkManager実装の詳細
 
-Rules:
+ルール：
 
-- Keep use cases single-purpose.
-- Preserve the distinction between upload orchestration, sync, local record management, and
-  scheduling.
-- Do not move worker behavior into domain use cases.
-- Keep validated settings concepts in value objects when that pattern already exists.
-- If a setting starts being shared by multiple features, be explicit about whether it still belongs
-  here or should move to a shared/core location.
+- ユースケースは単一の目的に留める。
+- アップロードオーケストレーション、同期、ローカルレコード管理、スケジューリングの区別を維持する。
+- ワーカー動作をドメインのユースケースに移動しない。
+- 既存のパターンがある場合は、バリデーション済みの設定概念を値オブジェクトに保つ。
+- 設定が複数のフィーチャーで共有されるようになった場合は、ここに留まるべきかコア/共有の場所に移動すべきかを明示する。
 
-## Data rules
+## データルール
 
-`feature/media/data` is responsible for:
+`feature/media/data` は以下を担当する：
 
-- local media access
-- upload record persistence
-- remote upload record sync
-- repository implementations
-- worker/scheduler implementations
-- mapping between database/remote/data models and domain models
-- reading/writing persisted settings values
-- implementing settings repository contracts
-- translating persistence models into domain-facing settings values
+- ローカルメディアアクセス
+- アップロードレコードの永続化
+- リモートアップロードレコードの同期
+- リポジトリ実装
+- ワーカー/スケジューラ実装
+- DBモデル/リモートモデル/データモデルとドメインモデルのマッピング
+- 永続化された設定値の読み書き
+- 設定リポジトリコントラクトの実装
+- 永続化モデルをドメイン向けの設定値に変換
 
-Rules:
+ルール：
 
-- Preserve the split between local data access, remote sync, repository coordination, and worker
-  execution.
-- Do not collapse multiple responsibilities into one large class.
-- Repository implementations should delegate to data sources and mapper objects.
-- Keep sync-status translation and error translation localized.
-- Re-throw `CancellationException` in coroutine error handling.
-- Keep settings persistence details in data; do not let UI or unrelated features access storage
-  details directly.
-- Prefer small repository implementations and focused data source code for settings.
+- ローカルデータアクセス、リモート同期、リポジトリ調整、ワーカー実行の分離を維持する。
+- 複数の責任を一つの大きなクラスに崩さない。
+- リポジトリ実装はデータソースとマッパーオブジェクトへの委譲のみを行う。
+- 同期ステータスの変換とエラー変換はローカルに保つ。
+- コルーチンのエラーハンドリングで `CancellationException` を再スローする。
+- 設定の永続化の詳細はdataに保つ。UIや無関係なフィーチャーがストレージの詳細に直接アクセスしないようにする。
+- 設定用の小さなリポジトリ実装と集中したデータソースコードを優先する。
 
-## Worker and scheduler guardrails
+## ワーカーとスケジューラのガードレール
 
-Be especially careful when touching:
+以下に触れる際は特に注意すること：
 
-- upload queue preparation
-- retry behavior
-- sync status transitions
-- local/remote upload record consistency
-- notification side effects
-- delete scheduling and background cleanup
+- アップロードキューの準備
+- リトライ動作
+- 同期ステータス遷移
+- ローカル/リモートアップロードレコードの整合性
+- 通知のサイドエフェクト
+- 削除スケジューリングとバックグラウンドクリーンアップ
 
-Rules:
+ルール：
 
-- Prefer existing worker/scheduler patterns.
-- Avoid changing execution semantics unless the task explicitly requires it.
-- If worker input/output or retry behavior changes, mention it explicitly in the report.
+- 既存のワーカー/スケジューラパターンを優先する。
+- タスクが明示的に要求しない限り、実行セマンティクスを変更しない。
+- ワーカーの入出力やリトライ動作が変わる場合は、レポートで明示的に言及する。
 
-## UI rules
+## UI ルール
 
-`feature/media/ui` is responsible for:
+`feature/media/ui` は以下を担当する：
 
-- media screen rendering
-- media ViewModels
-- media UI state/effect models
-- user-triggered actions such as selecting layout or starting UI-driven flows
+- メディアスクリーンの描画
+- メディア ViewModel
+- メディア UIステート/エフェクトモデル
+- レイアウト選択やUIドリブンなフローの開始など、ユーザーがトリガーするアクション
 
-Rules:
+ルール：
 
-- Keep business logic in use cases, not in composables.
-- ViewModels should orchestrate use cases and expose state/effects.
-- Keep grid/layout preferences or filtering behavior aligned with settings/domain responsibilities.
-- Be careful when changing user-visible status handling for uploads/deletes.
+- ビジネスロジックはコンポーザブルではなくユースケースに保つ。
+- ViewModel はユースケースをオーケストレーションし、ステート/エフェクトを公開する。
+- グリッド/レイアウト設定やフィルタリング動作を設定/ドメインの責任に合わせる。
+- アップロード/削除のユーザー向けステータス処理を変更する際は注意する。
 
-## Model separation rules
+## モデル分離ルール
 
-Do not return:
+以下を UI や domain API に直接返さないこと：
 
-- Room entities
-- remote DTOs
-- worker-only models
-- raw provider/storage responses
+- Room エンティティ
+- リモート DTO
+- ワーカー専用モデル
+- 生のプロバイダー/ストレージレスポンス
 
-to UI or domain APIs directly.
-Always map them to domain-facing models first.
+必ず最初にドメイン向けモデルにマッピングすること。
 
-## Testing guidance
+## テストガイダンス
 
-Prefer targeted media tests first:
+まず対象の media テストを優先する：
 
 ```bash
 ./gradlew :feature:media:domain:test
@@ -135,16 +131,15 @@ Prefer targeted media tests first:
 ./gradlew :feature:media:ui:test
 ```
 
-Run broader tests if changes affect app wiring, shared modules, or multiple media layers.
-If only settings logic changed, `:feature:media:domain:test` and `:feature:media:data:test` are
-sufficient as a first pass.
+変更がアプリ配線、共有モジュール、または複数のメディアレイヤーに影響する場合は、より広いテストを実行する。
+設定ロジックのみが変更された場合は、まず `:feature:media:domain:test` と `:feature:media:data:test` で十分です。
 
-## Report back with
+## レポート内容
 
-- which media layer changed
-- whether worker/scheduler behavior changed
-- whether sync status or upload/delete flow semantics changed
-- whether any settings semantics or validation changed
-- tests run
-- remaining risks around background execution or record consistency
-- any follow-up if a setting may outgrow this feature and should move to core
+- 変更された media レイヤー
+- ワーカー/スケジューラ動作が変更されたか
+- 同期ステータスやアップロード/削除フローのセマンティクスが変更されたか
+- 設定のセマンティクスやバリデーションが変更されたか
+- 実行したテスト
+- バックグラウンド実行やレコード整合性に関する残存リスク
+- 設定がこのフィーチャーを超えて core に移動すべき場合のフォローアップ

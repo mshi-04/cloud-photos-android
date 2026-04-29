@@ -1,58 +1,57 @@
-# Testing Conventions
+# テスト規約
 
-Referenced from `AGENTS.md` (source of truth for all rules).
-Source-of-truth order: `AGENTS.md` → feature-local patterns → `CLAUDE.md` → `.agent/skills/*`.
-When this file and `AGENTS.md` conflict, prefer `AGENTS.md`.
-See also: `.agent/skills/android-testing/SKILL.md` for testing pattern guidance.
-Where this file and the Skill conflict on annotation rules or naming details, prefer this file.
+`AGENTS.md` から参照されます（すべてのルールの情報源）。
+情報源の優先順位：`AGENTS.md` → フィーチャーローカルパターン → `CLAUDE.md` → `.agent/skills/*`。
+このファイルと `AGENTS.md` が矛盾する場合は `AGENTS.md` を優先すること。
+テストパターンのガイダンスは `.agent/skills/android-testing/SKILL.md` も参照。
+このファイルとスキルがアノテーションルールや命名の詳細で矛盾する場合は、このファイルを優先すること。
 
 ---
 
-## Test stack
+## テストスタック
 
 - JUnit 5
 - MockK
 - `kotlinx-coroutines-test`
-- Follow Arrange / Act / Assert structure.
+- Arrange / Act / Assert 構造に従う。
 
-## Test function naming
+## テスト関数の命名
 
-All test function names must use exactly this format:
+すべてのテスト関数名はこの形式を厳密に使用しなければなりません：
 
 ```text
-`[tested function name] [expected outcome] when [condition]`
+`[テスト対象の関数名] [期待される結果] when [条件]`
 ```
 
-This format applies to all layers: value objects, use cases, repositories, mappers, workers, and
-ViewModels.
+この形式は値オブジェクト、ユースケース、リポジトリ、マッパー、ワーカー、ViewModelなど
+すべてのレイヤーに適用されます。
 
-**Segment definitions:**
+**各セグメントの定義：**
 
-| Segment                | Rule                                                                                      |
-|------------------------|-------------------------------------------------------------------------------------------|
-| `tested function name` | The exact Kotlin function, property, or event-handler name under test. Must appear first. |
-| `expected outcome`     | A verb phrase using one of the allowed verbs only (see below).                            |
-| `when [condition]`     | The scenario or input state. Must always be present — never omit.                         |
+| セグメント             | ルール                                                                                           |
+|------------------------|--------------------------------------------------------------------------------------------------|
+| `テスト対象の関数名`   | テスト対象のKotlin関数、プロパティ、またはイベントハンドラの正確な名前。必ず最初に来る。         |
+| `期待される結果`       | 許可された動詞のみを使用する動詞句（下記参照）。                                                 |
+| `when [条件]`          | シナリオまたは入力状態。必ず含める — 省略しない。                                                |
 
-**Allowed verbs:** `returns` / `throws` / `sets` / `emits` / `calls` / `rethrows` / `ignores`
+**許可された動詞：** `returns` / `throws` / `sets` / `emits` / `calls` / `rethrows` / `ignores`
 
-**Naming restrictions:**
+**命名の制約：**
 
-- `test`, `should`, `verify`, or similar prefixes are forbidden.
-- snake_case is forbidden anywhere in the name.
-- camelCase is permitted for any identifier (e.g., `onSignIn`, `fetchMedia`) within the
-  backtick-enclosed test name. For symbolic names (class names or types), use PascalCase (e.g.,
-  `SignedInState`, `NetworkError`) when helpful. For the natural language parts that describe
-  conditions or expectations, prefer using lowercase words separated by spaces.
-- Japanese characters are forbidden.
-- Vague outcome words (`works`, `handles`, `correctly`, `properly`) are forbidden.
-- Categorical labels (`success case`, `failure case`, `happy path`, `error case`) are forbidden.
-- `success` or `failure` alone as the outcome is forbidden — write the concrete type, state,
-  or effect name instead (e.g., `returns SignedInState`, `returns NetworkError`).
-- Multiple behaviors in one function name are forbidden.
-- `updates` is not an allowed verb; use `sets` instead.
+- `test`、`should`、`verify` などのプレフィックスは禁止。
+- 名前のどこにもsnake_caseは禁止。
+- バッククォートで囲まれたテスト名内の識別子（例：`onSignIn`、`fetchMedia`）にcamelCaseは許可。
+  シンボリックな名前（クラス名や型）には役立つ場合にPascalCase（例：`SignedInState`、`NetworkError`）を使用。
+  条件や期待値を説明する自然言語部分にはスペース区切りの小文字を優先する。
+- 日本語文字は禁止。
+- 曖昧な結果を示す単語（`works`、`handles`、`correctly`、`properly`）は禁止。
+- カテゴリラベル（`success case`、`failure case`、`happy path`、`error case`）は禁止。
+- `success` や `failure` 単独の結果は禁止 — 具体的な型、状態、またはエフェクト名を書くこと
+  （例：`returns SignedInState`、`returns NetworkError`）。
+- 一つの関数名に複数の動作を含めることは禁止。
+- `updates` は許可された動詞ではない。代わりに `sets` を使用すること。
 
-**Examples:**
+**例：**
 
 ```kotlin
 fun `invoke returns SignedInState when repository returns done state`()
@@ -63,35 +62,33 @@ fun `invoke returns NetworkError when network is unavailable`()
 fun `of returns Email when input is valid`()
 ```
 
-## Annotations
+## アノテーション
 
-Allowed: `@Test`, `@BeforeEach`, `@AfterEach`, `@OptIn(ExperimentalCoroutinesApi::class)`,
-`@ParameterizedTest` (with `@ValueSource` / `@CsvSource` / `@MethodSource`), `@ExtendWith`
-(only when a JUnit extension from an external library or a custom extension is required — see
-note below).
+許可：`@Test`、`@BeforeEach`、`@AfterEach`、`@OptIn(ExperimentalCoroutinesApi::class)`、
+`@ParameterizedTest`（`@ValueSource` / `@CsvSource` / `@MethodSource` と共に）、
+`@ExtendWith`（外部ライブラリまたはカスタム拡張のJUnit拡張が必要な場合のみ — 下記注釈参照）。
 
-Forbidden: `@DisplayName` (backtick name is sufficient), `@Disabled` (fix or delete — do not
-commit disabled tests), `@Nested`, `@Tag`, `@Timeout`, `@RepeatedTest`.
+禁止：`@DisplayName`（バッククォートの名前で十分）、`@Disabled`（修正するか削除する — 無効なテストをコミットしない）、
+`@Nested`、`@Tag`、`@Timeout`、`@RepeatedTest`。
 
-Note on `@ExtendWith` and MockK: In standard `*Test.kt` files that use MockK, call `mockk<>()`
-directly — no `@ExtendWith(MockKExtension::class)` is needed or recommended. Reserve
-`@ExtendWith` for cases where a JUnit extension is genuinely required (e.g., a custom test
-lifecycle extension or a third-party library extension that has no MockK equivalent).
+`@ExtendWith` とMockKに関する注記：MockKを使用する標準的な `*Test.kt` ファイルでは、
+`mockk<>()` を直接呼び出すこと — `@ExtendWith(MockKExtension::class)` は不要であり推奨もされません。
+`@ExtendWith` はJUnit拡張が本当に必要な場合（例：カスタムテストライフサイクル拡張や、
+MockKに相当するものがないサードパーティライブラリ拡張）にのみ使用してください。
 
-## Verification timing
+## 検証タイミング
 
-| Timing             | Executor | Content                                                |
-|--------------------|----------|--------------------------------------------------------|
-| On task completion | AI agent | `./gradlew ktlintCheck detekt` → affected module tests |
-| Push / PR creation | Human    | push, PR creation, merge decision                      |
-| PR / merge gate    | CI       | lint checks (ktlintCheck + detekt) + all unit tests    |
+| タイミング           | 実行者     | 内容                                                        |
+|----------------------|------------|-------------------------------------------------------------|
+| タスク完了時         | AIエージェント | `./gradlew ktlintCheck detekt` → 影響モジュールのテスト |
+| プッシュ/PR作成      | 人間       | プッシュ、PR作成、マージ判断                                |
+| PR/マージゲート      | CI         | lintチェック（ktlintCheck + detekt）+ 全ユニットテスト      |
 
-See `docs/verification-policy.md` for the full policy including Gradle sync rules and test scope
-by change type.
+テストを実行しなかった場合は、その旨を明示的に記載すること。
 
-If tests are not run, explicitly state that they were not run.
+変更タイプ別のスコープを含む完全なポリシーは `docs/verification-policy.md` を参照。
 
-## Module test targets
+## モジュールテストターゲット
 
 ```bash
 ./gradlew :feature:auth:domain:test
@@ -100,6 +97,4 @@ If tests are not run, explicitly state that they were not run.
 ./gradlew :feature:media:domain:test
 ./gradlew :feature:media:data:test
 ./gradlew :feature:media:ui:test
-./gradlew :feature:settings:domain:test
-./gradlew :feature:settings:data:test
 ```

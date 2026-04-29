@@ -1,21 +1,20 @@
-# Media Upload and Delete Flow
+# メディアアップロード/削除フロー
 
-This document describes the upload and delete lifecycle in the `media` feature.
-Rules live in `AGENTS.md` and `feature/media/AGENTS.md`. This file explains *how* the flow works
-so that AI agents can reason about change impact without having to trace the entire call graph.
+このドキュメントは `media` フィーチャーのアップロードと削除のライフサイクルを説明します。
+ルールは `AGENTS.md` と `feature/media/AGENTS.md` にあります。このファイルはフロー全体の
+コールグラフを追わなくても変更の影響を把握できるよう、フローがどのように機能するかを説明します。
 
-## Why this document exists
+## このドキュメントが存在する理由
 
-The `media` feature is the highest-risk area in the repository.
-It mixes domain rules, local persistence, remote sync, background workers, and cancellation logic.
-Misunderstanding the flow leads to broken retry behavior, inconsistent sync states, or orphaned
-records.
+`media` フィーチャーはリポジトリ内で最もリスクの高い領域です。
+ドメインルール、ローカル永続化、リモート同期、バックグラウンドワーカー、キャンセルロジックが混在しています。
+フローを誤解すると、リトライ動作の破損、同期ステータスの不整合、孤立したレコードが生じます。
 
 ---
 
-## Upload flow
+## アップロードフロー
 
-### Trigger (UI → Domain)
+### トリガー（UI → Domain）
 
 ```text
 MediaViewModel.onScreenResumed()
@@ -26,45 +25,45 @@ MediaViewModel.onScreenResumed()
                                     └─ UploadSchedulerImpl → WorkManager.enqueueUniqueWork(UploadMediaWorker)
 ```
 
-### Worker execution (Data — background)
+### ワーカー実行（Data — バックグラウンド）
 
 ```text
 UploadMediaWorker.doWork()
   ↓
   LocalUploadRecordsRepository.getPendingUploadRecords()   [Room]
-  ↓ (for each record)
+  ↓ （各レコードに対して）
   ContentTypeResolver.resolve()
   UploadDataSource.uploadMedia()
     └─ Amplify.Storage.uploadInputStream()                 [S3]
-  ↓ (on success)
-  LocalUploadRecordsRepository.saveUploadRecords()         [update local DB]
+  ↓ （成功時）
+  LocalUploadRecordsRepository.saveUploadRecords()         [ローカルDBを更新]
   RemoteUploadRecordsRepository.createUploadRecord()       [POST /media/uploads]
-  ↓ (after all records)
+  ↓ （全レコード処理後）
   RemoteUploadRecordsRepository.completeUpload()           [POST /media/uploads/complete]
 ```
 
-### SyncStatus transitions
+### SyncStatus遷移
 
 ```text
-(new local media)
+（新しいローカルメディア）
   PENDING_UPLOAD
-      ↓ upload success + remote registration success
+      ↓ アップロード成功 + リモート登録成功
   SYNCED
-      ↓ user deletes
+      ↓ ユーザーが削除
   PENDING_DELETE
-      ↓ delete success
-  (record removed)
+      ↓ 削除成功
+  （レコード削除）
 
   PENDING_UPLOAD / PENDING_DELETE
-      ↓ permanent failure
+      ↓ 永続的なエラー
   ERROR
 ```
 
 ---
 
-## Delete flow
+## 削除フロー
 
-### Trigger (UI → Domain)
+### トリガー（UI → Domain）
 
 ```text
 MediaViewModel.scheduleDelete()
@@ -73,66 +72,67 @@ MediaViewModel.scheduleDelete()
             └─ DeleteSchedulerImpl → WorkManager.enqueueUniqueWork(DeleteMediaWorker)
 ```
 
-### Worker execution (Data — background)
+### ワーカー実行（Data — バックグラウンド）
 
 ```text
 DeleteMediaWorker.doWork()
   ↓
   LocalUploadRecordsRepository.getPendingDeleteRecords()   [Room]
-  ↓ (for each record)
+  ↓ （各レコードに対して）
   RemoteUploadRecordsRepository.deleteUploadRecord()       [DELETE /media/uploads/:id]
-  UploadDataSource.deleteUploadedObject()                  [S3 delete]
-  LocalUploadRecordsRepository.deleteUploadRecord()        [remove from Room]
+  UploadDataSource.deleteUploadedObject()                  [S3削除]
+  LocalUploadRecordsRepository.deleteUploadRecord()        [Roomから削除]
 ```
 
-Special case: if `cloudStoragePath` is null (never uploaded), skip remote/S3 steps and
-delete the local record directly.
+特殊ケース：`cloudStoragePath` がnullの場合（まだアップロードされていない）、
+リモート/S3のステップをスキップしてローカルレコードを直接削除します。
 
-S3 orphan tolerance: if `deleteUploadedObject()` fails with a non-cancellation error,
-the worker continues rather than retrying, accepting the orphan.
+S3孤立の許容：`deleteUploadedObject()` がキャンセル以外のエラーで失敗した場合、
+ワーカーはリトライせずに続行し、孤立オブジェクトを受け入れます。
 
 ---
 
-## Remote sync flow
+## リモート同期フロー
 
 ```text
 SyncUploadRecordsUseCase
   └─ RemoteUploadRecordsRepository.getUploadRecords()      [GET /media/uploads]
-       └─ LocalUploadRecordsRepository.saveUploadRecords() [upsert into Room]
+       └─ LocalUploadRecordsRepository.saveUploadRecords() [Roomにupsert]
 ```
 
-This runs on resume to pull down records uploaded from other devices or sessions.
+これは他のデバイスやセッションからアップロードされたレコードを取得するために
+レジューム時に実行されます。
 
 ---
 
-## Error classification
+## エラー分類
 
-Workers distinguish between permanent and temporary failures to decide retry behavior.
+ワーカーはリトライ動作を決定するために永続的エラーと一時的エラーを区別します。
 
-| Failure type                        | Worker response                                     | SyncStatus |
-|-------------------------------------|-----------------------------------------------------|------------|
-| Permanent (e.g., HTTP 4xx)          | No retry; clean up and mark ERROR                   | `ERROR`    |
-| Temporary (e.g., network, HTTP 5xx) | Set `hasTemporaryFailure = true` → `Result.retry()` | unchanged  |
-| CancellationException               | Re-throw immediately                                | unchanged  |
+| エラー種別                               | ワーカーの応答                                              | SyncStatus |
+|------------------------------------------|------------------------------------------------------------|------------|
+| 永続的（例：HTTP 4xx）                   | リトライなし、クリーンアップして ERROR としてマーク         | `ERROR`    |
+| 一時的（例：ネットワーク、HTTP 5xx）     | `hasTemporaryFailure = true` を設定 → `Result.retry()` を返す | 変化なし   |
+| CancellationException                    | 即座に再スロー                                              | 変化なし   |
 
 ---
 
-## Key boundaries to respect when changing this flow
+## このフローを変更する際に尊重すべき重要な境界
 
-1. **Do not collapse worker/scheduler/repository/datasource responsibilities.**
-   Each class has a different lifecycle and testability profile.
-   See `docs/architecture-decisions.md` for the reasoning.
+1. **ワーカー/スケジューラ/リポジトリ/データソースの責任を崩さない。**
+   各クラスは異なるライフサイクルとテスト可能性プロファイルを持ちます。
+   理由は `docs/architecture-decisions.md` を参照。
 
-2. **SyncStatus transitions must stay consistent.**
-   If you add a new status or change a transition, verify that workers, repositories, and UI state
-   all agree on the meaning.
+2. **SyncStatus遷移の整合性を維持する。**
+   新しいステータスを追加したり遷移を変更する場合は、ワーカー、リポジトリ、UIステートが
+   すべて意味について合意していることを確認すること。
 
-3. **Re-throw `CancellationException` in every `catch` block.**
-   Workers use nested `runCatching` blocks; each must re-throw independently.
-   See `docs/error-handling-guide.md`.
+3. **すべての `catch` ブロックで `CancellationException` を再スローする。**
+   ワーカーはネストされた `runCatching` ブロックを使用します。各ブロックは独立して再スローしなければなりません。
+   `docs/error-handling-guide.md` を参照。
 
-4. **Remote registration and local DB update must stay in sync.**
-   If remote registration fails, the local record must not be left in a state that implies success.
+4. **リモート登録とローカルDB更新は同期を保たなければならない。**
+   リモート登録が失敗した場合、ローカルレコードを成功を示す状態に放置してはなりません。
 
-5. **`completeUpload()` is called once per worker run, not per record.**
-   It signals batch completion. Do not move it inside the per-record loop.
+5. **`completeUpload()` は各レコードごとではなく、ワーカー実行ごとに1回呼び出される。**
+   バッチ完了を通知します。レコードごとのループ内に移動しないこと。

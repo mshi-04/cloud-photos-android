@@ -1,54 +1,50 @@
-# Android Conventions
+# Android規約
 
-Referenced from `AGENTS.md` (source of truth for all rules).
-Source-of-truth order: `AGENTS.md` → feature-local patterns → `CLAUDE.md` → `.agent/skills/*`.
-When this file and `AGENTS.md` conflict, prefer `AGENTS.md`.
+`AGENTS.md` から参照されます（すべてのルールの情報源）。
+情報源の優先順位：`AGENTS.md` → フィーチャーローカルパターン → `CLAUDE.md` → `.agent/skills/*`。
+このファイルと `AGENTS.md` が矛盾する場合は `AGENTS.md` を優先すること。
 
 ---
 
 ## Compose
 
-- Follow the existing pattern: screen = stateful entry, content = stateless/private rendering
-  function when applicable.
-- Keep screen state in ViewModels or dedicated UI state classes.
-- Avoid scattered side effects inside composables.
-- Use `LaunchedEffect(Unit)` and `rememberUpdatedState` consistently with existing patterns when
-  handling one-shot effects.
-- Use `stringResource()` for UI strings.
-- When adding previews, wrap them in `CloudPhotosTheme` and mirror existing preview conventions.
-- Reuse the same feature’s existing state/effect contract before introducing a new one.
+- 既存パターンに従う：スクリーン = ステートフルなエントリ、コンテンツ = ステートレス/プライベートな描画関数（適用可能な場合）。
+- スクリーンのステートはViewModelまたは専用UIステートクラスで管理する。
+- コンポーザブル内に分散したサイドエフェクトを避ける。
+- ワンショットエフェクトの処理には、既存パターンと一貫して `LaunchedEffect(Unit)` と `rememberUpdatedState` を使用する。
+- UI文字列には `stringResource()` を使用する。
+- プレビューを追加する場合は `CloudPhotosTheme` でラップし、既存のプレビュー規約に合わせる。
+- 新しいステート/エフェクトコントラクトを導入する前に、同じフィーチャーの既存コントラクトを再利用する。
 
-## ViewModels
+## ViewModel
 
-- ViewModels own screen state and trigger use cases.
-- Keep them focused on state transitions, validation wiring, and UI-facing effects.
-- Do not move domain logic from use cases into ViewModels.
-- Prefer the same feature module’s existing event-handler naming and state update patterns.
+- ViewModelはスクリーンのステートを所有し、ユースケースを起動する。
+- ステート遷移、バリデーション配線、UIフェイシングエフェクトに集中させる。
+- ユースケースからViewModelにドメインロジックを移動しない。
+- 同じフィーチャーモジュールの既存のイベントハンドラ命名とステート更新パターンを優先する。
 
 ## Hilt / DI
 
-- Keep Hilt wiring in appropriate DI/bootstrap locations.
-- App-level wiring belongs in `app`; feature-specific bindings belong in the feature module.
-- Prefer feature-local implementation binding patterns that already exist.
-- Avoid placing unrelated bindings into one large catch-all module.
+- Hilt配線は適切なDI/ブートストラップの場所に保つ。
+- アプリレベルの配線は `app` に、フィーチャー固有のバインディングはフィーチャーモジュールに属する。
+- すでに存在するフィーチャーローカルの実装バインディングパターンを優先する。
+- 無関係なバインディングを一つの大きなキャッチオールモジュールにまとめない。
 
-## Logging
+## ログ
 
-- Do not use `android.util.Log` directly in production code.
-- Temporary debug log statements must not be committed.
-- If a logging abstraction does not exist in this repository, prefer omitting the log over using
-  `android.util.Log` directly.
+- プロダクションコードで `android.util.Log` を直接使用しない。
+- 一時的なデバッグログ文をコミットしない。
+- このリポジトリにログ抽象化が存在しない場合、`android.util.Log` を直接使用するよりログを省略することを優先する。
 
-## Navigation
+## ナビゲーション
 
-- Keep navigation changes centralized and minimal.
-- Route definitions and top-level graph wiring belong in `app`.
-- Prefer editing existing nav definitions instead of spreading route knowledge across many files.
+- ナビゲーションの変更は集中化し、最小限に保つ。
+- ルート定義とトップレベルのグラフ配線は `app` に属する。
+- 多くのファイルにルートの知識を分散させるのではなく、既存のナビゲーション定義を編集することを優先する。
 
-## Background work
+## バックグラウンド処理
 
-- `media` contains upload/delete flows using workers/schedulers.
-- Prefer the existing worker/scheduler patterns for background execution.
-- Maintain the responsibility separation: worker → scheduler → repository → data source.
-- Be conservative when touching upload queue, sync status, record mapping, and worker retry
-  behavior.
+- `media` にはワーカー/スケジューラを使用するアップロード/削除フローが含まれる。
+- バックグラウンド実行には既存のワーカー/スケジューラパターンを優先する。
+- 責任の分離を維持する：ワーカー → スケジューラ → リポジトリ → データソース。
+- アップロードキュー、同期ステータス、レコードマッピング、ワーカーリトライ動作に触れる際は保守的に。

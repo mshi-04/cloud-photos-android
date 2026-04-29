@@ -1,20 +1,19 @@
-# Error Handling Guide
+# エラーハンドリングガイド
 
-This document covers the error handling patterns used in this repository.
-Rules live in `AGENTS.md`. This file explains *how* to apply them correctly.
+このドキュメントはこのリポジトリで使用されるエラーハンドリングパターンを説明します。
+ルールは `AGENTS.md` にあります。このファイルはそれらを正しく適用する方法を説明します。
 
 ---
 
-## CancellationException must always be re-thrown
+## CancellationException は必ず再スローしなければならない
 
-Kotlin coroutines signal cooperative cancellation via `CancellationException`.
-Swallowing it prevents coroutine scopes from cancelling cleanly, causes coroutine leaks,
-and breaks structured concurrency.
+Kotlinコルーチンは `CancellationException` によって協調的なキャンセルを通知します。
+それを握り潰すと、コルーチンスコープのクリーンなキャンセルが阻害され、コルーチンリークが発生し、
+構造化された同時実行が壊れます。
 
-**Every `catch` block that handles `Exception` or `Throwable` must re-throw `CancellationException`.
-**
+**`Exception` または `Throwable` を処理するすべての `catch` ブロックは、`CancellationException` を再スローしなければなりません。**
 
-### With try/catch
+### try/catch の場合
 
 ```kotlin
 try {
@@ -22,27 +21,27 @@ try {
 } catch (e: CancellationException) {
     throw e
 } catch (e: Exception) {
-    // handle
+    // ハンドリング
 }
 ```
 
-### With runCatching
+### runCatching の場合
 
-`runCatching` catches all `Throwable` including `CancellationException`.
-Always re-throw in `onFailure`:
+`runCatching` は `CancellationException` を含むすべての `Throwable` をキャッチします。
+`onFailure` 内で必ず再スローすること：
 
 ```kotlin
 runCatching {
     someCoroutine()
 }.onFailure { e ->
     if (e is CancellationException) throw e
-    // handle
+    // その他のエラーをハンドリング
 }
 ```
 
-### Nested runCatching
+### ネストされた runCatching
 
-Each nested `runCatching` block must re-throw independently:
+各ネストされた `runCatching` ブロックは独立して再スローしなければならない：
 
 ```kotlin
 runCatching {
@@ -57,31 +56,31 @@ runCatching {
 }
 ```
 
-Forgetting the inner re-throw is a common mistake. The outer re-throw does not protect
-against cancellation swallowed inside a nested block.
+内側の再スローを忘れるのはよくあるミスです。外側の再スローは、ネストされたブロック内で
+握り潰されたキャンセルを保護しません。
 
 ---
 
-## Error mapping belongs in the data layer
+## エラーマッピングはdata層に属する
 
-Domain use cases and domain models must not reference provider-specific error types
-(Amplify exceptions, Cognito errors, Room exceptions, etc.).
+ドメインのユースケースとドメインモデルは、プロバイダー固有のエラー型
+（Amplify例外、Cognitoエラー、Room例外など）を参照してはなりません。
 
-### Pattern
+### パターン
 
-1. Data source catches provider-specific exceptions.
-2. A mapper object translates them to domain-facing error types.
-3. The repository implementation returns domain errors.
+1. データソースがプロバイダー固有の例外をキャッチする。
+2. マッパーオブジェクトがそれらをドメイン向けのエラー型に変換する。
+3. リポジトリ実装がドメインエラーを返す。
 
 ```kotlin
-// data layer
+// data層
 } catch (e: CancellationException) {
     throw e
 } catch (e: Exception) {
-    UploadResult.Error(UploadErrorMapper.map(e))  // domain-facing error
+    UploadResult.Error(UploadErrorMapper.map(e))  // ドメイン向けエラー
 }
 
-// domain layer — no provider types visible
+// domain層 — プロバイダー型は見えない
 sealed class UploadError {
     data object NetworkError : UploadError()
     data object StorageError : UploadError()
@@ -91,9 +90,9 @@ sealed class UploadError {
 
 ---
 
-## Sealed result types over exceptions
+## 例外よりシールドリザルト型を優先する
 
-The `media` feature uses `UploadResult<T>` to represent operation outcomes at domain boundaries:
+`media` フィーチャーはドメイン境界での操作結果を表現するために `UploadResult<T>` を使用します：
 
 ```kotlin
 sealed class UploadResult<out T> {
@@ -102,36 +101,36 @@ sealed class UploadResult<out T> {
 }
 ```
 
-Prefer sealed result types over throwing exceptions when:
+以下の場合にシールドリザルト型を例外よりも優先する：
 
-- the caller must handle both success and failure paths
-- the error is a domain-level expected outcome (not a programming error)
-- the operation crosses the data/domain boundary
+- 呼び出し元が成功と失敗の両方のパスを処理しなければならない
+- エラーがドメインレベルで予期された結果である（プログラミングエラーではない）
+- 操作がdata/domain境界を越える
 
-Do not return sealed results *and* also throw exceptions for the same operation.
-
----
-
-## Permanent vs temporary failures in workers
-
-`UploadMediaWorker` and `DeleteMediaWorker` classify errors to decide retry behavior.
-This classification lives in a private helper such as `isPermanentFailure()`.
-
-| Condition                                   | Behavior                                    |
-|---------------------------------------------|---------------------------------------------|
-| `CancellationException`                     | Re-throw immediately                        |
-| Permanent failure (e.g., HTTP 4xx)          | Mark record as `ERROR`; do not retry        |
-| Temporary failure (e.g., network, HTTP 5xx) | Set retry flag; `Result.retry()` at the end |
-
-When changing this classification, verify that the SyncStatus transitions described in
-`docs/media-upload-flow.md` remain consistent.
+同じ操作に対してシールドリザルトを返しながら例外もスローするのは避けること。
 
 ---
 
-## Auth error mapping
+## ワーカーにおける永続的エラーと一時的エラー
 
-Auth provider exceptions (Cognito/Amplify) must be translated in `feature/auth/data` mappers.
-See `.agent/skills/android-auth-error/SKILL.md` for auth-specific guidance.
+`UploadMediaWorker` と `DeleteMediaWorker` はリトライ動作を決定するためにエラーを分類します。
+この分類は `isPermanentFailure()` などのプライベートヘルパーに置かれます。
 
-Do not return Cognito-specific error types to domain or UI.
-Preserve mappings that intentionally collapse provider errors to avoid account enumeration.
+| 条件                                     | 動作                                                     |
+|------------------------------------------|----------------------------------------------------------|
+| `CancellationException`                  | 即座に再スロー                                            |
+| 永続的なエラー（例：HTTP 4xx）           | レコードを `ERROR` としてマーク、リトライしない            |
+| 一時的なエラー（例：ネットワーク、HTTP 5xx） | リトライフラグを設定、最後に `Result.retry()` を返す   |
+
+この分類を変更する場合は、`docs/media-upload-flow.md` に記載されたSyncStatus遷移との
+整合性を検証すること。
+
+---
+
+## 認証エラーのマッピング
+
+認証プロバイダーの例外（Cognito/Amplify）は `feature/auth/data` のマッパーで変換しなければなりません。
+auth固有のガイダンスは `.agent/skills/android-auth-error/SKILL.md` を参照。
+
+Cognito固有のエラー型をdomainやUIに返してはならない。
+アカウント列挙を避けるためにプロバイダーエラーを意図的に統合しているマッピングは保持すること。

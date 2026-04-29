@@ -1,154 +1,152 @@
-# Forbidden Patterns
+# 禁止パターン
 
-Patterns to avoid in this repository, with brief reasoning for each.
-Rules are enforced by `AGENTS.md`; this file explains the *why* to aid judgment in edge cases.
+このリポジトリで避けるべきパターンと、各パターンの簡単な理由。
+ルールは `AGENTS.md` で強制されます。このファイルはエッジケースでの判断を助けるために「なぜか」を説明します。
 
 ---
 
-## android.util.Log in production code
+## プロダクションコードに android.util.Log
 
 ```kotlin
-// forbidden
+// 禁止
 Log.d("MediaRepo", "Uploading file: $path")
 ```
 
-**Why**: logcat is readable by any process with adb access on an unlocked device.
-Log calls can expose tokens, file paths, and user identifiers.
-This repository has no structured logging abstraction; omit the log or introduce one deliberately.
+**なぜ**：logcatは、ロック解除されたデバイスでadbアクセスを持つどのプロセスからでも読み取り可能です。
+ログ呼び出しはトークン、ファイルパス、ユーザー識別子を公開する可能性があります。
+このリポジトリには構造化ログの抽象化がありません。ログを省略するか、意図を持って導入してください。
 
 ---
 
-## Committing temporary debug logs
+## 一時的なデバッグログのコミット
 
-Even if the log uses a proper abstraction, temporary debug-only statements must not be committed.
+適切な抽象化を使ったログであっても、デバッグ専用の一時的な文はコミットしてはなりません。
 
-**Why**: debug logs degrade signal-to-noise ratio in logcat, may expose internal state, and rarely
-get cleaned up once merged.
+**なぜ**：デバッグログはlogcatのS/N比を下げ、内部状態を公開する可能性があり、マージされると
+ほとんどの場合クリーンアップされません。
 
 ---
 
-## UI calling data implementations directly
+## UIがdata実装を直接呼び出す
 
 ```kotlin
-// forbidden in ViewModel / Compose
+// ViewModel / Compose で禁止
 @Inject lateinit var uploadRepositoryImpl: UploadRepositoryImpl
 @Inject lateinit var mediaDao: MediaDao
 ```
 
-**Why**: `ui` should depend only on `domain` interfaces and `core:ui` / `core:common`.
-Direct data dependency bypasses use cases, breaks testability, and couples UI to persistence
-or SDK details.
+**なぜ**：`ui` は `domain` インターフェースと `core:ui` / `core:common` にのみ依存すべきです。
+data層への直接依存はユースケースをバイパスし、テスト可能性を損ない、UIを永続化やSDKの詳細に結合させます。
 
 ---
 
-## Android / Compose / Room / WorkManager / provider SDK in domain
+## domain に Android / Compose / Room / WorkManager / プロバイダーSDK
 
 ```kotlin
-// forbidden in feature:*:domain
+// feature:*:domain で禁止
 import androidx.room.Entity
 import com.amplifyframework.auth.AuthException
 import androidx.work.WorkManager
 ```
 
-**Why**: `domain` must stay framework-free so business logic is testable with pure JVM tests.
-Framework dependencies in domain make it impossible to test use cases without an Android device
-or emulator.
+**なぜ**：`domain` はフレームワークフリーに保たれ、ビジネスロジックが純粋なJVMテストでテスト可能でなければなりません。
+domainのフレームワーク依存は、Androidデバイスやエミュレータなしにユースケースをテストすることを不可能にします。
 
 ---
 
-## Returning DTOs, entities, or provider responses to UI
+## UIへのDTO、エンティティ、プロバイダーレスポンスの返却
 
 ```kotlin
-// forbidden
-fun getItems(): List<MediaEntity>         // Room entity to UI
-fun getAuthState(): AuthSignInResult      // Amplify type to UI
+// 禁止
+fun getItems(): List<MediaEntity>         // Room エンティティをUIへ
+fun getAuthState(): AuthSignInResult      // Amplify 型をUIへ
 ```
 
-**Why**: data-layer models encode persistence or SDK concerns that should not leak across the
-boundary. Changes to the schema or SDK response shape would break UI. Use mappers at the boundary.
+**なぜ**：data層のモデルは境界を越えて漏れるべきでない永続化やSDKの関心事をエンコードしています。
+スキーマやSDKレスポンスの形式の変更はUIを壊します。境界でマッパーを使用してください。
 
 ---
 
-## Business logic accumulating in RepositoryImpl
+## RepositoryImpl へのビジネスロジックの蓄積
 
 ```kotlin
-// forbidden
+// 禁止
 class UploadRepositoryImpl {
     fun upload(file: File) {
-        if (file.size > MAX_SIZE) throw ...   // business rule — belongs in domain
-        if (!networkAvailable()) return       // orchestration — belongs in use case
+        if (file.size > MAX_SIZE) throw ...   // ビジネスルール — domainに属する
+        if (!networkAvailable()) return       // オーケストレーション — ユースケースに属する
         ...
     }
 }
 ```
 
-**Why**: `RepositoryImpl` should delegate to data sources and mappers.
-Business rules belong in use cases; they are easier to test there and don't get duplicated.
+**なぜ**：`RepositoryImpl` はデータソースとマッパーへの委譲のみを行うべきです。
+ビジネスルールはユースケースに属し、そこでテストしやすく重複も発生しません。
 
 ---
 
-## Silent large refactors
+## 暗黙の大規模リファクタリング
 
-**Why**: broad package moves, mass renames, and cross-feature restructuring during a focused task
-make the diff unreadable and introduce merge conflicts. They also change things the task owner did
-not intend or approve. Surface large structural changes as explicit proposals, not side effects.
-
----
-
-## Unrelated cleanup
-
-Fixing formatting, renaming variables, or reorganizing imports in files you are not otherwise
-changing.
-
-**Why**: every touched file is a potential merge conflict and a review burden.
-Cleanup commits should be separate, explicit, and intentional.
+**なぜ**：集中したタスク中の広範なパッケージ移動、大規模リネーム、フィーチャー横断の再構築は、
+差分を読みにくくしマージコンフリクトを引き起こします。タスクオーナーが意図しないものや
+承認していないものも変更してしまいます。大きな構造変更はサイドエフェクトではなく、
+明示的な提案として提示してください。
 
 ---
 
-## Hardcoded secrets, endpoints, bucket names, or client IDs
+## 無関係なクリーンアップ
+
+それ以外で変更していないファイルのフォーマット修正、変数リネーム、インポート整理。
+
+**なぜ**：触れたファイルはすべて潜在的なマージコンフリクトとレビュー負担になります。
+クリーンアップコミットは分離し、明示的で意図的であるべきです。
+
+---
+
+## ハードコードされたシークレット、エンドポイント、バケット名、クライアントID
 
 ```kotlin
-// forbidden
+// 禁止
 private const val API_URL = "https://api.example.com"
 private const val COGNITO_CLIENT_ID = "abc123"
 ```
 
-**Why**: hardcoded values end up in version history, can be exposed in public forks, and cannot
-be rotated without a code change. Use the project's flavor-based configuration mechanism.
+**なぜ**：ハードコードされた値はバージョン履歴に残り、パブリックフォークで公開される可能性があり、
+コード変更なしにローテーションできません。プロジェクトのフレーバーベースの設定メカニズムを使用してください。
 
 ---
 
-## Swallowing CancellationException
+## CancellationException の握り潰し
 
 ```kotlin
-// forbidden
+// 禁止
 runCatching {
     someCoroutine()
-}.onFailure { /* nothing */ }
+}.onFailure { /* 何もしない */ }
 ```
 
-**Why**: `CancellationException` is how Kotlin coroutines signal cooperative cancellation.
-Swallowing it prevents coroutine scopes from cancelling cleanly, leading to leaked coroutines
-and broken cancellation chains.
+**なぜ**：`CancellationException` はKotlinコルーチンが協調的なキャンセルを通知する方法です。
+それを握り潰すと、コルーチンスコープのクリーンなキャンセルが阻害され、
+コルーチンリークとキャンセルチェーンの破損を引き起こします。
 
-Always re-throw:
+必ず再スローすること：
 
 ```kotlin
 }.onFailure { e ->
     if (e is CancellationException) throw e
-    // handle other errors
+    // その他のエラーをハンドリング
 }
 ```
 
 ---
 
-## Casual cross-feature dependencies
+## 軽率なフィーチャー横断依存
 
 ```kotlin
-// forbidden in feature:media
+// feature:media で禁止
 import com.appvoyager.cloudphotos.feature.auth.domain.usecase.GetCurrentUserUseCase
 ```
 
-**Why**: features should be independently deployable and testable. Direct feature-to-feature
-imports create coupling that makes it hard to test, refactor, or remove a feature.
-Shared contracts belong in `core:common`, not inside a sibling feature.
+**なぜ**：フィーチャーは独立してデプロイ・テスト可能であるべきです。フィーチャー間の直接インポートは、
+フィーチャーのテスト、リファクタリング、または削除を困難にする結合を生み出します。
+共有コントラクトは兄弟フィーチャーの内部ではなく `core:common` に属します。

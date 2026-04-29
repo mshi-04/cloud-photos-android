@@ -1,175 +1,168 @@
 # AGENTS.md
 
-This repository uses AI-assisted development under explicit architectural constraints.
-Follow these rules when proposing or making changes.
+このリポジトリはAIによる開発支援を前提とした明示的なアーキテクチャ制約のもとで運用されます。
+変更を提案・実施する際は、以下のルールに従ってください。
 
-## Supplementary documents
+## 補足ドキュメント
 
-Detailed guidance in `docs/`:
+詳細なガイダンスは `docs/` 配下にあります：
 
-- `docs/ai-playbook.md` — workflow guide: how to approach changes, change strategy, PR workflow
-- `docs/architecture-decisions.md` — why the structure is what it is
-- `docs/verification-policy.md` — when and how much to verify
-- `docs/forbidden-patterns.md` — anti-patterns with reasoning
-- `docs/implementation-rules.md` — UseCase, Repository, error handling, value object rules
-- `docs/android-conventions.md` — Compose, ViewModel, Hilt, Logging, Navigation, background work
-- `docs/testing-conventions.md` — test naming, annotations, verification timing, module targets
-- `docs/build-environment.md` — build flavors, environment properties, dependency rules
-- `docs/media-upload-flow.md` — upload/delete flow sequence and SyncStatus transitions
-- `docs/error-handling-guide.md` — CancellationException and error mapping patterns
+- `docs/ai-playbook.md` — 作業フロー：変更へのアプローチ、変更戦略、PRワークフロー
+- `docs/architecture-decisions.md` — 現在の構造になっている理由
+- `docs/verification-policy.md` — いつ・どの程度検証するか
+- `docs/forbidden-patterns.md` — 禁止パターンとその理由
+- `docs/implementation-rules.md` — UseCase、Repository、エラーハンドリング、値オブジェクトのルール
+- `docs/android-conventions.md` — Compose、ViewModel、Hilt、ログ、ナビゲーション、バックグラウンド処理
+- `docs/testing-conventions.md` — テスト命名、アノテーション、検証タイミング、モジュールターゲット
+- `docs/build-environment.md` — ビルドフレーバー、環境プロパティ、依存ルール
+- `docs/media-upload-flow.md` — アップロード/削除フローのシーケンスとSyncStatus遷移
+- `docs/error-handling-guide.md` — CancellationExceptionとエラーマッピングのパターン
 
-Sub-agent policy:
+サブエージェントポリシー：
 
-- `docs/ai-playbook.md` § 13 — sub-agent usage rules, delegation scope, parent agent ownership
+- `docs/ai-playbook.md` § 13 — サブエージェントの使用ルール、委譲スコープ、親エージェントの責任
 
-Feature-local guidance:
+フィーチャーローカルガイダンス：
 
-- `feature/auth/AGENTS.md` — auth-specific rules and guardrails
-- `feature/media/AGENTS.md` — media-specific rules and guardrails (includes former settings rules)
+- `feature/auth/AGENTS.md` — auth固有のルールとガードレール
+- `feature/media/AGENTS.md` — media固有のルールとガードレール（旧settingsルールを含む）
 
-## Objective
+## 目標
 
-Make small, correct, testable changes that preserve the repository's modular Android architecture.
-Do not optimize for large rewrites.
-Prefer the smallest safe change that matches existing feature patterns.
+リポジトリのモジュラーなAndroidアーキテクチャを保ちながら、小さく・正しく・テスト可能な変更を行う。
+大規模な書き直しを目標にしない。
+既存フィーチャーのパターンに合った、最小限の安全な変更を優先する。
 
-## Source-of-truth order
+## 情報源の優先順位
 
-When multiple guidance files exist, follow them in this order:
+複数のガイダンスファイルが存在する場合、以下の順に従うこと：
 
-1. `AGENTS.md`
-2. feature-local conventions and existing code patterns
+1. `AGENTS.md`（このファイル）
+2. フィーチャーローカルの規約と既存コードパターン
 3. `CLAUDE.md`
 4. `.agent/skills/*`
 
-If guidance appears to conflict, prefer the higher item in this list and keep the change
-conservative.
+ガイダンスが矛盾する場合は、上位のものを優先し、変更は保守的に保つこと。
 
-## Repository shape
+## リポジトリ構成
 
-- `app` = application wiring, entry points, navigation, top-level DI bootstrap, manifest, build
-  flavors
-- `core:common` = cross-cutting abstractions and domain-common contracts
-- `core:data` = shared data implementations used across features
-- `core:ui` = shared theme, strings, common UI resources/components
-- `feature:<name>:domain` = business models, repository contracts, use cases, value objects
-- `feature:<name>:data` = repository implementations, data sources, mappers, workers, persistence
-- `feature:<name>:ui` = ViewModels, UI state/effect, Compose screens/components
-- `build-logic` = shared Gradle convention plugins; avoid touching unless the task is about build
-  structure
+- `app` = アプリケーション配線、エントリポイント、ナビゲーション、トップレベルDIブートストラップ、マニフェスト、ビルドフレーバー
+- `core:common` = 横断的な抽象化とドメイン共通コントラクト
+- `core:data` = フィーチャー横断で使用される共有データ実装
+- `core:ui` = 共有テーマ、文字列、共通UIリソース/コンポーネント
+- `feature:<name>:domain` = ビジネスモデル、リポジトリコントラクト、ユースケース、値オブジェクト
+- `feature:<name>:data` = リポジトリ実装、データソース、マッパー、ワーカー、永続化
+- `feature:<name>:ui` = ViewModel、UIステート/エフェクト、Composeスクリーン/コンポーネント
+- `build-logic` = 共有Gradleコンベンションプラグイン。ビルド構造に関するタスク以外は触らない
 
-Current features include `auth` and `media`.
-Note: the former `settings` feature has been merged into `media`.
-`media` has `domain`, `data`, and `ui` submodules.
+現在のフィーチャー：`auth` と `media`。
+旧 `settings` フィーチャーは `media` に統合済み。
+`media` には `domain`、`data`、`ui` サブモジュールがある。
 
-## Layer placement rules
+## レイヤー配置ルール
 
 ### `app`
 
-Put code here only when it is truly app-wide:
+本当にアプリ全体に関わる場合のみここに置く：
 
-- application startup
-- top-level navigation composition
-- Hilt bootstrap/wiring modules that assemble feature implementations
-- flavor/build configuration concerns
+- アプリケーション起動
+- トップレベルのナビゲーション合成
+- フィーチャー実装を組み立てるHiltブートストラップ/配線モジュール
+- フレーバー/ビルド設定の関心事
 
-Do not place feature business logic here.
-Do not reintroduce code that belongs in `feature/*` modules.
+フィーチャーのビジネスロジックをここに置かない。
+`feature/*` モジュールに属するコードをここに戻さない。
 
 ### `feature:<name>:domain`
 
-Allowed here:
+ここに置いてよいもの：
 
-- use cases
-- repository interfaces
-- domain models
-- value objects
-- pure validation and business rules
+- ユースケース
+- リポジトリインターフェース
+- ドメインモデル
+- 値オブジェクト
+- 純粋なバリデーションとビジネスルール
 
-Not allowed here:
+ここに置いてはいけないもの：
 
-- Android framework types
-- Compose APIs
-- Room APIs
-- Amplify/Firebase/WorkManager implementations
-- concrete data source or repository implementations
+- Androidフレームワーク型
+- Compose API
+- Room API
+- Amplify/Firebase/WorkManager実装
+- データソースやリポジトリの具体的な実装
 
 ### `feature:<name>:data`
 
-Allowed here:
+ここに置いてよいもの：
 
-- repository implementations
-- DTO/entity mapping
-- remote/local data sources
-- Room DAOs/entities
-- worker/scheduler implementations
-- framework integration details
+- リポジトリ実装
+- DTO/エンティティマッピング
+- リモート/ローカルデータソース
+- Room DAO/エンティティ
+- ワーカー/スケジューラ実装
+- フレームワーク統合の詳細
 
-Rules:
+ルール：
 
-- Business rules belong in domain; this layer handles data translation and framework integration.
-- Error mapping belongs here via mapper objects.
+- ビジネスルールはdomain層に属する。この層はデータ変換とフレームワーク統合を担う。
+- エラーマッピングはマッパーオブジェクト経由でここに属する。
 
 ### `feature:<name>:ui`
 
-Allowed here:
+ここに置いてよいもの：
 
-- ViewModels
-- UI state/effect models
-- Compose screens/components
-- input event handling and view-facing formatting
+- ViewModel
+- UIステート/エフェクトモデル
+- Composeスクリーン/コンポーネント
+- 入力イベント処理とビュー向けフォーマット
 
-Rules:
+ルール：
 
-- UI/ViewModels call use cases or domain-facing abstractions.
-- UI must not call repository implementations, Room DAOs, Amplify clients, or WorkManager
-  directly.
-- Keep composables declarative and avoid embedding business rules in screens.
+- UI/ViewModelはユースケースまたはドメイン向け抽象化を呼び出す。
+- UIはリポジトリ実装、Room DAO、Amplifyクライアント、WorkManagerを直接呼び出してはならない。
+- コンポーザブルは宣言的に保ち、スクリーンにビジネスルールを埋め込まない。
 
-## Architectural rules
+## アーキテクチャルール
 
-1. Respect module boundaries.
-    - `ui` may depend on its `domain` module and shared UI/common modules.
-    - `data` may depend on its own `domain` and shared modules.
-    - `domain` must stay framework-light.
+1. モジュール境界を尊重する。
+    - `ui` はその `domain` モジュールと共有UI/commonモジュールに依存できる。
+    - `data` は自身の `domain` と共有モジュールに依存できる。
+    - `domain` はフレームワーク軽量に保つ。
 
-2. Preserve dependency direction.
-    - Do not introduce reverse dependencies between layers.
-    - Do not make one feature depend on an unrelated sibling feature.
-    - Prefer extracting shared abstractions to `core:*` only when reuse is real and already
-      justified by more than one feature.
+2. 依存方向を維持する。
+    - レイヤー間に逆方向の依存を導入しない。
+    - 無関係な兄弟フィーチャーを互いに依存させない。
+    - 共有抽象化を `core:*` に抽出するのは、複数フィーチャーで実際に再利用が正当化される場合のみ。
 
-3. Do not bypass use cases.
-    - ViewModels should normally call use cases.
-    - If a ViewModel interacts with a repository-facing abstraction directly, the reason must be
-      explicit and local.
+3. ユースケースをバイパスしない。
+    - ViewModelは通常ユースケースを呼び出す。
+    - ViewModelがリポジトリ向け抽象化を直接操作する場合、その理由を明示しローカルに限定する。
 
-4. Keep data models separated by layer.
-    - Do not expose DTOs, entities, DAO models, or network response models directly to UI.
-    - Use mappers at data boundaries.
+4. データモデルをレイヤーで分離する。
+    - DTO、エンティティ、DAOモデル、ネットワークレスポンスモデルをUIに直接公開しない。
+    - データ境界でマッパーを使用する。
 
-5. Prefer additive, local changes.
-    - Avoid broad package moves or cross-feature rewrites unless the task explicitly requires them.
-    - Touch the fewest files necessary.
+5. 加算的でローカルな変更を優先する。
+    - タスクが明示的に要求しない限り、広範なパッケージ移動やフィーチャー横断の書き直しを避ける。
+    - 最小限のファイル数に留める。
 
-6. Reuse existing patterns first.
-    - Before introducing a new abstraction, inspect the same feature for an existing equivalent
-      pattern.
-    - Match naming, folder placement, and test style already present in that feature.
+6. 既存パターンを先に再利用する。
+    - 新しい抽象化を導入する前に、同じフィーチャー内に同等のパターンが存在しないか確認する。
+    - そのフィーチャーの命名、フォルダ配置、テストスタイルに合わせる。
 
-## Git rules for AI agents
+## AIエージェント向けGitルール
 
-- Commit only after all lint checks (`ktlintCheck detekt`) and relevant module tests pass.
-- Write commit messages in Japanese, short and concise.
-- Push, PR creation, and merge decisions are out of scope for AI agents — leave them to the user.
+- lintチェック（`ktlintCheck detekt`）と関連モジュールのテストがすべて通過した後にのみコミットする。
+- コミットメッセージは日本語で、短く簡潔に書く。
+- プッシュ、PR作成、マージの判断はAIエージェントのスコープ外 — ユーザーに委ねる。
 
-## Required reporting format for AI-generated changes
+## AI生成変更の必須レポート形式
 
-When making a code change in this repository, report back with:
+このリポジトリでコード変更を行った場合、以下の形式でレポートすること：
 
-- touched modules
-- architectural reason for file placement
-- summary of what changed and why
-- tests run
-- tests not run, if any
-- known limitations or follow-up items
+- 変更したモジュール
+- ファイル配置のアーキテクチャ的理由
+- 何をなぜ変更したかの概要
+- 実行したテスト
+- 実行しなかったテスト（ある場合）
+- 既知の制限または今後の対応項目

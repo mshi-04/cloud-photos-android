@@ -1,50 +1,43 @@
-# Implementation Rules
+# 実装ルール
 
-Referenced from `AGENTS.md` (source of truth for all rules).
-Source-of-truth order: `AGENTS.md` → feature-local patterns → `CLAUDE.md` → `.agent/skills/*`.
-When this file and `AGENTS.md` conflict, prefer `AGENTS.md`.
+`AGENTS.md` から参照されます（すべてのルールの情報源）。
+情報源の優先順位：`AGENTS.md` → フィーチャーローカルパターン → `CLAUDE.md` → `.agent/skills/*`。
+このファイルと `AGENTS.md` が矛盾する場合は `AGENTS.md` を優先すること。
 
 ---
 
-## Use cases
+## ユースケース
 
-- Prefer `suspend operator fun invoke()`.
-- Keep each use case single-purpose.
-- Use cases should orchestrate domain work, not hold Android/framework concerns.
+- `suspend operator fun invoke()` を優先する。
+- 各ユースケースは単一の目的に留める。
+- ユースケースはドメイン処理をオーケストレーションし、Android/フレームワークの関心事を持たない。
 
-## Repository implementations
+## リポジトリ実装
 
-- Repository implementations should delegate to data sources and mappers.
-- Do not accumulate business logic in `RepositoryImpl` unless the logic is inherently about data
-  composition/translation.
+- リポジトリ実装はデータソースとマッパーへの委譲のみを行う。
+- ロジックが本質的にデータの合成/変換に関するものでない限り、`RepositoryImpl` にビジネスロジックを蓄積しない。
 
-## Error handling
+## エラーハンドリング
 
-- Error mapping belongs in the data layer via dedicated mapper objects.
-- In coroutine flows or `runCatching` usage, `CancellationException` must be re-thrown.
-- Do not swallow cancellation.
-- See `docs/error-handling-guide.md` for patterns and examples.
+- エラーマッピングは専用のマッパーオブジェクト経由でdata層に属する。
+- コルーチンフローや `runCatching` の使用では、`CancellationException` を必ず再スローする。
+- キャンセルを握り潰さない。
+- パターンと例は `docs/error-handling-guide.md` を参照。
 
-## Value objects
+## 値オブジェクト
 
-- Prefer `@JvmInline value class` with `private constructor` for validated domain concepts.
-- Instantiate through `companion object { fun of(raw: ...) }`.
-- Validate in `of()` using `require()`.
-- Trim string input before validation where appropriate.
-- Do not use raw primitives for validated domain concepts when an established value object pattern
-  exists.
-- Place value objects in the `valueobject/` package under the corresponding
-  `feature:<name>:domain` module
-  (e.g., `feature/auth/domain/src/main/kotlin/.../auth/valueobject/`).
+- バリデーション済みドメイン概念には `private constructor` を持つ `@JvmInline value class` を優先する。
+- `companion object { fun of(raw: ...) }` を通じてインスタンス化する。
+- `of()` 内で `require()` を使用してバリデーションする。
+- 適切な場合は、バリデーション前に文字列入力をトリムする。
+- 確立された値オブジェクトパターンが存在するバリデーション済みドメイン概念に対して生プリミティブを使用しない。
+- 値オブジェクトは対応する `feature:<name>:domain` モジュールの `valueobject/` パッケージに配置する
+  （例：`feature/auth/domain/src/main/kotlin/.../auth/valueobject/`）。
 
-## Feature-specific rules
+## フィーチャー固有のルール
 
-Feature-local guardrails live in the respective `feature/<name>/AGENTS.md` files.
-Read the relevant file before touching that feature:
+フィーチャーローカルのガードレールはそれぞれの `feature/<name>/AGENTS.md` ファイルに記載されています。
+そのフィーチャーに触れる前に関連ファイルを読むこと：
 
-- `feature/auth/AGENTS.md` — Cognito translation, auth value objects, auth step branching
-- `feature/media/AGENTS.md` — upload/delete scheduling, sync status, worker/scheduler split
-- `feature/settings/AGENTS.md` — lightweight settings, isolation, value object patterns
-
-These files take precedence for feature-local decisions, but defer to root `AGENTS.md` on
-conflicts.
+- `feature/auth/AGENTS.md` — Cognito変換、auth値オブジェクト、authステップ分岐
+- `feature/media/AGENTS.md` — アップロード/削除スケジューリング、同期ステータス、ワーカー/スケジューラ分離、設定ロジック

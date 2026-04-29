@@ -1,29 +1,29 @@
 # CloudPhotos (`com.appvoyager.cloudphotos`)
 
-## Primary instruction source
+## 主要な情報源
 
-`AGENTS.md` is the source of truth for repository-wide development rules.
-When working in this repository, read and follow `AGENTS.md` first.
-If this file and `AGENTS.md` overlap, prefer `AGENTS.md`.
+`AGENTS.md` がリポジトリ全体の開発ルールの情報源です。
+このリポジトリで作業する際は、まず `AGENTS.md` を読んで従ってください。
+このファイルと `AGENTS.md` が重複・矛盾する場合は `AGENTS.md` を優先します。
 
-## Purpose of this file
+## このファイルの目的
 
-This file is intentionally lightweight.
-It supplements `AGENTS.md` with Claude-oriented entry guidance and quick repo context.
-Do not duplicate detailed architectural policy here unless there is a Claude-specific reason.
+意図的に軽量なファイルです。
+`AGENTS.md` をClaude向けのエントリーガイダンスとリポジトリの概要で補足します。
+Claude固有の理由がない限り、詳細なアーキテクチャポリシーをここに重複させないでください。
 
-## Stack
+## スタック
 
 - Kotlin
-- Jetpack Compose (Material 3)
-- Clean Architecture
+- Jetpack Compose（Material 3）
+- クリーンアーキテクチャ
 - Hilt + KSP
-- AWS Amplify (Cognito)
-- Firebase (Analytics, FCM)
-- Min SDK 29 / Compile SDK 36 / Java 17
-- Flavors: `dev`, `prod`
+- AWS Amplify（Cognito）
+- Firebase（Analytics、FCM）
+- 最小SDK 29 / コンパイルSDK 36 / Java 17
+- フレーバー：`dev`、`prod`
 
-## Skills
+## スキル
 
 - `.agent/skills/android-clean-arch/SKILL.md`
 - `.agent/skills/android-composable/SKILL.md`
@@ -31,41 +31,38 @@ Do not duplicate detailed architectural policy here unless there is a Claude-spe
 - `.agent/skills/android-testing/SKILL.md`
 - `.agent/skills/android-media-upload/SKILL.md`
 
-## Subagents
+## サブエージェント
 
-- `.claude/agents/reviewer.md` — read-only code reviewer (architecture, security, conventions)
-- `.claude/agents/test-writer.md` — unit test generator (JUnit 5 + MockK patterns)
-- `.claude/agents/arch-checker.md` — architecture validator (module boundaries, dependency
-  direction)
+- `.claude/agents/reviewer.md` — 読み取り専用コードレビュアー（アーキテクチャ、セキュリティ、規約）
+- `.claude/agents/test-writer.md` — ユニットテスト生成（JUnit 5 + MockKパターン）
+- `.claude/agents/arch-checker.md` — アーキテクチャバリデータ（モジュール境界、依存方向）
 
-## Claude quick-start
+## Claudeクイックスタート
 
-Before making changes:
+変更を行う前に：
 
-1. Read `AGENTS.md`.
-2. Identify the smallest affected module.
-3. Reuse patterns already present in the same feature.
-4. Keep changes local and avoid silent refactors.
-5. Run the smallest relevant test scope, then report what changed.
+1. `AGENTS.md` を読む。
+2. 影響を受ける最小のモジュールを特定する。
+3. 同じフィーチャー内にすでに存在するパターンを再利用する。
+4. 変更をローカルに保ち、暗黙のリファクタリングを避ける。
+5. 最小限の関連テストスコープを実行し、何が変わったかをレポートする。
 
-## Repo-specific reminders
+## リポジトリ固有のリマインダー
 
-- UseCase style: `suspend operator fun invoke()` with a single responsibility.
-- Repository implementations should delegate to data sources and avoid business logic.
-- Error mapping belongs in the data layer via mapper objects.
-- `CancellationException` must be re-thrown in `runCatching` flows.
-- Domain models should prefer value objects over raw primitives for validated concepts.
-- Compose screens should stay declarative, with state owned by ViewModels/UI state classes.
-- UI strings should come from `stringResource()`.
-- Tests use JUnit 5 + MockK + `kotlinx-coroutines-test`.
+- UseCaseスタイル：単一責任の `suspend operator fun invoke()`。
+- リポジトリ実装はデータソースへの委譲のみ行い、ビジネスロジックを持たない。
+- エラーマッピングはマッパーオブジェクト経由でdata層に属する。
+- `runCatching` フローでは `CancellationException` を必ず再スローする。
+- ドメインモデルは、バリデーション済み概念に対して生プリミティブより値オブジェクトを優先する。
+- Composeスクリーンは宣言的に保ち、ステートはViewModel/UIステートクラスで所有する。
+- UI文字列は `stringResource()` を使用する。
+- テストはJUnit 5 + MockK + `kotlinx-coroutines-test` を使用する。
 
-## Testing entrypoint
+## テストのエントリポイント
 
-For local verification, use the smallest relevant Gradle command (e.g.,
-`./gradlew :feature:<name>:<layer>:test`).
-For CI-aligned verification (DEV/Debug configuration unit tests), use `bundle exec fastlane test`.
-Note that this command is scoped to CI-aligned validation and does not necessarily cover all
-modules. In contrast, `./gradlew test` is responsible for building and testing each module (
-providing broader module-level coverage). Use `bundle exec fastlane test` for CI-synchronized checks
-and `./gradlew test` for comprehensive module-wide testing.
-See `docs/verification-policy.md` for the overall verification policy including CI gates.
+ローカル検証には最小限の関連Gradleコマンドを使用する（例：`./gradlew :feature:<name>:<layer>:test`）。
+CI準拠の検証（DEV/Debugビルドのユニットテスト）には `bundle exec fastlane test` を使用する。
+このコマンドはCIと同期した検証にスコープされており、すべてのモジュールを対象とするわけではない。
+`./gradlew test` は各モジュールのビルドとテストを担当し（より広いモジュールレベルのカバレッジ）、
+`bundle exec fastlane test` はCI同期チェック、`./gradlew test` は包括的なモジュール全体テストに使用する。
+CIゲートを含む総合的な検証ポリシーは `docs/verification-policy.md` を参照。

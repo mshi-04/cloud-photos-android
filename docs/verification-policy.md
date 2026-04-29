@@ -1,80 +1,78 @@
-# Verification Policy
+# 検証ポリシー
 
-This document defines when and how much verification is required.
-The goal is to avoid both under-verification (missing real problems) and over-verification
-(Gradle sync and full test suite on every single-line change).
+このドキュメントはいつ・どの程度の検証が必要かを定義します。
+目標は、検証不足（実際の問題を見逃す）と過剰検証（単一行の変更ごとにGradleシンクとフルテストスイートを実行する）の両方を避けることです。
 
-## Principle
+## 原則
 
-Run the smallest scope that can actually catch the class of error introduced by your change.
-Escalate scope only when the change crosses module or layer boundaries.
+変更によって引き起こされるエラーのクラスを実際にキャッチできる最小スコープを実行する。
+変更がモジュールまたはレイヤー境界を越える場合のみスコープを拡大する。
 
-## Gradle sync
+## Gradleシンク
 
-Gradle sync is **not required** after every source-only change.
-Run Gradle sync only when you have changed:
+Gradleシンクはソースのみの変更の後に**必要ありません**。
+以下を変更した場合のみGradleシンクを実行すること：
 
-- `build.gradle.kts` files
+- `build.gradle.kts` ファイル
 - `libs.versions.toml`
 - `settings.gradle.kts`
-- `build-logic` convention plugins
-- Added or removed a module
+- `build-logic` コンベンションプラグイン
+- モジュールの追加または削除
 
-For Kotlin source changes inside an existing module, sync is unnecessary.
+既存モジュール内のKotlinソースの変更に対してシンクは不要です。
 
-## During development
+## 開発中
 
-Run the smallest scope covering what you changed:
+変更内容をカバーする最小スコープを実行する：
 
 ```bash
-# single module (preferred during active development)
+# 単一モジュール（開発中は推奨）
 ./gradlew :feature:<name>:<layer>:test
 
-# quick lint check
+# 素早いlintチェック
 ./gradlew ktlintCheck
 ```
 
-Do not run the full test suite on every iteration — CI is the final gate, not a local
-development loop.
+毎回のイテレーションでフルテストスイートを実行しない — CIが最終ゲートであり、ローカル開発ループではない。
 
-## Before opening a PR
+## PRを開く前
 
-Run lint and tests for all changed modules:
+変更したすべてのモジュールに対してlintとテストを実行する：
 
 ```bash
-# auto-fix formatting first
+# まずフォーマットを自動修正
 ./gradlew ktlintFormat
 
-# lint gates
+# lintゲート
 ./gradlew ktlintCheck detekt
 
-# tests — scope depends on what changed (see below)
+# テスト — スコープは変更内容による（下記参照）
 ```
 
-### Test scope by change type
+### 変更タイプ別テストスコープ
 
-| Change type                                     | Test command                                                                              |
-|-------------------------------------------------|-------------------------------------------------------------------------------------------|
-| Single feature layer (`feature:<name>:<layer>`) | `./gradlew :feature:<name>:<layer>:test`                                                  |
-| Multiple layers in one feature                  | `./gradlew :feature:<name>:domain:test :feature:<name>:data:test :feature:<name>:ui:test` |
-| `core:*` module                                 | `./gradlew test` (all modules)                                                            |
-| `app` wiring, navigation, top-level DI          | `./gradlew test`                                                                          |
-| Gradle / `build-logic` / dependency changes     | `./gradlew test`                                                                          |
-| Documentation only                              | No test run required                                                                      |
+| 変更タイプ                                          | テストコマンド                                                                                    |
+|-----------------------------------------------------|---------------------------------------------------------------------------------------------------|
+| 単一フィーチャーレイヤー（`feature:<name>:<layer>`）| `./gradlew :feature:<name>:<layer>:test`                                                          |
+| 一つのフィーチャー内の複数レイヤー                  | `./gradlew :feature:<name>:domain:test :feature:<name>:data:test :feature:<name>:ui:test`         |
+| `core:*` モジュール                                 | `./gradlew test`（全モジュール）                                                                   |
+| `app` 配線、ナビゲーション、トップレベルDI          | `./gradlew test`                                                                                  |
+| Gradle / `build-logic` / 依存関係の変更             | `./gradlew test`                                                                                  |
+| ドキュメントのみ                                    | テスト実行不要                                                                                    |
 
-When in doubt about scope, run `./gradlew test`.
+スコープに迷った場合は `./gradlew test` を実行する。
 
-## Before merging
+## マージ前
 
-CI is the final gate. Do not merge if CI is red.
+CIが最終ゲートです。CIが赤の場合はマージしないこと。
 
-CI runs lint checks (`bundle exec fastlane lint` → `ktlintCheck detekt`) and unit tests for the
-DEV Debug variant (`bundle exec fastlane test` → `testDevDebugUnitTest`).
+CIはlintチェック（`bundle exec fastlane lint` → `ktlintCheck detekt`）と
+DEV Debugバリアントのユニットテスト（`bundle exec fastlane test` → `testDevDebugUnitTest`）を実行します。
 
-A passing local run does not substitute for a passing CI run.
-If CI fails after your PR is opened, investigate and fix before merging.
+ローカルでのパスはCIでのパスの代替にはなりません。
+PRがオープンされた後にCIが失敗した場合は、マージ前に調査して修正してください。
 
-## Module test targets reference
+## モジュールテストターゲットリファレンス
 
 ```bash
 ./gradlew :feature:auth:domain:test
@@ -83,16 +81,14 @@ If CI fails after your PR is opened, investigate and fix before merging.
 ./gradlew :feature:media:domain:test
 ./gradlew :feature:media:data:test
 ./gradlew :feature:media:ui:test
-./gradlew :feature:settings:domain:test
-./gradlew :feature:settings:data:test
 ```
 
-## Reporting
+## レポート
 
-If you did not run tests, state it explicitly in the report:
+テストを実行しなかった場合は、レポートに明示的に記載すること：
 
 ```
-tests not run: <command> — reason: <why>
+実行しなかったテスト: <コマンド> — 理由: <なぜ>
 ```
 
-Omitting this is not acceptable. CI being the gate does not justify skipping the report.
+これを省略することは許容されません。CIがゲートであることはレポートをスキップする理由になりません。

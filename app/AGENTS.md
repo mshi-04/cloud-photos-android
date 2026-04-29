@@ -1,90 +1,87 @@
 # app/AGENTS.md
 
-Local guidance for the `app` module.
-Read root `AGENTS.md` first, then apply the rules below.
-If this file conflicts with root `AGENTS.md`, prefer the root file and keep the change conservative.
+`app` モジュールのローカルガイダンス。
+まずルートの `AGENTS.md` を読み、次に以下のルールを適用してください。
+このファイルとルートの `AGENTS.md` が矛盾する場合は、ルートファイルを優先し変更を保守的に保つこと。
 
-## Intent of the app module
+## app モジュールの意図
 
-`app` is the composition root of the application.
-It should own app-wide startup, top-level navigation, Android application wiring, manifest-level
-concerns, build flavors, and dependency injection bootstrap.
-It should not become a home for feature business logic.
+`app` はアプリケーションのコンポジションルートです。
+アプリ全体の起動、トップレベルのナビゲーション、Android アプリケーション配線、
+マニフェストレベルの関心事、ビルドフレーバー、DI ブートストラップを所有すべきです。
+フィーチャーのビジネスロジックの置き場所にしてはなりません。
 
-## Put code here only when it is app-wide
+## ここに置くのはアプリ全体に関わるものだけ
 
-Examples:
+例：
 
-- `Application` setup
-- top-level navigation graph composition
-- Hilt bootstrap/wiring modules that connect feature implementations
-- manifest declarations
-- flavor/build configuration
-- app-wide service initialization
+- `Application` のセットアップ
+- トップレベルのナビゲーショングラフの合成
+- フィーチャー実装を接続するHiltブートストラップ/配線モジュール
+- マニフェスト宣言
+- フレーバー/ビルド設定
+- アプリ全体のサービス初期化
 
-Do not place here:
+ここに置かないもの：
 
-- feature-specific business rules
-- feature-specific repository logic
-- feature-specific UI state/effect models unless they are truly top-level app state
-- code that belongs naturally inside `feature/*`
+- フィーチャー固有のビジネスルール
+- フィーチャー固有のリポジトリロジック
+- 真にトップレベルのアプリステートでない限り、フィーチャー固有のUIステート/エフェクトモデル
+- 自然に `feature/*` に属するコード
 
-## Navigation rules
+## ナビゲーションルール
 
-- Keep top-level navigation assembly here.
-- Prefer feature modules to own their internal UI/state logic, while `app` coordinates the
-  high-level graph.
-- Do not spread route knowledge across unrelated files when a centralized nav definition can handle
-  it.
+- トップレベルのナビゲーションアセンブリをここに保つ。
+- フィーチャーモジュールが内部のUI/ステートロジックを所有し、`app` は高レベルのグラフを調整することを優先する。
+- 集中化したナビゲーション定義が対応できる場合、ルートの知識を無関係なファイルに分散させない。
 
-## DI / bootstrap rules
+## DI / ブートストラップルール
 
-- `app` may assemble bindings that wire feature implementations into the running application.
-- Keep DI modules focused by responsibility.
-- Avoid turning `app` DI into a dumping ground for unrelated bindings.
-- If a binding is feature-local, prefer keeping its implementation pattern near the feature unless
-  app-wide assembly is required.
+- `app` はフィーチャー実装を実行中のアプリケーションに配線するバインディングをアセンブルできる。
+- DI モジュールは責任ごとに集中させる。
+- `app` の DI を無関係なバインディングのゴミ箱にしない。
+- バインディングがフィーチャーローカルであれば、アプリ全体のアセンブリが必要でない限り
+  フィーチャー近くに実装パターンを保つことを優先する。
 
-## Build / flavor rules
+## ビルド / フレーバールール
 
-This module contains high-risk configuration because it owns app-wide Android and flavor setup.
-Be especially careful when touching:
+このモジュールはアプリ全体のAndroidとフレーバーのセットアップを所有するため、リスクの高い設定を含みます。
+以下に触れる際は特に注意すること：
 
 - `app/build.gradle.kts`
-- flavor configuration
-- manifest entries
-- Firebase / Amplify initialization
-- environment property usage
+- フレーバー設定
+- マニフェストエントリ
+- Firebase / Amplify の初期化
+- 環境プロパティの使用
 
-Rules:
+ルール：
 
-- Do not hardcode secrets or environment-specific values.
-- Preserve existing flavor/property loading behavior.
-- Be cautious with changes that affect CI dummy-secret behavior or release/dev build parity.
+- シークレットや環境固有の値をハードコードしない。
+- 既存のフレーバー/プロパティ読み込み動作を維持する。
+- CI ダミーシークレットの動作やリリース/dev ビルドの同等性に影響する変更には注意する。
 
-## UI rules
+## UI ルール
 
-- Keep truly top-level app UI concerns here.
-- Feature screens and feature-local state should remain in feature modules.
-- When changing top-level entry flow, be explicit about how authentication and home/start routing
-  behavior changes.
+- 真にトップレベルのアプリ UI の関心事をここに保つ。
+- フィーチャーのスクリーンとフィーチャーローカルのステートはフィーチャーモジュールに残す。
+- トップレベルのエントリフローを変更する際は、認証とホーム/スタートのルーティング動作がどのように変わるかを明示する。
 
-## Testing guidance
+## テストガイダンス
 
-Changes in `app` often have broad impact.
-Prefer broader verification:
+`app` の変更は広範な影響を及ぼすことが多いです。
+より広い検証を優先する：
 
 ```bash
 ./gradlew test
 bundle exec fastlane test
 ```
 
-If app wiring changes touch auth/media/settings integration points, call that out explicitly.
+アプリ配線の変更が auth/media の統合ポイントに触れる場合は、明示的に言及すること。
 
-## Report back with
+## レポート内容
 
-- which app-wide concern changed
-- why the change belongs in `app`
-- which features or startup/navigation flows are affected
-- tests run
-- remaining integration risks
+- 変更されたアプリ全体の関心事
+- その変更が `app` に属する理由
+- 影響を受けるフィーチャーまたは起動/ナビゲーションフロー
+- 実行したテスト
+- 残存する統合リスク

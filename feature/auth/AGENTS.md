@@ -1,98 +1,98 @@
 # feature/auth/AGENTS.md
 
-Local guidance for the `auth` feature.
-Read root `AGENTS.md` first, then apply the rules below.
-If this file conflicts with root `AGENTS.md`, prefer the root file and keep the change conservative.
+`auth` フィーチャーのローカルガイダンス。
+まずルートの `AGENTS.md` を読み、次に以下のルールを適用してください。
+このファイルとルートの `AGENTS.md` が矛盾する場合は、ルートファイルを優先し変更を保守的に保つこと。
 
-## Scope
+## スコープ
 
-This feature is split into:
+このフィーチャーは以下に分割されています：
 
 - `feature/auth/domain`
 - `feature/auth/data`
 - `feature/auth/ui`
 
-## Intent of this feature
+## このフィーチャーの意図
 
-This feature owns authentication-related domain concepts and auth user flows.
-It should contain auth-specific models, value objects, use cases, data translation, and UI flows.
+このフィーチャーは認証関連のドメイン概念とユーザーの認証フローを所有します。
+auth固有のモデル、値オブジェクト、ユースケース、データ変換、UIフローを含むべきです。
 
-## Domain rules
+## ドメインルール
 
-Keep `feature/auth/domain` pure Kotlin.
-Allowed here:
+`feature/auth/domain` を純粋なKotlinに保つ。
+ここに置いてよいもの：
 
-- auth use cases
-- auth repository interfaces
-- auth domain models
-- auth value objects such as validated user-facing credentials and identifiers
+- auth ユースケース
+- auth リポジトリインターフェース
+- auth ドメインモデル
+- バリデーション済みのユーザー向け認証情報や識別子などの auth 値オブジェクト
 
-Do not place here:
+ここに置かないもの：
 
-- Cognito SDK specifics
-- Android framework types
-- Compose/UI types
-- data source implementations
+- Cognito SDK の詳細
+- Androidフレームワーク型
+- Compose/UI 型
+- データソース実装
 
-## Value object rules
+## 値オブジェクトルール
 
-Preserve value object usage for validated auth concepts.
-Prefer existing patterns for:
+バリデーション済みの auth 概念に対して値オブジェクトの使用を維持する。
+以下の既存パターンを優先する：
 
 - `Email`
 - `Password`
 - `UserId`
-- confirmation/auth tokens or codes when they represent validated domain inputs
+- バリデーション済みのドメイン入力を表す確認コード/auth トークン
 
-Do not replace established value objects with raw `String` values in domain APIs.
-If a new validated auth concept is introduced, prefer a value object over a primitive.
+確立された値オブジェクトをドメインAPIの生 `String` 値に置き換えない。
+新しいバリデーション済みの auth 概念が導入される場合は、プリミティブより値オブジェクトを優先する。
 
-## Data rules
+## データルール
 
-`feature/auth/data` is responsible for:
+`feature/auth/data` は以下を担当する：
 
-- integrating with Cognito/Amplify auth behavior
-- translating SDK errors and states into domain-friendly models
-- implementing repository contracts
-- mapping provider-specific auth steps/errors into domain results
+- Cognito/Amplify auth動作との統合
+- SDK エラーとステートをドメインフレンドリーなモデルに変換
+- リポジトリコントラクトの実装
+- プロバイダー固有の auth ステップ/エラーをドメイン結果にマッピング
 
-Rules:
+ルール：
 
-- Keep Cognito-specific translation in data mappers and data source implementations.
-- Do not leak provider-specific error/state models to domain or UI.
-- Repository implementations should delegate to data sources and mappers.
-- Error mapping belongs in data-layer mapper objects.
-- Re-throw `CancellationException` in coroutine error handling.
+- Cognito固有の変換をデータマッパーとデータソース実装に保つ。
+- プロバイダー固有のエラー/ステートモデルをdomainやUIに漏らさない。
+- リポジトリ実装はデータソースとマッパーへの委譲のみを行う。
+- エラーマッピングはdata層のマッパーオブジェクトに属する。
+- コルーチンのエラーハンドリングで `CancellationException` を再スローする。
 
-## UI rules
+## UI ルール
 
-`feature/auth/ui` is responsible for:
+`feature/auth/ui` は以下を担当する：
 
-- auth screens
-- auth ViewModels
-- UI state/effect classes
-- user input handling and screen-level validation wiring
+- auth スクリーン
+- auth ViewModel
+- UI ステート/エフェクトクラス
+- ユーザー入力処理とスクリーンレベルのバリデーション配線
 
-Rules:
+ルール：
 
-- ViewModels should call auth use cases.
-- Keep screen state in UI state classes / ViewModels.
-- Keep one-shot navigation/snackbar/etc. in effect models following existing patterns.
-- Do not move Cognito-specific translation into UI.
-- Do not move business rules from use cases into composables.
+- ViewModel は auth ユースケースを呼び出す。
+- スクリーンのステートは UI ステートクラス / ViewModel に保つ。
+- ワンショットのナビゲーション/スナックバーなどは既存パターンに従いエフェクトモデルに保つ。
+- Cognito 固有の変換を UI に移動しない。
+- ビジネスルールをユースケースからコンポーザブルに移動しない。
 
-## Flow-specific guardrails
+## フロー固有のガードレール
 
-When editing login, signup, forgot-password, reset-password, or verification flows:
+ログイン、サインアップ、パスワード忘れ、パスワードリセット、確認フローを編集する際：
 
-- preserve the separation between input validation, domain execution, and UI effects
-- keep auth-step branching readable and localized
-- prefer updating existing effect/state models instead of inventing parallel ones
-- be careful not to break existing screen-to-screen transition assumptions
+- 入力バリデーション、ドメイン実行、UIエフェクトの分離を維持する
+- auth ステップの分岐を読みやすくローカルに保つ
+- 並列的な新しいエフェクト/ステートモデルを発明するのではなく、既存のものを更新することを優先する
+- 既存のスクリーン間遷移の前提を壊さないよう注意する
 
-## Testing guidance
+## テストガイダンス
 
-Prefer targeted auth tests first:
+まず対象の auth テストを優先する：
 
 ```bash
 ./gradlew :feature:auth:domain:test
@@ -100,12 +100,12 @@ Prefer targeted auth tests first:
 ./gradlew :feature:auth:ui:test
 ```
 
-Run broader tests if changes cross app wiring or shared modules.
+変更がアプリ配線や共有モジュールをまたぐ場合は、より広いテストを実行する。
 
-## Report back with
+## レポート内容
 
-- which auth layer changed
-- whether provider-specific behavior changed
-- whether any value object or validation rule changed
-- tests run
-- remaining risks in auth flow transitions
+- 変更された auth レイヤー
+- プロバイダー固有の動作が変更されたか
+- 値オブジェクトやバリデーションルールが変更されたか
+- 実行したテスト
+- auth フロー遷移における残存リスク
