@@ -1,100 +1,125 @@
-# Architecture Decisions
+# アーキテクチャ決定
 
-This document explains why the repository is structured the way it is.
-It is not a rule file — rules live in `AGENTS.md`.
-The goal is to make the reasoning visible so that both humans and AI agents can make consistent
-decisions.
+この文書は、ルールの背景を説明します。実装判断は `AGENTS.md` と各規約文書を優先します。
 
-## Why modular? Why `app / core / feature`?
+## `app / core / feature`
 
-**Decision**: separate modules for `app`, `core:*`, and each `feature`.
+決定: アプリ配線、共有コード、フィーチャーをモジュールで分ける。
 
-**Reason**: large Android apps built in a single module become difficult to scale and test.
-Module boundaries enforce dependency direction at compile time, not just by convention.
-They also allow faster incremental builds and more targeted testing.
+理由:
 
-**What we avoid**: a flat structure where anything can call anything, leading to tangled
-dependencies
-that are expensive to untangle later.
+- Gradleモジュールで依存方向を制約できる。
+- 変更影響を絞れる。
+- テスト対象を絞れる。
+- フィーチャー追加時に無関係な依存を避けられる。
 
-## Why split each feature into `domain / data / ui`?
+避けるもの:
 
-**Decision**: each feature has three layers with explicit allowed-dependency directions.
+- すべてを `app` に集める。
+- 実利用のない便利コードを `core` に集める。
 
-**Reason**: this is the clean architecture principle applied to Android features.
+## `ui / domain / data`
 
-- `domain` stays framework-free, making business rules testable without device or Android context.
-- `data` isolates all SDK and persistence concerns so they can change without touching business
-  logic.
-- `ui` remains declarative and state-driven, making it easier to test and swap renderers.
+決定: Android公式のUI layer、optional domain layer、data layerをフィーチャーモジュールに対応させる。
 
-**What we avoid**: ViewModels that call Room DAOs directly, or use cases that import Amplify SDKs.
-Mixing layers makes it impossible to test business logic without an Android environment.
+理由:
 
-## Why value objects instead of raw primitives?
+- UIは状態描画とevent発行に集中できる。
+- domainはAndroidなしでテストできる。
+- dataはSDK、DB、network、cacheを閉じ込められる。
+- provider変更がUI/domainへ波及しにくい。
 
-**Decision**: validated domain concepts such as `Email`, `Password`, and `UserId` are expressed as
-`@JvmInline value class` with private constructors and factory validation.
+避けるもの:
 
-**Reason**: raw `String` parameters cannot encode their constraints.
-A function that takes `(email: String, userId: String)` can be called with arguments swapped at the
-call site with no compile-time protection.
-Value objects move validation to the construction site, make domain APIs self-documenting, and
-prevent invalid states from propagating through the system.
+- ViewModelがDAOやSDK clientを直接呼ぶ。
+- UseCaseがWorkManagerやAmplifyをimportする。
+- Entity/DTOがUI stateに入る。
 
-**What we avoid**: scattered `if (email.contains("@"))` checks at multiple call sites, or domain
-models that accept unvalidated input.
+## 単方向データフロー
 
-## Why keep provider-specific code inside `data`?
+決定: UIから状態更新までの流れを一方向にする。
 
-**Decision**: Cognito, Amplify, Firebase, Room, and WorkManager details must not cross out of
-`data`.
+```text
+UI event -> ViewModel -> UseCase/Repository -> UI state/effect -> UI
+```
 
-**Reason**: provider SDKs change. Auth providers are replaced. Storage backends evolve.
-Confining SDK details to `data` means a provider migration requires only `data` changes — domain
-and UI remain stable.
+理由:
 
-**What we avoid**: Cognito error types appearing in use cases, or Firebase types referenced in
-Compose screens. When that happens, a provider change becomes a cross-repo refactor.
+- 状態遷移を追いやすい。
+- Composeの再描画モデルと合う。
+- ViewModelテストで画面契約を検証しやすい。
 
-## Why separate worker / scheduler / repository / datasource?
+## UseCase
 
-**Decision**: background work in the `media` feature uses separate classes for workers,
-schedulers, repositories, and data sources rather than a single coordinating class.
+決定: domain rule、複数Repository調整、再利用操作をUseCaseで表す。
 
-**Reason**: each responsibility has a different lifecycle and testability profile.
+理由:
 
-- Workers manage WorkManager execution context.
-- Schedulers decide when to enqueue and with what constraints.
-- Repositories expose domain contracts.
-- Data sources handle raw reads/writes to local or remote storage.
+- ViewModelを状態管理へ集中させられる。
+- domainロジックをJVMテストできる。
+- 操作の意味が名前として残る。
 
-Collapsing these makes it impossible to test scheduling logic independently of persistence or
-vice versa. It also makes retry behavior and state transitions harder to reason about.
+避けるもの:
 
-**What we avoid**: a single `UploadManager` class that enqueues work, tracks records, calls the
-network, and maps errors — making every bug fix a surgery.
+- すべてのRepositoryメソッドを機械的にUseCase化する。
+- Android/SDK/DB型をUseCaseへ入れる。
 
-## Why is `android.util.Log` forbidden in production code?
+## Value Object
 
-**Decision**: `android.util.Log` must not appear in committed production code.
+決定: `Email`、`Password`、`UserId` など検証済み概念をvalue objectで表す。
 
-**Reason**: log calls with no severity/sampling control can leak sensitive data (tokens, user IDs,
-file paths) into logcat in production. They also add noise that makes real diagnostics harder.
-This repository currently has no structured logging abstraction; where logging is genuinely needed,
-it should be designed intentionally rather than added ad hoc.
+理由:
 
-**What we avoid**: debug-level token dumps or upload path logs that survive into release builds,
-visible to anyone with adb access on an unlocked device.
+- 生プリミティブでは制約を表現できない。
+- 無効値の伝播を防げる。
+- APIの意味が型で分かる。
 
-## Why treat lint / test / CI as a harness?
+## Provider隔離
 
-**Decision**: lint, unit tests, and CI are treated as gates, not suggestions.
+決定: Cognito、Amplify、Firebase、Room、WorkManager、HTTP実装はdataに閉じ込める。
 
-**Reason**: a change that breaks lint or tests leaves the repository in a state where the next
-change cannot be verified. CI is the shared, authoritative environment. A passing local run that
-fails CI is not a passing run.
-Treating verification as part of the definition of "done" keeps the main branch releasable.
+理由:
 
-**What we avoid**: a culture of "it works on my machine" where CI red is normalized, and the test
-suite degrades into an ignored checkbox.
+- providerは変更され得る。
+- SDK例外やmodelがdomain/UIへ漏れると移行コストが上がる。
+- mapper境界でdomain contractを安定させられる。
+
+## WorkManager分離
+
+決定: mediaのバックグラウンド処理をWorker、Scheduler、Repository、DataSourceへ分ける。
+
+理由:
+
+- WorkManagerは永続的に完了させたい処理に向く。
+- enqueue条件と実処理を分けるとテストしやすい。
+- retry、constraints、SyncStatus、DB/API整合性を個別に検証できる。
+
+## main-safe suspend
+
+決定: suspend APIはメインスレッドから呼ばれても安全にする。
+
+理由:
+
+- 呼び出し側がDispatcher詳細を知らずに済む。
+- ViewModelとUseCaseが読みやすくなる。
+- テストでDispatcherを差し替えやすい。
+
+## ログ制限
+
+決定: プロダクションコードへ `android.util.Log` を直接残さない。
+
+理由:
+
+- token、user id、path、URL、bucketなどの漏洩リスクがある。
+- 診断ノイズが増える。
+- 現状、統一ログ抽象化がない。
+
+## 検証スコープ
+
+決定: 変更が壊し得る最小範囲を検証し、境界を越える変更では広げる。
+
+理由:
+
+- 小変更に毎回フル検証を要求すると開発速度が落ちる。
+- 境界変更を狭いテストで済ませると回帰を見逃す。
+- CIを最終ゲートにしつつ、ローカルでも意味のある確認を行う。

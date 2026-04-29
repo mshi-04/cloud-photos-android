@@ -1,97 +1,118 @@
-# Testing Conventions
+# テスト規約
 
-Referenced from `AGENTS.md` (source of truth for all rules).
-Source-of-truth order: `AGENTS.md` → feature-local patterns → `CLAUDE.md` → `.agent/skills/*`.
-When this file and `AGENTS.md` conflict, prefer `AGENTS.md`.
-See also: `.agent/skills/android-testing/SKILL.md` for testing pattern guidance.
-Where this file and the Skill conflict on annotation rules or naming details, prefer this file.
+テストの書き方を定義します。実行範囲は `docs/verification-policy.md` を参照してください。
 
----
-
-## Test stack
+## スタック
 
 - JUnit 5
 - MockK
 - `kotlinx-coroutines-test`
-- Follow Arrange / Act / Assert structure.
+- Arrange / Act / Assert
 
-## Test function naming
+既存テストに合わせ、テストだけ別スタイルにしません。
 
-All test function names must use exactly this format:
+## 命名
+
+形式:
 
 ```text
-`[tested function name] [expected outcome] when [condition]`
+`[対象関数名] [期待結果] when [条件]`
 ```
 
-This format applies to all layers: value objects, use cases, repositories, mappers, workers, and
-ViewModels.
-
-**Segment definitions:**
-
-| Segment                | Rule                                                                                      |
-|------------------------|-------------------------------------------------------------------------------------------|
-| `tested function name` | The exact Kotlin function, property, or event-handler name under test. Must appear first. |
-| `expected outcome`     | A verb phrase using one of the allowed verbs only (see below).                            |
-| `when [condition]`     | The scenario or input state. Must always be present — never omit.                         |
-
-**Allowed verbs:** `returns` / `throws` / `sets` / `emits` / `calls` / `rethrows` / `ignores`
-
-**Naming restrictions:**
-
-- `test`, `should`, `verify`, or similar prefixes are forbidden.
-- snake_case is forbidden anywhere in the name.
-- camelCase is permitted for any identifier (e.g., `onSignIn`, `fetchMedia`) within the
-  backtick-enclosed test name. For symbolic names (class names or types), use PascalCase (e.g.,
-  `SignedInState`, `NetworkError`) when helpful. For the natural language parts that describe
-  conditions or expectations, prefer using lowercase words separated by spaces.
-- Japanese characters are forbidden.
-- Vague outcome words (`works`, `handles`, `correctly`, `properly`) are forbidden.
-- Categorical labels (`success case`, `failure case`, `happy path`, `error case`) are forbidden.
-- `success` or `failure` alone as the outcome is forbidden — write the concrete type, state,
-  or effect name instead (e.g., `returns SignedInState`, `returns NetworkError`).
-- Multiple behaviors in one function name are forbidden.
-- `updates` is not an allowed verb; use `sets` instead.
-
-**Examples:**
+例:
 
 ```kotlin
-fun `invoke returns SignedInState when repository returns done state`()
+fun `invoke returns SignedInState when repository returns signed in user`()
 fun `of throws IllegalArgumentException when email is blank after trim`()
 fun `onSignIn emits NavigateToHome when credentials are valid`()
-fun `onSignIn sets passwordError when password is blank`()
-fun `invoke returns NetworkError when network is unavailable`()
-fun `of returns Email when input is valid`()
+fun `doWork returns retry when upload fails with temporary error`()
 ```
 
-## Annotations
+許可する期待結果の動詞:
 
-Allowed: `@Test`, `@BeforeEach`, `@AfterEach`, `@OptIn(ExperimentalCoroutinesApi::class)`,
-`@ParameterizedTest` (with `@ValueSource` / `@CsvSource` / `@MethodSource`), `@ExtendWith`
-(only when a JUnit extension from an external library or a custom extension is required — see
-note below).
+- `returns`
+- `throws`
+- `sets`
+- `emits`
+- `calls`
+- `rethrows`
+- `ignores`
 
-Forbidden: `@DisplayName` (backtick name is sufficient), `@Disabled` (fix or delete — do not
-commit disabled tests), `@Nested`, `@Tag`, `@Timeout`, `@RepeatedTest`.
+禁止:
 
-Note on `@ExtendWith` and MockK: In standard `*Test.kt` files that use MockK, call `mockk<>()`
-directly — no `@ExtendWith(MockKExtension::class)` is needed or recommended. Reserve
-`@ExtendWith` for cases where a JUnit extension is genuinely required (e.g., a custom test
-lifecycle extension or a third-party library extension that has no MockK equivalent).
+- `test`、`should`、`verify` prefix
+- snake_case
+- 日本語テスト名
+- `works`、`handles`、`correctly`、`properly`
+- `success case`、`failure case`、`happy path`、`error case`
+- 曖昧な `success` / `failure`
+- 未許可動詞の `updates`
 
-## Verification timing
+## 構造
 
-| Timing             | Executor | Content                                                |
-|--------------------|----------|--------------------------------------------------------|
-| On task completion | AI agent | `./gradlew ktlintCheck detekt` → affected module tests |
-| Push / PR creation | Human    | push, PR creation, merge decision                      |
-| PR / merge gate    | CI       | lint checks (ktlintCheck + detekt) + all unit tests    |
+- Arrange、Act、Assertを空行で分ける。
+- 1テスト1理由にする。
+- Mockは境界の依存だけに使う。
+- Mapper、value object、domain modelは可能な限り実体でテストする。
+- sleepや実時間待ちを使わない。
 
-See `docs/verification-policy.md` for the full policy including Gradle sync rules and test scope
-by change type.
+## Coroutines / Flow
 
-If tests are not run, explicitly state that they were not run.
+- `runTest` を使う。
+- TestDispatcherを注入できる設計にする。
+- 基本は `StandardTestDispatcher` を使う。
+- 即時実行が目的のときだけ `UnconfinedTestDispatcher` を使う。
+- `advanceUntilIdle()` などで仮想時間を明示的に進める。
+- `CancellationException` の契約は `rethrows` で確認する。
+- Flow収集は既存ヘルパーや既存パターンに合わせる。
 
-## Module test targets
+## ViewModel
+
+- 初期stateを確認する。
+- event後のstate/effectを確認する。
+- UseCase呼び出しの有無だけで終わらせない。
+- 画面契約として見える結果をassertする。
+- Main dispatcher差し替えは既存Ruleを使う。
+
+## Domain
+
+- UseCaseは成功、domain error、validation、キャンセルを必要に応じて検証する。
+- Value objectは正規化、境界値、不正値を検証する。
+- Repository interfaceをmockする場合は、domain contractとして意味のある戻り値にする。
+
+## Data / Worker
+
+- Repository実装はDataSource呼び出し、Mapper適用、domain resultを検証する。
+- Mapperはprovider例外やDTO/Entity変換を検証する。
+- Workerは `Result.success()` / `Result.retry()` / `Result.failure()` と状態更新を検証する。
+- WorkManagerのunique name、constraints、input Dataを変える場合は契約をテストまたは報告する。
+
+## Annotation
+
+許可:
+
+- `@Test`
+- `@BeforeEach`
+- `@AfterEach`
+- `@OptIn(ExperimentalCoroutinesApi::class)`
+- `@ParameterizedTest`
+- `@ValueSource`
+- `@CsvSource`
+- `@MethodSource`
+- `@ExtendWith`（本当にJUnit拡張が必要な場合のみ）
+
+禁止:
+
+- `@DisplayName`
+- `@Disabled`
+- `@Nested`
+- `@Tag`
+- `@Timeout`
+- `@RepeatedTest`
+
+MockKでは通常 `mockk<>()` を直接使います。`@ExtendWith(MockKExtension::class)` は原則不要です。
+
+## 主なGradleターゲット
 
 ```bash
 ./gradlew :feature:auth:domain:test
@@ -100,6 +121,4 @@ If tests are not run, explicitly state that they were not run.
 ./gradlew :feature:media:domain:test
 ./gradlew :feature:media:data:test
 ./gradlew :feature:media:ui:test
-./gradlew :feature:settings:domain:test
-./gradlew :feature:settings:data:test
 ```

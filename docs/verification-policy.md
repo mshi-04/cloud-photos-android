@@ -1,98 +1,73 @@
-# Verification Policy
+# 検証ポリシー
 
-This document defines when and how much verification is required.
-The goal is to avoid both under-verification (missing real problems) and over-verification
-(Gradle sync and full test suite on every single-line change).
+変更後に何を確認するかを定義します。
 
-## Principle
+## 原則
 
-Run the smallest scope that can actually catch the class of error introduced by your change.
-Escalate scope only when the change crosses module or layer boundaries.
+- 変更が壊し得る範囲を検証する。
+- レイヤーやモジュールを越えた変更は検証範囲を広げる。
+- ドキュメントのみの変更ではGradleテストを要求しない。
+- 実行しなかった検証は理由と一緒に報告する。
 
-## Gradle sync
+## Gradle Syncが必要な変更
 
-Gradle sync is **not required** after every source-only change.
-Run Gradle sync only when you have changed:
-
-- `build.gradle.kts` files
-- `libs.versions.toml`
+- `build.gradle.kts`
 - `settings.gradle.kts`
-- `build-logic` convention plugins
-- Added or removed a module
+- `libs.versions.toml`
+- `build-logic`
+- モジュール追加/削除
+- AGP、Kotlin、KSP、Hilt、Compose compilerなどの設定変更
 
-For Kotlin source changes inside an existing module, sync is unnecessary.
+Kotlinソース、resource、文書のみの変更では通常不要です。
 
-## During development
+## 変更種別ごとの検証
 
-Run the smallest scope covering what you changed:
+| 変更種別 | 検証 |
+|---|---|
+| ドキュメントのみ | 文書間参照と整合性確認 |
+| 単一domainモジュール | `./gradlew :feature:<name>:domain:test` |
+| 単一dataモジュール | `./gradlew :feature:<name>:data:test` |
+| 単一uiモジュール | `./gradlew :feature:<name>:ui:test` |
+| 同一フィーチャー複数レイヤー | 触れた各レイヤーのtest |
+| `app` | `./gradlew test`、必要に応じてassemble |
+| `core:*` | `./gradlew test` |
+| Gradle / 依存 / build-logic | `./gradlew test`、`ktlintCheck detekt`、必要に応じてassemble |
+| media Worker/Scheduler/SyncStatus | `:feature:media:data:test` と関連domain/uiテスト |
+
+迷った場合は `./gradlew test` を選びます。
+
+## 開発中
 
 ```bash
-# single module (preferred during active development)
 ./gradlew :feature:<name>:<layer>:test
-
-# quick lint check
 ./gradlew ktlintCheck
 ```
 
-Do not run the full test suite on every iteration — CI is the final gate, not a local
-development loop.
+毎回フルスイートを走らせる必要はありません。
 
-## Before opening a PR
-
-Run lint and tests for all changed modules:
+## PR前
 
 ```bash
-# auto-fix formatting first
 ./gradlew ktlintFormat
-
-# lint gates
 ./gradlew ktlintCheck detekt
-
-# tests — scope depends on what changed (see below)
 ```
 
-### Test scope by change type
+その後、変更種別に応じたテストを実行します。
 
-| Change type                                     | Test command                                                                              |
-|-------------------------------------------------|-------------------------------------------------------------------------------------------|
-| Single feature layer (`feature:<name>:<layer>`) | `./gradlew :feature:<name>:<layer>:test`                                                  |
-| Multiple layers in one feature                  | `./gradlew :feature:<name>:domain:test :feature:<name>:data:test :feature:<name>:ui:test` |
-| `core:*` module                                 | `./gradlew test` (all modules)                                                            |
-| `app` wiring, navigation, top-level DI          | `./gradlew test`                                                                          |
-| Gradle / `build-logic` / dependency changes     | `./gradlew test`                                                                          |
-| Documentation only                              | No test run required                                                                      |
+## CI
 
-When in doubt about scope, run `./gradlew test`.
+CIは最終ゲートです。ローカルで通っていても、CIが赤ならマージしません。
 
-## Before merging
-
-CI is the final gate. Do not merge if CI is red.
-
-CI runs lint checks (`bundle exec fastlane lint` → `ktlintCheck detekt`) and unit tests for the
-DEV Debug variant (`bundle exec fastlane test` → `testDevDebugUnitTest`).
-
-A passing local run does not substitute for a passing CI run.
-If CI fails after your PR is opened, investigate and fix before merging.
-
-## Module test targets reference
+主なCI相当:
 
 ```bash
-./gradlew :feature:auth:domain:test
-./gradlew :feature:auth:data:test
-./gradlew :feature:auth:ui:test
-./gradlew :feature:media:domain:test
-./gradlew :feature:media:data:test
-./gradlew :feature:media:ui:test
-./gradlew :feature:settings:domain:test
-./gradlew :feature:settings:data:test
+bundle exec fastlane lint
+bundle exec fastlane test
 ```
 
-## Reporting
+## 報告形式
 
-If you did not run tests, state it explicitly in the report:
-
+```text
+実行したテスト/検証: <コマンドまたは確認内容> — <結果>
+実行しなかったテスト/検証: <コマンド> — 理由: <理由>
 ```
-tests not run: <command> — reason: <why>
-```
-
-Omitting this is not acceptable. CI being the gate does not justify skipping the report.
