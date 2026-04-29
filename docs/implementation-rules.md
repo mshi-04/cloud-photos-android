@@ -1,50 +1,182 @@
-# Implementation Rules
+# 実装ルール
 
-Referenced from `AGENTS.md` (source of truth for all rules).
-Source-of-truth order: `AGENTS.md` → feature-local patterns → `CLAUDE.md` → `.agent/skills/*`.
-When this file and `AGENTS.md` conflict, prefer `AGENTS.md`.
+コードの置き場所と依存方向を決める文書です。
 
----
+## レイヤー対応
 
-## Use cases
+| Android公式の層 | このリポジトリの配置 |
+|---|---|
+| UI layer | `feature:<name>:ui` |
+| Domain layer | `feature:<name>:domain` |
+| Data layer | `feature:<name>:data` |
+| App composition | `app` |
+| Shared concerns | `core:*` |
 
-- Prefer `suspend operator fun invoke()`.
-- Keep each use case single-purpose.
-- Use cases should orchestrate domain work, not hold Android/framework concerns.
+依存方向は `ui -> domain <- data` を基本にします。`app` は組み立て役です。
 
-## Repository implementations
+## 配置判断
 
-- Repository implementations should delegate to data sources and mappers.
-- Do not accumulate business logic in `RepositoryImpl` unless the logic is inherently about data
-  composition/translation.
+| 変更内容 | 置き場所 |
+|---|---|
+| Compose screen/component | `feature:<name>:ui` |
+| ViewModel、UI state/effect/event | `feature:<name>:ui` |
+| UseCase、Repository interface | `feature:<name>:domain` |
+| Domain model、value object、domain error/result | `feature:<name>:domain` |
+| Repository implementation | `feature:<name>:data` |
+| DTO、Entity、DAO、DataSource、Mapper | `feature:<name>:data` |
+| Room、DataStore、WorkManager、SDK統合 | `feature:<name>:data` |
+| 起動、トップレベルNavigation、アプリ全体DI、Manifest、flavor | `app` |
+| 複数フィーチャーで共有する契約 | `core:common` |
+| 複数フィーチャーで共有するdata infrastructure | `core:data` |
+| Theme、共有resource、共有UI component | `core:ui` |
+| Gradle convention | `build-logic` |
 
-## Error handling
+`core` は最後の選択肢です。単に便利、汎用的、将来使いそう、という理由では移動しません。
 
-- Error mapping belongs in the data layer via dedicated mapper objects.
-- In coroutine flows or `runCatching` usage, `CancellationException` must be re-thrown.
-- Do not swallow cancellation.
-- See `docs/error-handling-guide.md` for patterns and examples.
+## app
 
-## Value objects
+`app` はコンポジションルートです。
 
-- Prefer `@JvmInline value class` with `private constructor` for validated domain concepts.
-- Instantiate through `companion object { fun of(raw: ...) }`.
-- Validate in `of()` using `require()`.
-- Trim string input before validation where appropriate.
-- Do not use raw primitives for validated domain concepts when an established value object pattern
-  exists.
-- Place value objects in the `valueobject/` package under the corresponding
-  `feature:<name>:domain` module
-  (e.g., `feature/auth/domain/src/main/kotlin/.../auth/valueobject/`).
+置くもの:
 
-## Feature-specific rules
+- `Application`、`Activity`
+- トップレベルNavGraph
+- アプリ全体のHilt配線
+- Manifest、flavor、初期化処理
 
-Feature-local guardrails live in the respective `feature/<name>/AGENTS.md` files.
-Read the relevant file before touching that feature:
+置かないもの:
 
-- `feature/auth/AGENTS.md` — Cognito translation, auth value objects, auth step branching
-- `feature/media/AGENTS.md` — upload/delete scheduling, sync status, worker/scheduler split
-- `feature/settings/AGENTS.md` — lightweight settings, isolation, value object patterns
+- フィーチャー固有のビジネスルール
+- Repository実装の詳細
+- DAO/DataSource/Worker本体
+- フィーチャー固有のUI state/effect
 
-These files take precedence for feature-local decisions, but defer to root `AGENTS.md` on
-conflicts.
+## domain
+
+`domain` はAndroidから独立したビジネス境界です。
+
+置くもの:
+
+- UseCase
+- Repository interface
+- Domain model
+- Value object
+- Domain result/error
+- 純粋なvalidation
+
+禁止:
+
+- Android framework型
+- Compose API
+- Room API
+- WorkManager API
+- Amplify/Firebase/Cognito/S3などのSDK型
+- Repository/DataSourceの具体実装
+
+UseCaseはmain-safeにします。重いCPU処理やブロッキングI/Oが必要なら、責任を持つ層でDispatcherを切り替えます。
+
+## data
+
+`data` は外部世界との接続を閉じ込めます。
+
+置くもの:
+
+- Repository implementation
+- Local/Remote DataSource
+- DTO、Entity、DAO
+- Mapper
+- Room、DataStore
+- Worker、Scheduler
+- SDK/API client連携
+
+ルール:
+
+- DTO、Entity、SDK modelをdomain/UIへ漏らさない。
+- provider例外はdomain向けerrorへmapする。
+- Repository実装に画面都合の分岐を入れない。
+- ビジネスルールが増えたらUseCaseへ移す。
+- `CancellationException` を握り潰さない。
+
+## ui
+
+`ui` は状態駆動の画面を所有します。
+
+置くもの:
+
+- ViewModel
+- UI state/effect/event
+- Compose screen/component
+- 表示用formatting
+
+ルール:
+
+- Composableはstateを受け取りeventを返す。
+- ViewModelはUseCaseまたはdomain abstractionを呼ぶ。
+- UIからDAO、SDK、Repository実装、Workerを直接呼ばない。
+- UI stateにDTO/Entity/SDK modelを入れない。
+- Navigationやsnackbarなどの一回限りの動作は既存effectパターンに合わせる。
+
+## UseCase
+
+UseCaseを作る基準:
+
+- 複数Repositoryを調整する。
+- 複数画面/複数ViewModelから再利用される。
+- domain ruleを名前付き操作として表したい。
+- data操作の前後にvalidationや状態遷移が必要。
+
+避けるもの:
+
+- 単純なRepositoryメソッドの無意味な1対1ラップ。
+- Android/SDK/DB型を受け取るUseCase。
+- UI都合のformatting。
+
+## Repository
+
+- interfaceはdomain、implementationはdata。
+- Repositoryはデータ取得、保存、同期、キャッシュ、競合解決の境界です。
+- provider固有の型や例外はdata内で閉じます。
+- UIに都合のよい文字列加工はRepositoryへ入れません。
+
+## Mapper
+
+- DTO/Entity/SDK modelとdomain modelの変換はdataに置く。
+- provider例外からdomain errorへの変換もdataに置く。
+- 同じ変換をRepositoryやDataSourceに分散させない。
+
+## Value Object
+
+検証済みdomain概念には `@JvmInline value class` を優先します。
+
+- constructorはprivate。
+- `of(raw: ...)` で生成する。
+- `of()` 内でtrimやvalidationを行う。
+- 既存value objectを生プリミティブに戻さない。
+- 置き場所は該当domainモジュールの `valueobject/` を優先する。
+
+## auth固有
+
+- `Email`、`Password`、`UserId`、token/code系のvalue objectを尊重する。
+- Cognito/Amplify型はdataから外へ出さない。
+- アカウント列挙を避けるために統合されたエラー表現を不用意に分解しない。
+- 入力validation、UseCase実行、UI effectを分離する。
+
+## media固有
+
+旧 `settings` は `media` に統合済みです。
+
+- 設定domain contract/usecase/value objectは `feature:media:domain`。
+- 設定永続化、DataStore、Repository実装は `feature:media:data`。
+- 設定UIは `feature:media:ui`。
+
+Worker/Scheduler/SyncStatusに触れる場合は `docs/media-upload-flow.md` を読む。
+
+## 禁止パターン
+
+- `domain` が `data` に依存する。
+- UIがDAO、SDK、Repository実装、Workerを直接呼ぶ。
+- DTO/Entity/SDK modelをdomain/UIへ公開する。
+- `RepositoryImpl` にビジネスルールを蓄積する。
+- `catch (Exception)` や `runCatching` で `CancellationException` を握り潰す。
+- 実利用のない共有化を `core` に入れる。
+- 一時ログや `android.util.Log` をプロダクションコードに残す。

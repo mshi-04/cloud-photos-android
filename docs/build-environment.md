@@ -1,67 +1,107 @@
-# Build and Environment
+# ビルドと環境
 
-Referenced from `AGENTS.md` (source of truth for all rules).
-Source-of-truth order: `AGENTS.md` → feature-local patterns → `CLAUDE.md` → `.agent/skills/*`.
-When this file and `AGENTS.md` conflict, prefer `AGENTS.md`.
+Gradle、flavor、環境値、依存追加に関するルールです。
 
----
+## 方針
 
-## Build and environment rules
+- Kotlin DSLとVersion Catalogを使う。
+- 共有設定は `build-logic` のconvention pluginへ寄せる。
+- 単一モジュールだけの依存は、そのモジュールに閉じる。
+- ビルド構造に関係しない作業で `build-logic` を触らない。
+- 依存追加は理由、スコープ、検証範囲を報告する。
 
-This project uses build flavors and required environment properties.
-Be careful not to break flavored builds.
+## Flavor必須値
 
-Each flavor must define the following required properties:
+各flavorは以下の値を必要とします。
 
 - `COGNITO_CLIENT_ID`
 - `API_BASE_URL`
 - `S3_BUCKET_NAME`
 
-### Where to set properties
+実際のキー:
 
-Properties are resolved in this priority order:
+- `DEV_COGNITO_CLIENT_ID`
+- `DEV_API_BASE_URL`
+- `DEV_S3_BUCKET_NAME`
+- `PROD_COGNITO_CLIENT_ID`
+- `PROD_API_BASE_URL`
+- `PROD_S3_BUCKET_NAME`
 
-1. **`local.properties`** (local development — never commit this file):
-   ```properties
-   DEV_COGNITO_CLIENT_ID=xxxxx
-   DEV_API_BASE_URL=https://dev.example.com/
-   DEV_S3_BUCKET_NAME=my-dev-bucket
-   PROD_COGNITO_CLIENT_ID=yyyyy
-   PROD_API_BASE_URL=https://api.example.com/
-   PROD_S3_BUCKET_NAME=my-prod-bucket
-   ```
+## 解決順序
 
-2. **Gradle project properties** (e.g., `-PDEV_COGNITO_CLIENT_ID=xxxxx` on the command line
-   or via `gradle.properties`).
+1. `local.properties`
+2. Gradle project property (`-PKEY=value`)
+3. `ORG_GRADLE_PROJECT_*` 環境変数
 
-3. **CI environment**: Pass `DEV_*` / `PROD_*` values **as Gradle project properties**,
-   which is what `findProperty` resolves. Two equivalent ways:
-    - Command-line: `-PDEV_COGNITO_CLIENT_ID=xxxxx`
-    - Environment variable mapped to Gradle property:
-      `ORG_GRADLE_PROJECT_DEV_COGNITO_CLIENT_ID=xxxxx`
-      (Gradle automatically maps `ORG_GRADLE_PROJECT_*`-prefixed env vars to project properties)
+例:
 
-   The root `build.gradle.kts` reads `local.properties` first, then falls back to
-   `findProperty` (Gradle project properties), so either method above works in CI.
+```properties
+DEV_COGNITO_CLIENT_ID=xxxxx
+DEV_API_BASE_URL=https://dev.example.com/
+DEV_S3_BUCKET_NAME=my-dev-bucket
+PROD_COGNITO_CLIENT_ID=yyyyy
+PROD_API_BASE_URL=https://api.example.com/
+PROD_S3_BUCKET_NAME=my-prod-bucket
+```
 
-> **Key naming**: prefix the base name with the flavor prefix — `DEV_` or `PROD_`.
-> Example: `DEV_COGNITO_CLIENT_ID`, `PROD_API_BASE_URL`.
+`local.properties` はコミットしません。
 
-Rules:
+CIで渡す例:
 
-- Do not hardcode secrets, endpoints, client IDs, or bucket names in Kotlin source.
-- Do not commit environment-specific values outside the intended configuration mechanism.
-- Be careful when touching `app/build.gradle.kts`, flavor logic, manifest configuration, or CI
-  dummy-secret behavior.
-- Flavor-specific values must be placed in the intended property or configuration flow — do not
-  scatter them into Kotlin source.
-- Avoid changing `build-logic` unless the task is explicitly about Gradle conventions.
+```bash
+./gradlew assembleDevDebug -PDEV_COGNITO_CLIENT_ID=xxxxx
+```
 
-## Dependency rules
+または:
 
-- Prefer existing libraries and patterns already used in the repository.
-- Do not add a new library unless clearly necessary.
-- If adding a dependency is unavoidable, explain why and keep the scope minimal.
-- Prefer module-local dependencies over broad app-level additions when possible.
-- If a dependency change spans `app`, `core:*`, or multiple feature modules, treat it as a wider
-  verification scope (run `./gradlew test`).
+```text
+ORG_GRADLE_PROJECT_DEV_COGNITO_CLIENT_ID=xxxxx
+```
+
+## 禁止
+
+- Kotlinソースへsecret、endpoint、client id、bucket名を直書きする。
+- 実環境値や `local.properties` をコミットする。
+- flavor差分をソースコードの条件分岐へ散らす。
+- 単一フィーチャー用途の依存を全体conventionへ入れる。
+- 既存conventionの意図を確認せず整理目的で `build-logic` を書き換える。
+
+## 依存追加チェック
+
+依存を追加する前に確認します。
+
+1. 既存依存や標準APIで足りないか。
+2. runtime依存かtest依存か。
+3. 追加先は最小モジュールか。
+4. KSP、Hilt、Room、Compose、AGP設定変更が必要か。
+5. ライセンス、バイナリサイズ、メンテナンス状況に問題がないか。
+6. 検証スコープは `docs/verification-policy.md` に合っているか。
+
+## build-logic
+
+触ってよい例:
+
+- 複数モジュール共通のAndroid/Kotlin設定。
+- lint、test、Compose、Hilt、Room、KSPの共通設定。
+- モジュール追加に伴う既存conventionの拡張。
+
+避ける例:
+
+- 単一モジュールだけの依存。
+- 一時的な回避設定。
+- ついでの大規模整理。
+
+## 検証
+
+Gradle、依存、build-logicを変更した場合:
+
+```bash
+./gradlew test
+./gradlew ktlintCheck detekt
+```
+
+variantやflavorに影響する場合:
+
+```bash
+./gradlew assembleDevDebug
+```

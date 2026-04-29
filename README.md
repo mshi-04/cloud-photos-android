@@ -236,7 +236,6 @@ CI がパスしない PR はマージできません。フォーク PR ではダ
   遷移
 - [`docs/error-handling-guide.md`](docs/error-handling-guide.md) — CancellationException
   とエラーマッピングのパターン
-- [`docs/forbidden-patterns.md`](docs/forbidden-patterns.md) — 禁止パターンとその理由
 - [`AGENTS.md`](AGENTS.md) — 開発ルール（人間・AI エージェント共通）
 
 ## セキュリティ
