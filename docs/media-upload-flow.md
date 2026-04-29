@@ -1,138 +1,149 @@
 # メディアアップロード/削除フロー
 
-このドキュメントは `media` フィーチャーのアップロードと削除のライフサイクルを説明します。
-ルールは `AGENTS.md` と `feature/media/AGENTS.md` にあります。このファイルはフロー全体の
-コールグラフを追わなくても変更の影響を把握できるよう、フローがどのように機能するかを説明します。
+`feature:media` の同期処理は、Room、API、S3、WorkManager、UI stateをまたぐ高リスク領域です。
 
-## このドキュメントが存在する理由
+## 責任境界
 
-`media` フィーチャーはリポジトリ内で最もリスクの高い領域です。
-ドメインルール、ローカル永続化、リモート同期、バックグラウンドワーカー、キャンセルロジックが混在しています。
-フローを誤解すると、リトライ動作の破損、同期ステータスの不整合、孤立したレコードが生じます。
+| 要素 | 責任 |
+|---|---|
+| `MediaViewModel` | 画面イベント、UI state/effect、UseCase呼び出し |
+| UseCase | 同期、アップロード準備、削除予約、スケジュール要求 |
+| Scheduler | WorkManagerへenqueueする条件と方法 |
+| Worker | バックグラウンド実行、retry/failure判断 |
+| Repository | domain contract、DataSource調整、mapper適用 |
+| DataSource | Room、DataStore、S3、APIなど具体I/O |
 
----
+責任を混ぜないこと。特にWorkerへUI都合を入れず、ViewModelからWorkManagerを直接呼びません。
 
-## アップロードフロー
-
-### トリガー（UI → Domain）
+## アップロード開始
 
 ```text
 MediaViewModel.onScreenResumed()
-  ├─ syncRemote()         → SyncUploadRecordsUseCase
-  ├─ prepareUploadQueue() → PrepareUploadQueueUseCase
-  └─ scheduleUpload()     → ScheduleUploadUseCase
-                               └─ UploadScheduler.scheduleUpload()
-                                    └─ UploadSchedulerImpl → WorkManager.enqueueUniqueWork(UploadMediaWorker)
+  ├─ syncRemote()
+  │    └─ SyncUploadRecordsUseCase
+  ├─ prepareUploadQueue()
+  │    └─ PrepareUploadQueueUseCase
+  └─ scheduleUpload()
+       └─ ScheduleUploadUseCase
+            └─ UploadScheduler.scheduleUpload()
+                 └─ UploadSchedulerImpl
+                      └─ WorkManager.enqueueUniqueWork(UploadMediaWorker)
 ```
 
-### ワーカー実行（Data — バックグラウンド）
+## UploadMediaWorker
 
 ```text
 UploadMediaWorker.doWork()
-  ↓
-  LocalUploadRecordsRepository.getPendingUploadRecords()   [Room]
-  ↓ （各レコードに対して）
-  ContentTypeResolver.resolve()
-  UploadDataSource.uploadMedia()
-    └─ Amplify.Storage.uploadInputStream()                 [S3]
-  ↓ （成功時）
-  LocalUploadRecordsRepository.saveUploadRecords()         [ローカルDBを更新]
-  RemoteUploadRecordsRepository.createUploadRecord()       [POST /media/uploads]
-  ↓ （全レコード処理後）
-  RemoteUploadRecordsRepository.completeUpload()           [POST /media/uploads/complete]
+  └─ LocalUploadRecordsRepository.getPendingUploadRecords()
+       └─ for each record
+            ├─ ContentTypeResolver.resolve()
+            ├─ UploadDataSource.uploadMedia()
+            ├─ LocalUploadRecordsRepository.saveUploadRecords()
+            └─ RemoteUploadRecordsRepository.createUploadRecord()
+       └─ RemoteUploadRecordsRepository.completeUpload()
 ```
 
-### SyncStatus遷移
+守ること:
 
-```text
-（新しいローカルメディア）
-  PENDING_UPLOAD
-      ↓ アップロード成功 + リモート登録成功
-  SYNCED
-      ↓ ユーザーが削除
-  PENDING_DELETE
-      ↓ 削除成功
-  （レコード削除）
+- `completeUpload()` はWorker実行単位で1回呼ぶ。
+- リモート登録失敗を成功扱いにしない。
+- 一時エラーではretry可能な状態を維持する。
+- 永続エラーでは `ERROR` へ遷移させる。
+- `CancellationException` は再スローする。
 
-  PENDING_UPLOAD / PENDING_DELETE
-      ↓ 永続的なエラー
-  ERROR
-```
-
----
-
-## 削除フロー
-
-### トリガー（UI → Domain）
+## 削除開始
 
 ```text
 MediaViewModel.scheduleDelete()
   └─ ScheduleDeleteUseCase
        └─ DeleteScheduler.scheduleDelete()
-            └─ DeleteSchedulerImpl → WorkManager.enqueueUniqueWork(DeleteMediaWorker)
+            └─ DeleteSchedulerImpl
+                 └─ WorkManager.enqueueUniqueWork(DeleteMediaWorker)
 ```
 
-### ワーカー実行（Data — バックグラウンド）
+## DeleteMediaWorker
 
 ```text
 DeleteMediaWorker.doWork()
-  ↓
-  LocalUploadRecordsRepository.getPendingDeleteRecords()   [Room]
-  ↓ （各レコードに対して）
-  RemoteUploadRecordsRepository.deleteUploadRecord()       [DELETE /media/uploads/:id]
-  UploadDataSource.deleteUploadedObject()                  [S3削除]
-  LocalUploadRecordsRepository.deleteUploadRecord()        [Roomから削除]
+  └─ LocalUploadRecordsRepository.getPendingDeleteRecords()
+       └─ for each record
+            ├─ RemoteUploadRecordsRepository.deleteUploadRecord()
+            ├─ UploadDataSource.deleteUploadedObject()
+            └─ LocalUploadRecordsRepository.deleteUploadRecord()
 ```
 
-特殊ケース：`cloudStoragePath` がnullの場合（まだアップロードされていない）、
-リモート/S3のステップをスキップしてローカルレコードを直接削除します。
+`cloudStoragePath == null` は未アップロード扱いです。リモート/S3削除をスキップしてローカルレコードを削除します。
 
-S3孤立の許容：`deleteUploadedObject()` がキャンセル以外のエラーで失敗した場合、
-ワーカーはリトライせずに続行し、孤立オブジェクトを受け入れます。
+既存仕様では、削除時のS3削除失敗を孤立オブジェクトとして許容して処理継続するケースがあります。
+この動作を変える場合は、retry増加、ユーザー表示、ローカル/リモート不整合を報告します。
 
----
-
-## リモート同期フロー
+## リモート同期
 
 ```text
 SyncUploadRecordsUseCase
-  └─ RemoteUploadRecordsRepository.getUploadRecords()      [GET /media/uploads]
-       └─ LocalUploadRecordsRepository.saveUploadRecords() [Roomにupsert]
+  └─ RemoteUploadRecordsRepository.getUploadRecords()
+       └─ LocalUploadRecordsRepository.saveUploadRecords()
 ```
 
-これは他のデバイスやセッションからアップロードされたレコードを取得するために
-レジューム時に実行されます。
+目的:
 
----
+- 他デバイス/他セッションのアップロード結果を取り込む。
+- ローカル表示をリモート状態へ再同期する。
+
+`PENDING_UPLOAD` や `PENDING_DELETE` をリモート状態で上書きする変更は慎重に扱います。
+
+## SyncStatus
+
+```text
+new local media
+  -> PENDING_UPLOAD
+  -> SYNCED
+  -> PENDING_DELETE
+  -> deleted
+
+PENDING_UPLOAD / PENDING_DELETE
+  -> ERROR
+```
+
+意味:
+
+- `PENDING_UPLOAD`: ローカルにあり、アップロード待ち。
+- `SYNCED`: アップロードとリモート登録が完了。
+- `PENDING_DELETE`: 削除予約済み。
+- `ERROR`: 永続的失敗。自動retryでは解消しない。
+
+ステータス追加や意味変更は、domain、data、ui、テスト、文書を同時に更新します。
 
 ## エラー分類
 
-ワーカーはリトライ動作を決定するために永続的エラーと一時的エラーを区別します。
+| エラー | Worker応答 | SyncStatus |
+|---|---|---|
+| `CancellationException` | 再スロー | 変更なし |
+| 一時的エラー | `Result.retry()` | 原則変更なし |
+| 永続的エラー | retryしない | `ERROR` |
+| 削除時の孤立許容ケース | 処理継続 | レコード削除される場合あり |
 
-| エラー種別                               | ワーカーの応答                                              | SyncStatus |
-|------------------------------------------|------------------------------------------------------------|------------|
-| 永続的（例：HTTP 4xx）                   | リトライなし、クリーンアップして ERROR としてマーク         | `ERROR`    |
-| 一時的（例：ネットワーク、HTTP 5xx）     | `hasTemporaryFailure = true` を設定 → `Result.retry()` を返す | 変化なし   |
-| CancellationException                    | 即座に再スロー                                              | 変化なし   |
+`docs/error-handling-guide.md` と一致させます。
 
----
+## WorkManager契約
 
-## このフローを変更する際に尊重すべき重要な境界
+変更時に確認する:
 
-1. **ワーカー/スケジューラ/リポジトリ/データソースの責任を崩さない。**
-   各クラスは異なるライフサイクルとテスト可能性プロファイルを持ちます。
-   理由は `docs/architecture-decisions.md` を参照。
+- unique work name
+- enqueue policy
+- constraints
+- tag
+- input/output Data
+- retry/backoff
+- foreground/notification
 
-2. **SyncStatus遷移の整合性を維持する。**
-   新しいステータスを追加したり遷移を変更する場合は、ワーカー、リポジトリ、UIステートが
-   すべて意味について合意していることを確認すること。
+これらを変えた場合は、既存キューや互換性への影響を報告します。
 
-3. **すべての `catch` ブロックで `CancellationException` を再スローする。**
-   ワーカーはネストされた `runCatching` ブロックを使用します。各ブロックは独立して再スローしなければなりません。
-   `docs/error-handling-guide.md` を参照。
+## 変更チェックリスト
 
-4. **リモート登録とローカルDB更新は同期を保たなければならない。**
-   リモート登録が失敗した場合、ローカルレコードを成功を示す状態に放置してはなりません。
-
-5. **`completeUpload()` は各レコードごとではなく、ワーカー実行ごとに1回呼び出される。**
-   バッチ完了を通知します。レコードごとのループ内に移動しないこと。
+- Worker/Scheduler/Repository/DataSourceの責任が混ざっていない。
+- SyncStatusの意味がdomain/data/uiで一致している。
+- ローカルDB更新とリモートAPI呼び出しの順序が不整合を生まない。
+- `CancellationException` を再スローしている。
+- retryされる失敗とretryされない失敗がテストされている。
+- WorkManager契約を不用意に変えていない。

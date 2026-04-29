@@ -1,50 +1,84 @@
 # Android規約
 
-`AGENTS.md` から参照されます（すべてのルールの情報源）。
-情報源の優先順位：`AGENTS.md` → フィーチャーローカルパターン → `CLAUDE.md` → `.agent/skills/*`。
-このファイルと `AGENTS.md` が矛盾する場合は `AGENTS.md` を優先すること。
-
----
+Android実装時の具体ルールです。配置判断は `docs/implementation-rules.md` を優先します。
 
 ## Compose
 
-- 既存パターンに従う：スクリーン = ステートフルなエントリ、コンテンツ = ステートレス/プライベートな描画関数（適用可能な場合）。
-- スクリーンのステートはViewModelまたは専用UIステートクラスで管理する。
-- コンポーザブル内に分散したサイドエフェクトを避ける。
-- ワンショットエフェクトの処理には、既存パターンと一貫して `LaunchedEffect(Unit)` と `rememberUpdatedState` を使用する。
-- UI文字列には `stringResource()` を使用する。
-- プレビューを追加する場合は `CloudPhotosTheme` でラップし、既存のプレビュー規約に合わせる。
-- 新しいステート/エフェクトコントラクトを導入する前に、同じフィーチャーの既存コントラクトを再利用する。
+- ScreenはViewModelと接続する入口、Contentは可能な限りstatelessな描画関数にする。
+- Composableはstateを受け取り、event callbackを呼ぶ。
+- State hoistingを優先し、再利用部品は `value` と `onValueChange` または明示的なeventを受け取る。
+- `remember` はUI一時状態に限定する。画面状態、通信状態、永続状態はViewModelやdomain/dataへ置く。
+- UI stateは単一のdata classまたは既存contractで表す。
+- 一回限りのNavigation、toast/snackbar、permission requestは既存effectパターンに合わせる。
+- `stringResource()` を使い、表示文字列を直書きしない。
+- Previewを追加する場合は既存Previewと `CloudPhotosTheme` の使い方に合わせる。
+- Lazy系や画像/動画表示では、不要なstate readや重い変換をComposable内に置かない。
 
 ## ViewModel
 
-- ViewModelはスクリーンのステートを所有し、ユースケースを起動する。
-- ステート遷移、バリデーション配線、UIフェイシングエフェクトに集中させる。
-- ユースケースからViewModelにドメインロジックを移動しない。
-- 同じフィーチャーモジュールの既存のイベントハンドラ命名とステート更新パターンを優先する。
+- UI stateを公開し、UI eventを受け取る。
+- UseCaseまたはdomain abstractionを呼ぶ。
+- `viewModelScope` 内では想定される例外を処理し、`CancellationException` は再スローする。
+- ViewModelへdomain ruleを移さない。
+- UI formattingは置いてよいが、DTO/Entity/SDK model変換はdata層へ置く。
+- Repository interfaceを直接呼ぶ場合は、UseCaseを省く理由が既存パターンと整合していること。
+
+## Coroutines / Flow
+
+- suspend関数はmain-safeにする。
+- Dispatcherを直接ハードコードしない。既存のDispatcher注入パターンがあれば使う。
+- `Dispatchers.IO` への切り替えは、ブロッキングI/OやSDK呼び出しを実際に持つ層で行う。
+- `StateFlow` は画面状態、effect用Flowは一回限りの動作に使い分ける。
+- Flowは収集側のライフサイクルを意識し、ViewModelの外で無期限収集を作らない。
+- `CancellationException` はcatchしない。catchした場合は必ず再スローする。
 
 ## Hilt / DI
 
-- Hilt配線は適切なDI/ブートストラップの場所に保つ。
-- アプリレベルの配線は `app` に、フィーチャー固有のバインディングはフィーチャーモジュールに属する。
-- すでに存在するフィーチャーローカルの実装バインディングパターンを優先する。
-- 無関係なバインディングを一つの大きなキャッチオールモジュールにまとめない。
+- Constructor injectionを優先する。
+- interface binding、SDK client、Room、DataStore、外部生成が必要なものだけmoduleに置く。
+- `app` はアプリ全体の組み立て、フィーチャー固有bindingはフィーチャー側の既存配置を優先する。
+- `@InstallIn` とscopeはライフサイクルに合わせる。
+- 無関係なbindingを巨大moduleへまとめない。
+
+## Navigation
+
+- トップレベルNavGraphは `app` に置く。
+- 画面内部の状態、event、effectはフィーチャーに置く。
+- route知識を無関係なUI componentへ広げない。
+- 認証状態、start destination、back stackを変える場合は影響を報告する。
+
+## WorkManager
+
+WorkManagerは、アプリが画面外になっても、プロセス終了や端末再起動をまたいでも完了させたい作業に使います。
+
+使う場面:
+
+- メディアアップロード/削除
+- サーバー同期
+- 一定条件下で確実に実行したいバックグラウンド処理
+
+使わない場面:
+
+- 画面を離れたら止まってよい処理
+- UI操作直後の短い非同期処理
+- 正確な時刻に鳴らすアラーム
+
+mediaでは既存のWorker/Scheduler構造を維持します。
+
+- unique work名、enqueue policy、constraints、tag、input/output Dataを不用意に変えない。
+- retry/backoffを変える場合は、SyncStatusとテストも確認する。
+- long-running workとしてforeground化が必要になる変更は、通知設計も含めて扱う。
 
 ## ログ
 
-- プロダクションコードで `android.util.Log` を直接使用しない。
-- 一時的なデバッグログ文をコミットしない。
-- このリポジトリにログ抽象化が存在しない場合、`android.util.Log` を直接使用するよりログを省略することを優先する。
+- プロダクションコードに `android.util.Log` を直接残さない。
+- token、user id、path、URL、bucket、署名付きURLをログへ出さない。
+- 一時デバッグログをコミットしない。
+- ログが必要な場合は、構造化ログ方針を別作業として扱う。
 
-## ナビゲーション
+## Resource / UI
 
-- ナビゲーションの変更は集中化し、最小限に保つ。
-- ルート定義とトップレベルのグラフ配線は `app` に属する。
-- 多くのファイルにルートの知識を分散させるのではなく、既存のナビゲーション定義を編集することを優先する。
-
-## バックグラウンド処理
-
-- `media` にはワーカー/スケジューラを使用するアップロード/削除フローが含まれる。
-- バックグラウンド実行には既存のワーカー/スケジューラパターンを優先する。
-- 責任の分離を維持する：ワーカー → スケジューラ → リポジトリ → データソース。
-- アップロードキュー、同期ステータス、レコードマッピング、ワーカーリトライ動作に触れる際は保守的に。
+- 文字列はresourceへ置く。
+- 色、typography、shapeはthemeを優先する。
+- Material 3の既存componentを優先する。
+- 共通UI componentは複数フィーチャーで実利用がある場合だけ `core:ui` に置く。

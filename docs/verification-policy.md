@@ -1,94 +1,73 @@
 # 検証ポリシー
 
-このドキュメントはいつ・どの程度の検証が必要かを定義します。
-目標は、検証不足（実際の問題を見逃す）と過剰検証（単一行の変更ごとにGradleシンクとフルテストスイートを実行する）の両方を避けることです。
+変更後に何を確認するかを定義します。
 
 ## 原則
 
-変更によって引き起こされるエラーのクラスを実際にキャッチできる最小スコープを実行する。
-変更がモジュールまたはレイヤー境界を越える場合のみスコープを拡大する。
+- 変更が壊し得る範囲を検証する。
+- レイヤーやモジュールを越えた変更は検証範囲を広げる。
+- ドキュメントのみの変更ではGradleテストを要求しない。
+- 実行しなかった検証は理由と一緒に報告する。
 
-## Gradleシンク
+## Gradle Syncが必要な変更
 
-Gradleシンクはソースのみの変更の後に**必要ありません**。
-以下を変更した場合のみGradleシンクを実行すること：
-
-- `build.gradle.kts` ファイル
-- `libs.versions.toml`
+- `build.gradle.kts`
 - `settings.gradle.kts`
-- `build-logic` コンベンションプラグイン
-- モジュールの追加または削除
+- `libs.versions.toml`
+- `build-logic`
+- モジュール追加/削除
+- AGP、Kotlin、KSP、Hilt、Compose compilerなどの設定変更
 
-既存モジュール内のKotlinソースの変更に対してシンクは不要です。
+Kotlinソース、resource、文書のみの変更では通常不要です。
+
+## 変更種別ごとの検証
+
+| 変更種別 | 検証 |
+|---|---|
+| ドキュメントのみ | 文書間参照と整合性確認 |
+| 単一domainモジュール | `./gradlew :feature:<name>:domain:test` |
+| 単一dataモジュール | `./gradlew :feature:<name>:data:test` |
+| 単一uiモジュール | `./gradlew :feature:<name>:ui:test` |
+| 同一フィーチャー複数レイヤー | 触れた各レイヤーのtest |
+| `app` | `./gradlew test`、必要に応じてassemble |
+| `core:*` | `./gradlew test` |
+| Gradle / 依存 / build-logic | `./gradlew test`、`ktlintCheck detekt`、必要に応じてassemble |
+| media Worker/Scheduler/SyncStatus | `:feature:media:data:test` と関連domain/uiテスト |
+
+迷った場合は `./gradlew test` を選びます。
 
 ## 開発中
 
-変更内容をカバーする最小スコープを実行する：
-
 ```bash
-# 単一モジュール（開発中は推奨）
 ./gradlew :feature:<name>:<layer>:test
-
-# 素早いlintチェック
 ./gradlew ktlintCheck
 ```
 
-毎回のイテレーションでフルテストスイートを実行しない — CIが最終ゲートであり、ローカル開発ループではない。
+毎回フルスイートを走らせる必要はありません。
 
-## PRを開く前
-
-変更したすべてのモジュールに対してlintとテストを実行する：
+## PR前
 
 ```bash
-# まずフォーマットを自動修正
 ./gradlew ktlintFormat
-
-# lintゲート
 ./gradlew ktlintCheck detekt
-
-# テスト — スコープは変更内容による（下記参照）
 ```
 
-### 変更タイプ別テストスコープ
+その後、変更種別に応じたテストを実行します。
 
-| 変更タイプ                                          | テストコマンド                                                                                    |
-|-----------------------------------------------------|---------------------------------------------------------------------------------------------------|
-| 単一フィーチャーレイヤー（`feature:<name>:<layer>`）| `./gradlew :feature:<name>:<layer>:test`                                                          |
-| 一つのフィーチャー内の複数レイヤー                  | `./gradlew :feature:<name>:domain:test :feature:<name>:data:test :feature:<name>:ui:test`         |
-| `core:*` モジュール                                 | `./gradlew test`（全モジュール）                                                                   |
-| `app` 配線、ナビゲーション、トップレベルDI          | `./gradlew test`                                                                                  |
-| Gradle / `build-logic` / 依存関係の変更             | `./gradlew test`                                                                                  |
-| ドキュメントのみ                                    | テスト実行不要                                                                                    |
+## CI
 
-スコープに迷った場合は `./gradlew test` を実行する。
+CIは最終ゲートです。ローカルで通っていても、CIが赤ならマージしません。
 
-## マージ前
-
-CIが最終ゲートです。CIが赤の場合はマージしないこと。
-
-CIはlintチェック（`bundle exec fastlane lint` → `ktlintCheck detekt`）と
-DEV Debugバリアントのユニットテスト（`bundle exec fastlane test` → `testDevDebugUnitTest`）を実行します。
-
-ローカルでのパスはCIでのパスの代替にはなりません。
-PRがオープンされた後にCIが失敗した場合は、マージ前に調査して修正してください。
-
-## モジュールテストターゲットリファレンス
+主なCI相当:
 
 ```bash
-./gradlew :feature:auth:domain:test
-./gradlew :feature:auth:data:test
-./gradlew :feature:auth:ui:test
-./gradlew :feature:media:domain:test
-./gradlew :feature:media:data:test
-./gradlew :feature:media:ui:test
+bundle exec fastlane lint
+bundle exec fastlane test
 ```
 
-## レポート
+## 報告形式
 
-テストを実行しなかった場合は、レポートに明示的に記載すること：
-
+```text
+実行したテスト/検証: <コマンドまたは確認内容> — <結果>
+実行しなかったテスト/検証: <コマンド> — 理由: <理由>
 ```
-実行しなかったテスト: <コマンド> — 理由: <なぜ>
-```
-
-これを省略することは許容されません。CIがゲートであることはレポートをスキップする理由になりません。

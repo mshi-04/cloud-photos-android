@@ -1,94 +1,118 @@
 # テスト規約
 
-`AGENTS.md` から参照されます（すべてのルールの情報源）。
-情報源の優先順位：`AGENTS.md` → フィーチャーローカルパターン → `CLAUDE.md` → `.agent/skills/*`。
-このファイルと `AGENTS.md` が矛盾する場合は `AGENTS.md` を優先すること。
-テストパターンのガイダンスは `.agent/skills/android-testing/SKILL.md` も参照。
-このファイルとスキルがアノテーションルールや命名の詳細で矛盾する場合は、このファイルを優先すること。
+テストの書き方を定義します。実行範囲は `docs/verification-policy.md` を参照してください。
 
----
-
-## テストスタック
+## スタック
 
 - JUnit 5
 - MockK
 - `kotlinx-coroutines-test`
-- Arrange / Act / Assert 構造に従う。
+- Arrange / Act / Assert
 
-## テスト関数の命名
+既存テストに合わせ、テストだけ別スタイルにしません。
 
-すべてのテスト関数名はこの形式を厳密に使用しなければなりません：
+## 命名
+
+形式:
 
 ```text
-`[テスト対象の関数名] [期待される結果] when [条件]`
+`[対象関数名] [期待結果] when [条件]`
 ```
 
-この形式は値オブジェクト、ユースケース、リポジトリ、マッパー、ワーカー、ViewModelなど
-すべてのレイヤーに適用されます。
-
-**各セグメントの定義：**
-
-| セグメント             | ルール                                                                                           |
-|------------------------|--------------------------------------------------------------------------------------------------|
-| `テスト対象の関数名`   | テスト対象のKotlin関数、プロパティ、またはイベントハンドラの正確な名前。必ず最初に来る。         |
-| `期待される結果`       | 許可された動詞のみを使用する動詞句（下記参照）。                                                 |
-| `when [条件]`          | シナリオまたは入力状態。必ず含める — 省略しない。                                                |
-
-**許可された動詞：** `returns` / `throws` / `sets` / `emits` / `calls` / `rethrows` / `ignores`
-
-**命名の制約：**
-
-- `test`、`should`、`verify` などのプレフィックスは禁止。
-- 名前のどこにもsnake_caseは禁止。
-- バッククォートで囲まれたテスト名内の識別子（例：`onSignIn`、`fetchMedia`）にcamelCaseは許可。
-  シンボリックな名前（クラス名や型）には役立つ場合にPascalCase（例：`SignedInState`、`NetworkError`）を使用。
-  条件や期待値を説明する自然言語部分にはスペース区切りの小文字を優先する。
-- 日本語文字は禁止。
-- 曖昧な結果を示す単語（`works`、`handles`、`correctly`、`properly`）は禁止。
-- カテゴリラベル（`success case`、`failure case`、`happy path`、`error case`）は禁止。
-- `success` や `failure` 単独の結果は禁止 — 具体的な型、状態、またはエフェクト名を書くこと
-  （例：`returns SignedInState`、`returns NetworkError`）。
-- 一つの関数名に複数の動作を含めることは禁止。
-- `updates` は許可された動詞ではない。代わりに `sets` を使用すること。
-
-**例：**
+例:
 
 ```kotlin
-fun `invoke returns SignedInState when repository returns done state`()
+fun `invoke returns SignedInState when repository returns signed in user`()
 fun `of throws IllegalArgumentException when email is blank after trim`()
 fun `onSignIn emits NavigateToHome when credentials are valid`()
-fun `onSignIn sets passwordError when password is blank`()
-fun `invoke returns NetworkError when network is unavailable`()
-fun `of returns Email when input is valid`()
+fun `doWork returns retry when upload fails with temporary error`()
 ```
 
-## アノテーション
+許可する期待結果の動詞:
 
-許可：`@Test`、`@BeforeEach`、`@AfterEach`、`@OptIn(ExperimentalCoroutinesApi::class)`、
-`@ParameterizedTest`（`@ValueSource` / `@CsvSource` / `@MethodSource` と共に）、
-`@ExtendWith`（外部ライブラリまたはカスタム拡張のJUnit拡張が必要な場合のみ — 下記注釈参照）。
+- `returns`
+- `throws`
+- `sets`
+- `emits`
+- `calls`
+- `rethrows`
+- `ignores`
 
-禁止：`@DisplayName`（バッククォートの名前で十分）、`@Disabled`（修正するか削除する — 無効なテストをコミットしない）、
-`@Nested`、`@Tag`、`@Timeout`、`@RepeatedTest`。
+禁止:
 
-`@ExtendWith` とMockKに関する注記：MockKを使用する標準的な `*Test.kt` ファイルでは、
-`mockk<>()` を直接呼び出すこと — `@ExtendWith(MockKExtension::class)` は不要であり推奨もされません。
-`@ExtendWith` はJUnit拡張が本当に必要な場合（例：カスタムテストライフサイクル拡張や、
-MockKに相当するものがないサードパーティライブラリ拡張）にのみ使用してください。
+- `test`、`should`、`verify` prefix
+- snake_case
+- 日本語テスト名
+- `works`、`handles`、`correctly`、`properly`
+- `success case`、`failure case`、`happy path`、`error case`
+- 曖昧な `success` / `failure`
+- 未許可動詞の `updates`
 
-## 検証タイミング
+## 構造
 
-| タイミング           | 実行者     | 内容                                                        |
-|----------------------|------------|-------------------------------------------------------------|
-| タスク完了時         | AIエージェント | `./gradlew ktlintCheck detekt` → 影響モジュールのテスト |
-| プッシュ/PR作成      | 人間       | プッシュ、PR作成、マージ判断                                |
-| PR/マージゲート      | CI         | lintチェック（ktlintCheck + detekt）+ 全ユニットテスト      |
+- Arrange、Act、Assertを空行で分ける。
+- 1テスト1理由にする。
+- Mockは境界の依存だけに使う。
+- Mapper、value object、domain modelは可能な限り実体でテストする。
+- sleepや実時間待ちを使わない。
 
-テストを実行しなかった場合は、その旨を明示的に記載すること。
+## Coroutines / Flow
 
-変更タイプ別のスコープを含む完全なポリシーは `docs/verification-policy.md` を参照。
+- `runTest` を使う。
+- TestDispatcherを注入できる設計にする。
+- 基本は `StandardTestDispatcher` を使う。
+- 即時実行が目的のときだけ `UnconfinedTestDispatcher` を使う。
+- `advanceUntilIdle()` などで仮想時間を明示的に進める。
+- `CancellationException` の契約は `rethrows` で確認する。
+- Flow収集は既存ヘルパーや既存パターンに合わせる。
 
-## モジュールテストターゲット
+## ViewModel
+
+- 初期stateを確認する。
+- event後のstate/effectを確認する。
+- UseCase呼び出しの有無だけで終わらせない。
+- 画面契約として見える結果をassertする。
+- Main dispatcher差し替えは既存Ruleを使う。
+
+## Domain
+
+- UseCaseは成功、domain error、validation、キャンセルを必要に応じて検証する。
+- Value objectは正規化、境界値、不正値を検証する。
+- Repository interfaceをmockする場合は、domain contractとして意味のある戻り値にする。
+
+## Data / Worker
+
+- Repository実装はDataSource呼び出し、Mapper適用、domain resultを検証する。
+- Mapperはprovider例外やDTO/Entity変換を検証する。
+- Workerは `Result.success()` / `Result.retry()` / `Result.failure()` と状態更新を検証する。
+- WorkManagerのunique name、constraints、input Dataを変える場合は契約をテストまたは報告する。
+
+## Annotation
+
+許可:
+
+- `@Test`
+- `@BeforeEach`
+- `@AfterEach`
+- `@OptIn(ExperimentalCoroutinesApi::class)`
+- `@ParameterizedTest`
+- `@ValueSource`
+- `@CsvSource`
+- `@MethodSource`
+- `@ExtendWith`（本当にJUnit拡張が必要な場合のみ）
+
+禁止:
+
+- `@DisplayName`
+- `@Disabled`
+- `@Nested`
+- `@Tag`
+- `@Timeout`
+- `@RepeatedTest`
+
+MockKでは通常 `mockk<>()` を直接使います。`@ExtendWith(MockKExtension::class)` は原則不要です。
+
+## 主なGradleターゲット
 
 ```bash
 ./gradlew :feature:auth:domain:test

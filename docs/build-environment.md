@@ -1,61 +1,107 @@
 # ビルドと環境
 
-`AGENTS.md` から参照されます（すべてのルールの情報源）。
-情報源の優先順位：`AGENTS.md` → フィーチャーローカルパターン → `CLAUDE.md` → `.agent/skills/*`。
-このファイルと `AGENTS.md` が矛盾する場合は `AGENTS.md` を優先すること。
+Gradle、flavor、環境値、依存追加に関するルールです。
 
----
+## 方針
 
-## ビルドと環境のルール
+- Kotlin DSLとVersion Catalogを使う。
+- 共有設定は `build-logic` のconvention pluginへ寄せる。
+- 単一モジュールだけの依存は、そのモジュールに閉じる。
+- ビルド構造に関係しない作業で `build-logic` を触らない。
+- 依存追加は理由、スコープ、検証範囲を報告する。
 
-このプロジェクトはビルドフレーバーと必須の環境プロパティを使用します。
-フレーバー付きビルドを壊さないよう注意してください。
+## Flavor必須値
 
-各フレーバーは以下の必須プロパティを定義しなければなりません：
+各flavorは以下の値を必要とします。
 
 - `COGNITO_CLIENT_ID`
 - `API_BASE_URL`
 - `S3_BUCKET_NAME`
 
-### プロパティの設定場所
+実際のキー:
 
-プロパティは以下の優先順位で解決されます：
+- `DEV_COGNITO_CLIENT_ID`
+- `DEV_API_BASE_URL`
+- `DEV_S3_BUCKET_NAME`
+- `PROD_COGNITO_CLIENT_ID`
+- `PROD_API_BASE_URL`
+- `PROD_S3_BUCKET_NAME`
 
-1. **`local.properties`**（ローカル開発用 — このファイルは絶対にコミットしない）：
-   ```properties
-   DEV_COGNITO_CLIENT_ID=xxxxx
-   DEV_API_BASE_URL=https://dev.example.com/
-   DEV_S3_BUCKET_NAME=my-dev-bucket
-   PROD_COGNITO_CLIENT_ID=yyyyy
-   PROD_API_BASE_URL=https://api.example.com/
-   PROD_S3_BUCKET_NAME=my-prod-bucket
-   ```
+## 解決順序
 
-2. **Gradleプロジェクトプロパティ**（例：コマンドラインで `-PDEV_COGNITO_CLIENT_ID=xxxxx`、または `gradle.properties` 経由）。
+1. `local.properties`
+2. Gradle project property (`-PKEY=value`)
+3. `ORG_GRADLE_PROJECT_*` 環境変数
 
-3. **CI環境**：`DEV_*` / `PROD_*` の値を **Gradleプロジェクトプロパティとして** 渡します（`findProperty` が解決するもの）。同等の2つの方法：
-    - コマンドライン：`-PDEV_COGNITO_CLIENT_ID=xxxxx`
-    - Gradleプロパティにマッピングされた環境変数：
-      `ORG_GRADLE_PROJECT_DEV_COGNITO_CLIENT_ID=xxxxx`
-      （GradleはOSのプレフィックス `ORG_GRADLE_PROJECT_*` の環境変数を自動的にプロジェクトプロパティにマッピングする）
+例:
 
-   ルートの `build.gradle.kts` はまず `local.properties` を読み、次に `findProperty`（Gradleプロジェクトプロパティ）にフォールバックするため、上記のどちらの方法もCIで機能する。
+```properties
+DEV_COGNITO_CLIENT_ID=xxxxx
+DEV_API_BASE_URL=https://dev.example.com/
+DEV_S3_BUCKET_NAME=my-dev-bucket
+PROD_COGNITO_CLIENT_ID=yyyyy
+PROD_API_BASE_URL=https://api.example.com/
+PROD_S3_BUCKET_NAME=my-prod-bucket
+```
 
-> **キー命名**：フレーバープレフィックスでベース名を接頭辞付けする — `DEV_` または `PROD_`。
-> 例：`DEV_COGNITO_CLIENT_ID`、`PROD_API_BASE_URL`。
+`local.properties` はコミットしません。
 
-ルール：
+CIで渡す例:
 
-- Kotlinソースにシークレット、エンドポイント、クライアントID、バケット名をハードコードしない。
-- 意図した設定メカニズム外に環境固有の値をコミットしない。
-- `app/build.gradle.kts`、フレーバーロジック、マニフェスト設定、CIダミーシークレットの動作に触れる際は注意する。
-- フレーバー固有の値は意図したプロパティまたは設定フローに配置する — Kotlinソースに散在させない。
-- Gradleコンベンションに関するタスク以外は `build-logic` を変更しない。
+```bash
+./gradlew assembleDevDebug -PDEV_COGNITO_CLIENT_ID=xxxxx
+```
 
-## 依存ルール
+または:
 
-- リポジトリですでに使用されている既存のライブラリとパターンを優先する。
-- 明確に必要でない限り、新しいライブラリを追加しない。
-- 依存関係の追加が避けられない場合は理由を説明し、スコープを最小限に保つ。
-- できる限りアプリレベルの広範な追加よりモジュールローカルな依存を優先する。
-- 依存関係の変更が `app`、`core:*`、または複数のフィーチャーモジュールにまたがる場合は、より広い検証スコープとして扱う（`./gradlew test` を実行する）。
+```text
+ORG_GRADLE_PROJECT_DEV_COGNITO_CLIENT_ID=xxxxx
+```
+
+## 禁止
+
+- Kotlinソースへsecret、endpoint、client id、bucket名を直書きする。
+- 実環境値や `local.properties` をコミットする。
+- flavor差分をソースコードの条件分岐へ散らす。
+- 単一フィーチャー用途の依存を全体conventionへ入れる。
+- 既存conventionの意図を確認せず整理目的で `build-logic` を書き換える。
+
+## 依存追加チェック
+
+依存を追加する前に確認します。
+
+1. 既存依存や標準APIで足りないか。
+2. runtime依存かtest依存か。
+3. 追加先は最小モジュールか。
+4. KSP、Hilt、Room、Compose、AGP設定変更が必要か。
+5. ライセンス、バイナリサイズ、メンテナンス状況に問題がないか。
+6. 検証スコープは `docs/verification-policy.md` に合っているか。
+
+## build-logic
+
+触ってよい例:
+
+- 複数モジュール共通のAndroid/Kotlin設定。
+- lint、test、Compose、Hilt、Room、KSPの共通設定。
+- モジュール追加に伴う既存conventionの拡張。
+
+避ける例:
+
+- 単一モジュールだけの依存。
+- 一時的な回避設定。
+- ついでの大規模整理。
+
+## 検証
+
+Gradle、依存、build-logicを変更した場合:
+
+```bash
+./gradlew test
+./gradlew ktlintCheck detekt
+```
+
+variantやflavorに影響する場合:
+
+```bash
+./gradlew assembleDevDebug
+```

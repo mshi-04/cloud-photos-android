@@ -1,168 +1,36 @@
 # AGENTS.md
 
-このリポジトリはAIによる開発支援を前提とした明示的なアーキテクチャ制約のもとで運用されます。
-変更を提案・実施する際は、以下のルールに従ってください。
+このリポジトリのAI作業ルールです。詳細は `docs/` の該当文書を参照してください。
 
-## 補足ドキュメント
+## 基本ルール
 
-詳細なガイダンスは `docs/` 配下にあります：
+- commit、push、branch作成、PR作成、merge、rebaseは、ユーザーが明示的に依頼した場合だけ行う。
 
-- `docs/ai-playbook.md` — 作業フロー：変更へのアプローチ、変更戦略、PRワークフロー
-- `docs/architecture-decisions.md` — 現在の構造になっている理由
-- `docs/verification-policy.md` — いつ・どの程度検証するか
-- `docs/forbidden-patterns.md` — 禁止パターンとその理由
-- `docs/implementation-rules.md` — UseCase、Repository、エラーハンドリング、値オブジェクトのルール
-- `docs/android-conventions.md` — Compose、ViewModel、Hilt、ログ、ナビゲーション、バックグラウンド処理
-- `docs/testing-conventions.md` — テスト命名、アノテーション、検証タイミング、モジュールターゲット
-- `docs/build-environment.md` — ビルドフレーバー、環境プロパティ、依存ルール
-- `docs/media-upload-flow.md` — アップロード/削除フローのシーケンスとSyncStatus遷移
-- `docs/error-handling-guide.md` — CancellationExceptionとエラーマッピングのパターン
+## 主要文書
 
-サブエージェントポリシー：
+- `docs/implementation-rules.md`: 配置、依存方向、UseCase/Repository/値オブジェクト
+- `docs/android-conventions.md`: Compose、ViewModel、coroutines、Hilt、Navigation、WorkManager
+- `docs/testing-conventions.md`: テスト命名、AAA、coroutines/Flow/ViewModel/Workerテスト
+- `docs/verification-policy.md`: 変更種別ごとの検証スコープ
+- `docs/build-environment.md`: Gradle、flavor、環境値、依存追加
+- `docs/error-handling-guide.md`: CancellationException、Result、provider error mapping
+- `docs/media-upload-flow.md`: mediaのアップロード、削除、同期、SyncStatus
+- `docs/architecture-decisions.md`: 現在の構造を選んでいる理由
 
-- `docs/ai-playbook.md` § 13 — サブエージェントの使用ルール、委譲スコープ、親エージェントの責任
+## 構成
 
-フィーチャーローカルガイダンス：
+- `app`: 起動、トップレベルNavigation、アプリ全体DI、Manifest、flavor
+- `core:*`: 複数フィーチャーで共有する契約、data infrastructure、UI資産
+- `feature:<name>:domain`: UseCase、Repository interface、domain model、value object
+- `feature:<name>:data`: Repository実装、DataSource、Mapper、Room、DataStore、Worker、SDK統合
+- `feature:<name>:ui`: ViewModel、UI state/effect/event、Compose screen/component
+- `build-logic`: 共有Gradle convention plugin
 
-- `feature/auth/AGENTS.md` — auth固有のルールとガードレール
-- `feature/media/AGENTS.md` — media固有のルールとガードレール（旧settingsルールを含む）
+## Git
 
-## 目標
+コミット前は `ktlintCheck detekt` と関連テストを通し、コミットメッセージは日本語で短く書きます。
 
-リポジトリのモジュラーなAndroidアーキテクチャを保ちながら、小さく・正しく・テスト可能な変更を行う。
-大規模な書き直しを目標にしない。
-既存フィーチャーのパターンに合った、最小限の安全な変更を優先する。
+## 報告
 
-## 情報源の優先順位
-
-複数のガイダンスファイルが存在する場合、以下の順に従うこと：
-
-1. `AGENTS.md`（このファイル）
-2. フィーチャーローカルの規約と既存コードパターン
-3. `CLAUDE.md`
-4. `.agent/skills/*`
-
-ガイダンスが矛盾する場合は、上位のものを優先し、変更は保守的に保つこと。
-
-## リポジトリ構成
-
-- `app` = アプリケーション配線、エントリポイント、ナビゲーション、トップレベルDIブートストラップ、マニフェスト、ビルドフレーバー
-- `core:common` = 横断的な抽象化とドメイン共通コントラクト
-- `core:data` = フィーチャー横断で使用される共有データ実装
-- `core:ui` = 共有テーマ、文字列、共通UIリソース/コンポーネント
-- `feature:<name>:domain` = ビジネスモデル、リポジトリコントラクト、ユースケース、値オブジェクト
-- `feature:<name>:data` = リポジトリ実装、データソース、マッパー、ワーカー、永続化
-- `feature:<name>:ui` = ViewModel、UIステート/エフェクト、Composeスクリーン/コンポーネント
-- `build-logic` = 共有Gradleコンベンションプラグイン。ビルド構造に関するタスク以外は触らない
-
-現在のフィーチャー：`auth` と `media`。
-旧 `settings` フィーチャーは `media` に統合済み。
-`media` には `domain`、`data`、`ui` サブモジュールがある。
-
-## レイヤー配置ルール
-
-### `app`
-
-本当にアプリ全体に関わる場合のみここに置く：
-
-- アプリケーション起動
-- トップレベルのナビゲーション合成
-- フィーチャー実装を組み立てるHiltブートストラップ/配線モジュール
-- フレーバー/ビルド設定の関心事
-
-フィーチャーのビジネスロジックをここに置かない。
-`feature/*` モジュールに属するコードをここに戻さない。
-
-### `feature:<name>:domain`
-
-ここに置いてよいもの：
-
-- ユースケース
-- リポジトリインターフェース
-- ドメインモデル
-- 値オブジェクト
-- 純粋なバリデーションとビジネスルール
-
-ここに置いてはいけないもの：
-
-- Androidフレームワーク型
-- Compose API
-- Room API
-- Amplify/Firebase/WorkManager実装
-- データソースやリポジトリの具体的な実装
-
-### `feature:<name>:data`
-
-ここに置いてよいもの：
-
-- リポジトリ実装
-- DTO/エンティティマッピング
-- リモート/ローカルデータソース
-- Room DAO/エンティティ
-- ワーカー/スケジューラ実装
-- フレームワーク統合の詳細
-
-ルール：
-
-- ビジネスルールはdomain層に属する。この層はデータ変換とフレームワーク統合を担う。
-- エラーマッピングはマッパーオブジェクト経由でここに属する。
-
-### `feature:<name>:ui`
-
-ここに置いてよいもの：
-
-- ViewModel
-- UIステート/エフェクトモデル
-- Composeスクリーン/コンポーネント
-- 入力イベント処理とビュー向けフォーマット
-
-ルール：
-
-- UI/ViewModelはユースケースまたはドメイン向け抽象化を呼び出す。
-- UIはリポジトリ実装、Room DAO、Amplifyクライアント、WorkManagerを直接呼び出してはならない。
-- コンポーザブルは宣言的に保ち、スクリーンにビジネスルールを埋め込まない。
-
-## アーキテクチャルール
-
-1. モジュール境界を尊重する。
-    - `ui` はその `domain` モジュールと共有UI/commonモジュールに依存できる。
-    - `data` は自身の `domain` と共有モジュールに依存できる。
-    - `domain` はフレームワーク軽量に保つ。
-
-2. 依存方向を維持する。
-    - レイヤー間に逆方向の依存を導入しない。
-    - 無関係な兄弟フィーチャーを互いに依存させない。
-    - 共有抽象化を `core:*` に抽出するのは、複数フィーチャーで実際に再利用が正当化される場合のみ。
-
-3. ユースケースをバイパスしない。
-    - ViewModelは通常ユースケースを呼び出す。
-    - ViewModelがリポジトリ向け抽象化を直接操作する場合、その理由を明示しローカルに限定する。
-
-4. データモデルをレイヤーで分離する。
-    - DTO、エンティティ、DAOモデル、ネットワークレスポンスモデルをUIに直接公開しない。
-    - データ境界でマッパーを使用する。
-
-5. 加算的でローカルな変更を優先する。
-    - タスクが明示的に要求しない限り、広範なパッケージ移動やフィーチャー横断の書き直しを避ける。
-    - 最小限のファイル数に留める。
-
-6. 既存パターンを先に再利用する。
-    - 新しい抽象化を導入する前に、同じフィーチャー内に同等のパターンが存在しないか確認する。
-    - そのフィーチャーの命名、フォルダ配置、テストスタイルに合わせる。
-
-## AIエージェント向けGitルール
-
-- lintチェック（`ktlintCheck detekt`）と関連モジュールのテストがすべて通過した後にのみコミットする。
-- コミットメッセージは日本語で、短く簡潔に書く。
-- プッシュ、PR作成、マージの判断はAIエージェントのスコープ外 — ユーザーに委ねる。
-
-## AI生成変更の必須レポート形式
-
-このリポジトリでコード変更を行った場合、以下の形式でレポートすること：
-
-- 変更したモジュール
-- ファイル配置のアーキテクチャ的理由
-- 何をなぜ変更したかの概要
-- 実行したテスト
-- 実行しなかったテスト（ある場合）
-- 既知の制限または今後の対応項目
+変更した場合は、変更したモジュール/文書、配置理由、概要、実行した検証、実行しなかった検証と理由、既知の制限を報告します。
+`media` のWorker、Scheduler、SyncStatus、アップロード/削除フローに触れた場合は、retry、状態遷移、整合性への影響も明記します。
