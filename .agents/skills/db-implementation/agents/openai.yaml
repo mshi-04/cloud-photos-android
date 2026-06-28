@@ -1,0 +1,4 @@
+interface:
+  display_name: "DB Implementation"
+  short_description: "Design, implement, and repair Room database work."
+  default_prompt: "Update Room database code following existing Entity, DAO, mapper, and validation conventions."

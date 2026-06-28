@@ -1,0 +1,4 @@
+interface:
+  display_name: "Data Implementation"
+  short_description: "Design, implement, and repair data layer work."
+  default_prompt: "Update the data layer following existing Repository, DataSource, and Mapper conventions."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Test Implementation"
+  short_description: "Add, repair, and review project tests."
+  default_prompt: "Add or update tests following the existing testing conventions."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Auth Implementation"
+  short_description: "Design, implement, and repair authentication work."
+  default_prompt: "Update authentication code following existing Cognito, Amplify, and AuthResult conventions."
