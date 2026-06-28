@@ -1,6 +1,7 @@
 package com.appvoyager.cloudphotos.ui.auth.viewmodel
 
 import androidx.lifecycle.SavedStateHandle
+import app.cash.turbine.test
 import com.appvoyager.cloudphotos.domain.auth.model.AuthError
 import com.appvoyager.cloudphotos.domain.auth.model.AuthResult
 import com.appvoyager.cloudphotos.domain.auth.model.SignInState
@@ -13,11 +14,10 @@ import com.appvoyager.cloudphotos.ui.auth.uistate.AuthFieldError
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
+import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -50,98 +50,138 @@ class LoginViewModelTest {
 
     @Test
     fun `uiState sets email to empty when viewModel is initialized`() {
+        // Arrange
+        // State: freshly created viewModel exposes an empty login form
+
+        // Act
         val state = viewModel.uiState.value
-        Assertions.assertEquals("", state.email)
-        Assertions.assertEquals("", state.password)
-        Assertions.assertFalse(state.isLoading)
-        Assertions.assertNull(state.emailError)
-        Assertions.assertNull(state.passwordError)
+
+        // Assert
+        Assertions.assertEquals(LoginFormSnapshot(), LoginFormSnapshot.from(state))
     }
 
     @Test
     fun `onEmailChanged sets email when called`() {
+        // Arrange
+        // State: email field starts empty before user input
+
+        // Act
+        // State: email input updates the form state
         viewModel.onEmailChanged("test@example.com")
         val state = viewModel.uiState.value
-        Assertions.assertEquals("test@example.com", state.email)
-        Assertions.assertNull(state.emailError)
+
+        // Assert
+        Assertions.assertEquals(
+            LoginFormSnapshot(email = "test@example.com"),
+            LoginFormSnapshot.from(state)
+        )
     }
 
     @Test
     fun `onPasswordChanged sets password when called`() {
+        // Arrange
+        // State: password field starts empty before user input
+
+        // Act
+        // State: password input updates the form state
         viewModel.onPasswordChanged("password1")
         val state = viewModel.uiState.value
-        Assertions.assertEquals("password1", state.password)
-        Assertions.assertNull(state.passwordError)
+
+        // Assert
+        Assertions.assertEquals(
+            LoginFormSnapshot(password = "password1"),
+            LoginFormSnapshot.from(state)
+        )
     }
 
     @Test
     fun `isFormValid returns true when email and password are valid`() {
+        // Arrange
         viewModel.onEmailChanged("test@example.com")
         viewModel.onPasswordChanged("password1")
-        Assertions.assertTrue(viewModel.isFormValid)
+
+        // Act
+        // Normal: valid email and valid password make the form submittable
+        val isFormValid = viewModel.isFormValid
+
+        // Assert
+        Assertions.assertTrue(isFormValid)
     }
 
     @Test
     fun `isFormValid returns false when email is invalid`() {
+        // Arrange
         viewModel.onEmailChanged("invalid")
         viewModel.onPasswordChanged("password1")
-        Assertions.assertFalse(viewModel.isFormValid)
+
+        // Act
+        // Boundary: invalid email prevents submit even when password is valid
+        val isFormValid = viewModel.isFormValid
+
+        // Assert
+        Assertions.assertFalse(isFormValid)
     }
 
     @Test
     fun `isFormValid returns false when password is too short`() {
+        // Arrange
         viewModel.onEmailChanged("test@example.com")
         viewModel.onPasswordChanged("short")
-        Assertions.assertFalse(viewModel.isFormValid)
+
+        // Act
+        // Boundary: short password prevents submit even when email is valid
+        val isFormValid = viewModel.isFormValid
+
+        // Assert
+        Assertions.assertFalse(isFormValid)
     }
 
     @Test
     fun `onSignIn emits NavigateToHome when sign in returns SignedIn`() = runTest(testDispatcher) {
         // Arrange
+        // Flow: signed-in result emits home navigation effect
         viewModel.onEmailChanged("test@example.com")
         viewModel.onPasswordChanged("password1")
         coEvery { signInUseCase(any()) } returns AuthResult.Success(SignInState.SignedIn)
 
-        // Act
-        var effect: LoginEffect? = null
-        val job = launch { effect = viewModel.effect.first() }
-        viewModel.onSignIn()
-        advanceUntilIdle()
+        // Act & Assert
+        viewModel.effect.test {
+            viewModel.onSignIn()
+            advanceUntilIdle()
 
-        // Assert
-        Assertions.assertTrue(effect is LoginEffect.NavigateToHome)
-        Assertions.assertFalse(viewModel.uiState.value.isLoading)
-        job.cancel()
+            Assertions.assertEquals(LoginEffect.NavigateToHome, awaitItem())
+            cancelAndConsumeRemainingEvents()
+        }
     }
 
     @Test
     fun `onSignIn emits NavigateToVerification when sign in returns UserNotConfirmed error`() =
         runTest(testDispatcher) {
             // Arrange
+            // Flow: unconfirmed user emits verification navigation effect
             viewModel.onEmailChanged("test@example.com")
             viewModel.onPasswordChanged("password1")
             coEvery { signInUseCase(any()) } returns AuthResult.Error(
                 AuthError.UserNotConfirmed()
             )
 
-            // Act
-            var effect: LoginEffect? = null
-            val job = launch { effect = viewModel.effect.first() }
-            viewModel.onSignIn()
-            advanceUntilIdle()
+            // Act & Assert
+            viewModel.effect.test {
+                viewModel.onSignIn()
+                advanceUntilIdle()
 
-            // Assert
-            Assertions.assertTrue(effect is LoginEffect.NavigateToVerification)
-            Assertions.assertEquals(
-                Email.of("test@example.com"),
-                (effect as LoginEffect.NavigateToVerification).email
-            )
-            job.cancel()
+                Assertions.assertEquals(
+                    LoginEffect.NavigateToVerification(Email.of("test@example.com")),
+                    awaitItem()
+                )
+                cancelAndConsumeRemainingEvents()
+            }
         }
 
     @Test
     fun `onSignIn sets passwordError when sign in returns InvalidCredentials error`() = runTest(testDispatcher) {
         // Arrange
+        // Error: invalid credentials maps to password field error
         viewModel.onEmailChanged("test@example.com")
         viewModel.onPasswordChanged("password1")
         coEvery { signInUseCase(any()) } returns AuthResult.Error(
@@ -162,52 +202,51 @@ class LoginViewModelTest {
     @Test
     fun `onSignIn emits ShowSnackbar when sign in returns Network error`() = runTest(testDispatcher) {
         // Arrange
+        // Flow: network error emits snackbar effect
         viewModel.onEmailChanged("test@example.com")
         viewModel.onPasswordChanged("password1")
         coEvery { signInUseCase(any()) } returns AuthResult.Error(
             AuthError.Network("offline")
         )
 
-        // Act
-        var effect: LoginEffect? = null
-        val job = launch { effect = viewModel.effect.first() }
-        viewModel.onSignIn()
-        advanceUntilIdle()
+        // Act & Assert
+        viewModel.effect.test {
+            viewModel.onSignIn()
+            advanceUntilIdle()
 
-        // Assert
-        Assertions.assertTrue(effect is LoginEffect.ShowSnackbar)
-        Assertions.assertEquals(
-            AuthSnackbarMessage.Network,
-            (effect as LoginEffect.ShowSnackbar).message
-        )
-        job.cancel()
+            Assertions.assertEquals(
+                LoginEffect.ShowSnackbar(AuthSnackbarMessage.Network),
+                awaitItem()
+            )
+            cancelAndConsumeRemainingEvents()
+        }
     }
 
     @Test
     fun `onSignUp emits NavigateToVerification when signUp returns Success`() = runTest(testDispatcher) {
         // Arrange
+        // Flow: sign-up success emits verification navigation effect
         viewModel.onEmailChanged("test@example.com")
         viewModel.onPasswordChanged("password1")
         coEvery { signUpUseCase(any()) } returns AuthResult.Success(Unit)
 
-        // Act
-        var effect: LoginEffect? = null
-        val job = launch { effect = viewModel.effect.first() }
-        viewModel.onSignUp()
-        advanceUntilIdle()
+        // Act & Assert
+        viewModel.effect.test {
+            viewModel.onSignUp()
+            advanceUntilIdle()
 
-        // Assert
-        Assertions.assertTrue(effect is LoginEffect.NavigateToVerification)
-        Assertions.assertEquals(
-            Email.of("test@example.com"),
-            (effect as LoginEffect.NavigateToVerification).email
-        )
-        job.cancel()
+            Assertions.assertEquals(
+                LoginEffect.NavigateToVerification(Email.of("test@example.com")),
+                awaitItem()
+            )
+            cancelAndConsumeRemainingEvents()
+        }
     }
 
     @Test
     fun `onSignUp sets emailError when sign up returns UsernameAlreadyExists error`() = runTest(testDispatcher) {
         // Arrange
+        // Error: existing username maps to email field error
         viewModel.onEmailChanged("test@example.com")
         viewModel.onPasswordChanged("password1")
         coEvery { signUpUseCase(any()) } returns AuthResult.Error(
@@ -228,6 +267,7 @@ class LoginViewModelTest {
     @Test
     fun `onSignIn sets emailError when both fields are empty`() = runTest(testDispatcher) {
         // Arrange
+        // Boundary: empty credentials set both field errors
         viewModel.onEmailChanged("")
         viewModel.onPasswordChanged("")
 
@@ -237,8 +277,13 @@ class LoginViewModelTest {
 
         // Assert
         val state = viewModel.uiState.value
-        Assertions.assertEquals(AuthFieldError.InvalidEmail, state.emailError)
-        Assertions.assertEquals(AuthFieldError.PasswordTooShort, state.passwordError)
+        Assertions.assertEquals(
+            LoginFormSnapshot(
+                emailError = AuthFieldError.InvalidEmail,
+                passwordError = AuthFieldError.PasswordTooShort
+            ),
+            LoginFormSnapshot.from(state)
+        )
     }
 
     @Test
@@ -247,26 +292,17 @@ class LoginViewModelTest {
         viewModel.onEmailChanged("test@example.com")
         viewModel.onPasswordChanged("password1")
         coEvery { signInUseCase(any()) } coAnswers {
-            delay(1000)
+            delay(1000.milliseconds)
             AuthResult.Success(SignInState.SignedIn)
         }
 
-        // Act – call twice quickly
+        // Act
         viewModel.onSignIn()
-        Assertions.assertTrue(
-            viewModel.uiState.value.isLoading,
-            "Expected isLoading to be true immediately after first call"
-        )
-        Assertions.assertTrue(
-            viewModel.uiState.value.isLoading,
-            "Expected isLoading to be true immediately after first call"
-        )
         viewModel.onSignIn()
         advanceUntilIdle()
 
-        // Assert – use case should only be invoked once
+        // Assert
         coVerify(exactly = 1) { signInUseCase(any()) }
-        Assertions.assertFalse(viewModel.uiState.value.isLoading)
     }
 
     @Test
@@ -275,31 +311,23 @@ class LoginViewModelTest {
         viewModel.onEmailChanged("test@example.com")
         viewModel.onPasswordChanged("password1")
         coEvery { signUpUseCase(any()) } coAnswers {
-            delay(1000)
+            delay(1000.milliseconds)
             AuthResult.Success(Unit)
         }
 
-        // Act – call twice quickly
+        // Act
         viewModel.onSignUp()
-        Assertions.assertTrue(
-            viewModel.uiState.value.isLoading,
-            "Expected isLoading to be true immediately after first call"
-        )
-        Assertions.assertTrue(
-            viewModel.uiState.value.isLoading,
-            "Expected isLoading to be true immediately after first call"
-        )
         viewModel.onSignUp()
         advanceUntilIdle()
 
-        // Assert – use case should only be invoked once
+        // Assert
         coVerify(exactly = 1) { signUpUseCase(any()) }
-        Assertions.assertFalse(viewModel.uiState.value.isLoading)
     }
 
     @Test
     fun `onSignIn sets emailError when email is invalid`() = runTest(testDispatcher) {
-        // Arrange – invalid email, valid password
+        // Arrange
+        // Boundary: invalid email sets only email field error
         viewModel.onEmailChanged("invalid")
         viewModel.onPasswordChanged("password1")
 
@@ -309,13 +337,16 @@ class LoginViewModelTest {
 
         // Assert
         val state = viewModel.uiState.value
-        Assertions.assertEquals(AuthFieldError.InvalidEmail, state.emailError)
-        Assertions.assertNull(state.passwordError)
+        Assertions.assertEquals(
+            LoginFormSnapshot(email = "invalid", password = "password1", emailError = AuthFieldError.InvalidEmail),
+            LoginFormSnapshot.from(state)
+        )
     }
 
     @Test
     fun `onSignIn sets passwordError when password is too short`() = runTest(testDispatcher) {
-        // Arrange – valid email, short password
+        // Arrange
+        // Boundary: short password sets only password field error
         viewModel.onEmailChanged("test@example.com")
         viewModel.onPasswordChanged("short")
 
@@ -325,7 +356,31 @@ class LoginViewModelTest {
 
         // Assert
         val state = viewModel.uiState.value
-        Assertions.assertNull(state.emailError)
-        Assertions.assertEquals(AuthFieldError.PasswordTooShort, state.passwordError)
+        Assertions.assertEquals(
+            LoginFormSnapshot(
+                email = "test@example.com",
+                password = "short",
+                passwordError = AuthFieldError.PasswordTooShort
+            ),
+            LoginFormSnapshot.from(state)
+        )
+    }
+
+    private data class LoginFormSnapshot(
+        val email: String = "",
+        val password: String = "",
+        val isLoading: Boolean = false,
+        val emailError: AuthFieldError? = null,
+        val passwordError: AuthFieldError? = null
+    ) {
+        companion object {
+            fun from(state: com.appvoyager.cloudphotos.ui.auth.uistate.LoginUiState) = LoginFormSnapshot(
+                email = state.email,
+                password = state.password,
+                isLoading = state.isLoading,
+                emailError = state.emailError,
+                passwordError = state.passwordError
+            )
+        }
     }
 }

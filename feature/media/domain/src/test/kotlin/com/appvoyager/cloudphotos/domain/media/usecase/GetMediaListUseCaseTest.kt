@@ -1,5 +1,6 @@
 package com.appvoyager.cloudphotos.domain.media.usecase
 
+import app.cash.turbine.test
 import com.appvoyager.cloudphotos.domain.media.model.Media
 import com.appvoyager.cloudphotos.domain.media.model.MediaType
 import com.appvoyager.cloudphotos.domain.media.repository.LocalMediaRepository
@@ -8,14 +9,12 @@ import com.appvoyager.cloudphotos.domain.media.valueobject.MediaId
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaUrl
 import io.mockk.every
 import io.mockk.mockk
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 
 class GetMediaListUseCaseTest {
 
@@ -40,13 +39,14 @@ class GetMediaListUseCaseTest {
                 createdAt = MediaCreatedAt.of(1600000000000L)
             )
         )
-        every { localMediaRepository.getMediaListFlow() } returns flowOf(expectedMediaList)
+        every { localMediaRepository.getMediaListFlow() } returns MutableStateFlow(expectedMediaList)
 
-        // Act
-        val result = getMediaListUseCase().first()
-
-        // Assert
-        assertEquals(expectedMediaList, result)
+        // Act & Assert
+        // Flow: repository media list is emitted without requiring completion
+        getMediaListUseCase().test {
+            assertEquals(expectedMediaList, awaitItem())
+            cancelAndConsumeRemainingEvents()
+        }
     }
 
     @Test
@@ -56,9 +56,10 @@ class GetMediaListUseCaseTest {
         every { localMediaRepository.getMediaListFlow() } returns flow { throw expected }
 
         // Act & Assert
-        val actual = assertThrows<RuntimeException> {
-            getMediaListUseCase().first()
+        // Error: repository flow failure is propagated to the collector
+        getMediaListUseCase().test {
+            val actual = awaitError()
+            assertEquals(expected, actual)
         }
-        assertEquals(expected, actual)
     }
 }

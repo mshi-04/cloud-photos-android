@@ -1,5 +1,6 @@
 package com.appvoyager.cloudphotos.data.media.repository
 
+import app.cash.turbine.test
 import com.appvoyager.cloudphotos.data.media.datasource.LocalMediaDataSource
 import com.appvoyager.cloudphotos.domain.media.model.Media
 import com.appvoyager.cloudphotos.domain.media.model.MediaType
@@ -8,9 +9,9 @@ import com.appvoyager.cloudphotos.domain.media.valueobject.MediaId
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaUrl
 import io.mockk.coEvery
 import io.mockk.mockk
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -31,11 +32,12 @@ class LocalMediaRepositoryImplTest {
         // Arrange
         coEvery { mockDataSource.getLocalMediaList() } returns expectedMediaList
 
-        // Act
-        val result = repository.getMediaListFlow().first()
-
-        // Assert
-        assertEquals(expectedMediaList, result)
+        // Act & Assert
+        // Flow: data source result is emitted once and completes
+        repository.getMediaListFlow().test {
+            assertEquals(expectedMediaList, awaitItem())
+            awaitComplete()
+        }
     }
 
     @Test
@@ -44,6 +46,7 @@ class LocalMediaRepositoryImplTest {
         coEvery { mockDataSource.getLocalMediaList() } returns expectedMediaList
 
         // Act
+        // Normal: data source result is returned as repository result
         val result = repository.getMediaList()
 
         // Assert
@@ -56,6 +59,7 @@ class LocalMediaRepositoryImplTest {
         coEvery { mockDataSource.getLocalMediaList() } throws RuntimeException("data source failure")
 
         // Act & Assert
+        // Error: data source exception is propagated by suspend API
         assertThrows<RuntimeException> {
             repository.getMediaList()
         }
@@ -67,8 +71,9 @@ class LocalMediaRepositoryImplTest {
         coEvery { mockDataSource.getLocalMediaList() } throws RuntimeException("data source failure")
 
         // Act & Assert
-        assertThrows<RuntimeException> {
-            repository.getMediaListFlow().first()
+        // Error: data source exception is propagated by Flow API
+        repository.getMediaListFlow().test {
+            assertInstanceOf(RuntimeException::class.java, awaitError())
         }
     }
 

@@ -1,0 +1,4 @@
+interface:
+  display_name: "CI Build Troubleshooting"
+  short_description: "Investigate and repair build, CI, and lint failures."
+  default_prompt: "Investigate and fix build, CI, ktlint, detekt, or Gradle failures."

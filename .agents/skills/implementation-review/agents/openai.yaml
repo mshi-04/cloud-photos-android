@@ -1,0 +1,4 @@
+interface:
+  display_name: "Implementation Review"
+  short_description: "Review implementation diffs against project rules."
+  default_prompt: "Review the current implementation diff against this repository's architecture and testing rules."

@@ -10,13 +10,15 @@ on:
 
 permissions:
   contents: read
+  issues: write
+  pull-requests: write
 
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build:
+  lint:
     runs-on: ubuntu-latest
 
     env:
@@ -70,18 +72,241 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Set dummy secrets for Fork PRs
+      - name: Run Lint Checks
+        run: bundle exec fastlane lint
+
+  unit-test:
+    runs-on: ubuntu-latest
+
+    env:
+      BUNDLE_PATH: vendor/bundle
+      RUBY_VERSION: '4.0.1'
+      BUNDLER_VERSION: '4.0.3'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: ${{ github.event_name == 'pull_request' }}
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ env.RUBY_VERSION }}
+          bundler: ${{ env.BUNDLER_VERSION }}
+          bundler-cache: false
+
+      - name: Restore bundle cache
+        id: bundle-cache-restore
+        uses: actions/cache/restore@v5
+        with:
+          path: vendor/bundle
+          key: ${{ runner.os }}-ruby-${{ env.RUBY_VERSION }}-bundler-${{ env.BUNDLER_VERSION }}-${{ hashFiles('**/Gemfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-ruby-${{ env.RUBY_VERSION }}-bundler-${{ env.BUNDLER_VERSION }}-
+
+      - name: Install gems
+        run: |
+          bundle config set path "$BUNDLE_PATH"
+          bundle install --jobs 4 --retry 3
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Set dummy environment values for Fork PRs
         run: |
           echo "DEV_API_BASE_URL=${DEV_API_BASE_URL:-http://localhost:8080/dummy}" >> $GITHUB_ENV
           echo "DEV_COGNITO_CLIENT_ID=${DEV_COGNITO_CLIENT_ID:-dummy_client_id}" >> $GITHUB_ENV
           echo "DEV_S3_BUCKET_NAME=${DEV_S3_BUCKET_NAME:-dummy_bucket_name}" >> $GITHUB_ENV
+          echo "ORG_GRADLE_PROJECT_DEV_API_BASE_URL=${DEV_API_BASE_URL:-http://localhost:8080/dummy}" >> $GITHUB_ENV
+          echo "ORG_GRADLE_PROJECT_DEV_COGNITO_CLIENT_ID=${DEV_COGNITO_CLIENT_ID:-dummy_client_id}" >> $GITHUB_ENV
+          echo "ORG_GRADLE_PROJECT_DEV_S3_BUCKET_NAME=${DEV_S3_BUCKET_NAME:-dummy_bucket_name}" >> $GITHUB_ENV
         env:
           DEV_API_BASE_URL: ${{ secrets.DEV_API_BASE_URL }}
           DEV_COGNITO_CLIENT_ID: ${{ secrets.DEV_COGNITO_CLIENT_ID }}
           DEV_S3_BUCKET_NAME: ${{ secrets.DEV_S3_BUCKET_NAME }}
 
-      - name: Run Lint Checks
-        run: bundle exec fastlane lint
-
       - name: Execute Unit Tests
         run: bundle exec fastlane test
+
+      - name: Generate Unit Test Kover XML Reports
+        if: github.event_name == 'pull_request'
+        run: |
+          ./gradlew \
+            :app:koverXmlReportDevDebug \
+            :core:common:koverXmlReportJvm \
+            :core:data:koverXmlReportDebug \
+            :core:ui:koverXmlReportDebug \
+            :feature:auth:domain:koverXmlReportJvm \
+            :feature:auth:data:koverXmlReportDebug \
+            :feature:auth:ui:koverXmlReportDebug \
+            :feature:media:domain:koverXmlReportJvm \
+            :feature:media:data:koverXmlReportDebug \
+            :feature:media:ui:koverXmlReportDebug
+
+      - name: Add coverage report to PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            const workspace = process.env.GITHUB_WORKSPACE;
+            const marker = '<!-- unit-test-kover-coverage -->';
+
+            function findKoverXmlFiles(dir, results = []) {
+              for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+                if (entry.name === '.git' || entry.name === '.gradle' || entry.name === 'node_modules') {
+                  continue;
+                }
+
+                const fullPath = path.join(dir, entry.name);
+                if (entry.isDirectory()) {
+                  findKoverXmlFiles(fullPath, results);
+                } else if (entry.isFile() && entry.name.endsWith('.xml') && fullPath.includes(`${path.sep}build${path.sep}reports${path.sep}kover${path.sep}`)) {
+                  results.push(fullPath);
+                }
+              }
+              return results;
+            }
+
+            function lineCounterOf(xml) {
+              const counters = [...xml.matchAll(/<counter type="LINE" missed="(\d+)" covered="(\d+)"/g)];
+              if (counters.length === 0) {
+                return null;
+              }
+
+              const [, missed, covered] = counters[counters.length - 1];
+              return {
+                missed: Number(missed),
+                covered: Number(covered),
+              };
+            }
+
+            function formatPercent(covered, missed) {
+              const total = covered + missed;
+              if (total === 0) {
+                return 'N/A';
+              }
+              return `${((covered / total) * 100).toFixed(2)}%`;
+            }
+
+            const reports = findKoverXmlFiles(workspace).sort();
+            const modules = [];
+            let totalMissed = 0;
+            let totalCovered = 0;
+
+            for (const report of reports) {
+              const xml = fs.readFileSync(report, 'utf8');
+              const counter = lineCounterOf(xml);
+              if (!counter) {
+                continue;
+              }
+
+              totalMissed += counter.missed;
+              totalCovered += counter.covered;
+              const relativePath = path.relative(workspace, report).replace(/\\/g, '/');
+              const moduleName = relativePath.split('/build/reports/kover/')[0];
+              modules.push({
+                moduleName,
+                coverage: formatPercent(counter.covered, counter.missed),
+              });
+            }
+
+            const rows = modules
+              .map(({ moduleName, coverage }) => `| \`${moduleName}\` | ${coverage} |`)
+              .join('\n');
+            const body = [
+              marker,
+              '### Unit Test Coverage (Kover)',
+              '',
+              '| Module | Line Coverage |',
+              '|:-|:-:|',
+              rows || '| No Kover XML reports found | N/A |',
+              '',
+              `| Total Project Coverage | ${formatPercent(totalCovered, totalMissed)} |`,
+              '|:-|:-:|',
+              '',
+              'UnitTestのみを対象にしたKover結果です。CI fail閾値は設定していません。',
+            ].join('\n');
+
+            const { owner, repo } = context.repo;
+            const issue_number = context.payload.pull_request.number;
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner,
+              repo,
+              issue_number,
+              per_page: 100,
+            });
+            const existing = comments.find((comment) => comment.user.type === 'Bot' && comment.body.includes(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number,
+                body,
+              });
+            }
+
+  instrumented-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: ${{ github.event_name == 'pull_request' }}
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Set dummy Gradle properties for Fork PRs
+        run: |
+          echo "ORG_GRADLE_PROJECT_DEV_API_BASE_URL=${DEV_API_BASE_URL:-http://localhost:8080/dummy}" >> $GITHUB_ENV
+          echo "ORG_GRADLE_PROJECT_DEV_COGNITO_CLIENT_ID=${DEV_COGNITO_CLIENT_ID:-dummy_client_id}" >> $GITHUB_ENV
+          echo "ORG_GRADLE_PROJECT_DEV_S3_BUCKET_NAME=${DEV_S3_BUCKET_NAME:-dummy_bucket_name}" >> $GITHUB_ENV
+        env:
+          DEV_API_BASE_URL: ${{ secrets.DEV_API_BASE_URL }}
+          DEV_COGNITO_CLIENT_ID: ${{ secrets.DEV_COGNITO_CLIENT_ID }}
+          DEV_S3_BUCKET_NAME: ${{ secrets.DEV_S3_BUCKET_NAME }}
+
+      - name: Enable KVM group permissions
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Execute Instrumented Tests
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 36
+          arch: x86_64
+          target: google_apis
+          script: ./gradlew :feature:media:data:connectedDebugAndroidTest
