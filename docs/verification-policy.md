@@ -81,7 +81,9 @@ bundle exec fastlane test
   :feature:media:ui:koverXmlReportDebug
 ```
 
-Koverのカバレッジコメントは可視化目的です。閾値でCIを失敗させる場合は、導入前に方針を明記します。
+KoverのカバレッジコメントはUnitTest対象のmodule別サマリを可視化する目的です。
+InstrumentedTest専用の変更をUnitTestカバレッジの変更ファイル評価に含めないため、変更ファイル別の閾値表示は使いません。
+閾値でCIを失敗させる場合は、導入前に方針を明記します。
 
 ## 報告形式
 
