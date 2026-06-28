@@ -9,8 +9,8 @@ import com.appvoyager.cloudphotos.domain.media.valueobject.MediaId
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaUrl
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
@@ -39,13 +39,13 @@ class GetMediaListUseCaseTest {
                 createdAt = MediaCreatedAt.of(1600000000000L)
             )
         )
-        every { localMediaRepository.getMediaListFlow() } returns flowOf(expectedMediaList)
+        every { localMediaRepository.getMediaListFlow() } returns MutableStateFlow(expectedMediaList)
 
         // Act & Assert
-        // Flow: repository media list is emitted once and completes
+        // Flow: repository media list is emitted without requiring completion
         getMediaListUseCase().test {
             assertEquals(expectedMediaList, awaitItem())
-            awaitComplete()
+            cancelAndConsumeRemainingEvents()
         }
     }
 

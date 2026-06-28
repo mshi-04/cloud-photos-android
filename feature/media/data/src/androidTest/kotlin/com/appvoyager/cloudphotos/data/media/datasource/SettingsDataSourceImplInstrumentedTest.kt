@@ -83,6 +83,20 @@ class SettingsDataSourceImplInstrumentedTest {
     }
 
     @Test
+    fun setGridColumnCount_returnsPreviousCount_whenCountIsNegative() = runTest {
+        // Arrange
+        dataSource.setGridColumnCount(4)
+
+        // Act
+        // Boundary: negative count is ignored and does not overwrite the previous valid count
+        dataSource.setGridColumnCount(-1)
+        val actual = dataSource.gridColumnCount.first()
+
+        // Assert
+        assertEquals(4, actual)
+    }
+
+    @Test
     fun setGridColumnCount_returnsLatestCount_whenCalledMultipleTimes() = runTest {
         // Arrange
         dataSource.setGridColumnCount(2)

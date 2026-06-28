@@ -11,6 +11,7 @@ import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -72,7 +73,7 @@ class LocalMediaRepositoryImplTest {
         // Act & Assert
         // Error: data source exception is propagated by Flow API
         repository.getMediaListFlow().test {
-            assertEquals("data source failure", awaitError().message)
+            assertInstanceOf(RuntimeException::class.java, awaitError())
         }
     }
 

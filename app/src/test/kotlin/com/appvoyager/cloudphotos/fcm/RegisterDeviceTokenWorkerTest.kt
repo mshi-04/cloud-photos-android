@@ -24,7 +24,6 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class RegisterDeviceTokenWorkerTest {
@@ -111,11 +110,17 @@ class RegisterDeviceTokenWorkerTest {
         val worker = createWorker("fcm-token")
         coEvery { deviceTokenDataSource.register(any()) } throws CancellationException()
 
-        // Act & Assert
+        // Act
         // Coroutine: cancellation is propagated instead of converted to retry
-        assertThrows<CancellationException> {
+        val actual = try {
             worker.doWork()
+            null
+        } catch (e: CancellationException) {
+            e
         }
+
+        // Assert
+        assertEquals(CancellationException::class, actual?.let { it::class })
     }
 
     private fun createWorker(token: String?): RegisterDeviceTokenWorker {

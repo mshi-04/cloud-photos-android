@@ -126,10 +126,11 @@ class CameraViewModelTest {
     }
 
     @Test
-    fun `retryCamera sets uiState to Ready when called`() {
+    fun `retryCamera sets uiState to Ready when called`() = runTest {
         // Arrange
         viewModel.onPermissionGranted()
         viewModel.onCameraError()
+        advanceUntilIdle()
 
         // Act
         // State: retry recovers camera error to ready
