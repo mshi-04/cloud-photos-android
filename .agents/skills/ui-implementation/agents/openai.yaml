@@ -1,0 +1,4 @@
+interface:
+  display_name: "UI Implementation"
+  short_description: "Design, implement, and repair UI layer work."
+  default_prompt: "Update the UI layer following the existing Compose and ViewModel conventions."

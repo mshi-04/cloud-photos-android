@@ -1,0 +1,4 @@
+interface:
+  display_name: "Media Sync Implementation"
+  short_description: "Design, implement, and repair media sync work."
+  default_prompt: "Update media sync or Worker code following the existing upload and delete flow."

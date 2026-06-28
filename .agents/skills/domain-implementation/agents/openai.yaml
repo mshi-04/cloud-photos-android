@@ -1,0 +1,4 @@
+interface:
+  display_name: "Domain Implementation"
+  short_description: "Design, implement, and repair domain layer work."
+  default_prompt: "Update the domain layer following existing UseCase, Repository, and value object conventions."
