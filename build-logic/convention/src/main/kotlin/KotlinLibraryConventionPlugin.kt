@@ -10,6 +10,7 @@ class KotlinLibraryConventionPlugin : Plugin<Project> {
         with(target) {
             pluginManager.apply(LintConventionPlugin::class.java)
             pluginManager.apply("org.jetbrains.kotlin.jvm")
+            pluginManager.apply("org.jetbrains.kotlinx.kover")
 
             extensions.configure<KotlinJvmProjectExtension>("kotlin") {
                 jvmToolchain(17)

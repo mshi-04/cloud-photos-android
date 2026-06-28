@@ -1,5 +1,6 @@
 package com.appvoyager.cloudphotos.ui.media.viewmodel
 
+import app.cash.turbine.test
 import com.appvoyager.cloudphotos.domain.auth.model.AuthError
 import com.appvoyager.cloudphotos.domain.auth.model.AuthResult
 import com.appvoyager.cloudphotos.domain.auth.usecase.DeleteUserUseCase
@@ -27,7 +28,6 @@ import io.mockk.mockk
 import io.mockk.runs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -176,16 +176,18 @@ class MediaViewModelTest {
         val viewModel = createViewModel()
         advanceUntilIdle()
 
-        // Act
-        viewModel.loadMediaList()
-        advanceUntilIdle()
+        // Act & Assert
+        // Flow: media load failure emits snackbar effect
+        viewModel.effect.test {
+            viewModel.loadMediaList()
+            advanceUntilIdle()
 
-        // Assert
-        val effect = viewModel.effect.first()
-        assertEquals(
-            MediaSnackbarMessage.MediaLoadFailed,
-            (effect as MediaEffect.ShowSnackbar).message
-        )
+            assertEquals(
+                MediaSnackbarMessage.MediaLoadFailed,
+                (awaitItem() as MediaEffect.ShowSnackbar).message
+            )
+            cancelAndConsumeRemainingEvents()
+        }
     }
 
     @Test
@@ -212,9 +214,12 @@ class MediaViewModelTest {
         val viewModel = createViewModel()
         advanceUntilIdle()
 
-        // Assert
-        val effect = viewModel.effect.first()
-        assertEquals(MediaSnackbarMessage.Unknown, (effect as MediaEffect.ShowSnackbar).message)
+        // Act & Assert
+        // Flow: grid column flow failure emits unknown snackbar
+        viewModel.effect.test {
+            assertEquals(MediaSnackbarMessage.Unknown, (awaitItem() as MediaEffect.ShowSnackbar).message)
+            cancelAndConsumeRemainingEvents()
+        }
     }
 
     @Test
@@ -243,13 +248,15 @@ class MediaViewModelTest {
         val viewModel = createViewModel()
         advanceUntilIdle()
 
-        // Act
-        viewModel.onGridColumnCountChanged(4)
-        advanceUntilIdle()
+        // Act & Assert
+        // Flow: grid column save failure emits unknown snackbar
+        viewModel.effect.test {
+            viewModel.onGridColumnCountChanged(4)
+            advanceUntilIdle()
 
-        // Assert
-        val effect = viewModel.effect.first()
-        assertEquals(MediaSnackbarMessage.Unknown, (effect as MediaEffect.ShowSnackbar).message)
+            assertEquals(MediaSnackbarMessage.Unknown, (awaitItem() as MediaEffect.ShowSnackbar).message)
+            cancelAndConsumeRemainingEvents()
+        }
     }
 
     @Test
@@ -433,13 +440,15 @@ class MediaViewModelTest {
         viewModel.elapsedRealtimeProvider = { MediaViewModel.MIN_RESUME_INTERVAL_MS }
         advanceUntilIdle()
 
-        // Act
-        viewModel.onScreenResumed()
-        advanceUntilIdle()
+        // Act & Assert
+        // Flow: sync failure emits unknown snackbar
+        viewModel.effect.test {
+            viewModel.onScreenResumed()
+            advanceUntilIdle()
 
-        // Assert
-        val effect = viewModel.effect.first()
-        assertEquals(MediaSnackbarMessage.Unknown, (effect as MediaEffect.ShowSnackbar).message)
+            assertEquals(MediaSnackbarMessage.Unknown, (awaitItem() as MediaEffect.ShowSnackbar).message)
+            cancelAndConsumeRemainingEvents()
+        }
     }
 
     @Test
@@ -451,13 +460,15 @@ class MediaViewModelTest {
         val viewModel = createViewModel()
         advanceUntilIdle()
 
-        // Act
-        viewModel.signOut()
-        advanceUntilIdle()
+        // Act & Assert
+        // Flow: successful sign out emits login navigation effect
+        viewModel.effect.test {
+            viewModel.signOut()
+            advanceUntilIdle()
 
-        // Assert
-        val effect = viewModel.effect.first()
-        assertEquals(MediaEffect.NavigateToLogin, effect)
+            assertEquals(MediaEffect.NavigateToLogin, awaitItem())
+            cancelAndConsumeRemainingEvents()
+        }
     }
 
     @Test
@@ -469,13 +480,15 @@ class MediaViewModelTest {
         val viewModel = createViewModel()
         advanceUntilIdle()
 
-        // Act
-        viewModel.signOut()
-        advanceUntilIdle()
+        // Act & Assert
+        // Flow: sign out domain error emits failure snackbar
+        viewModel.effect.test {
+            viewModel.signOut()
+            advanceUntilIdle()
 
-        // Assert
-        val effect = viewModel.effect.first()
-        assertEquals(MediaSnackbarMessage.SignOutFailed, (effect as MediaEffect.ShowSnackbar).message)
+            assertEquals(MediaSnackbarMessage.SignOutFailed, (awaitItem() as MediaEffect.ShowSnackbar).message)
+            cancelAndConsumeRemainingEvents()
+        }
     }
 
     @Test
@@ -487,13 +500,15 @@ class MediaViewModelTest {
         val viewModel = createViewModel()
         advanceUntilIdle()
 
-        // Act
-        viewModel.signOut()
-        advanceUntilIdle()
+        // Act & Assert
+        // Flow: sign out exception emits failure snackbar
+        viewModel.effect.test {
+            viewModel.signOut()
+            advanceUntilIdle()
 
-        // Assert
-        val effect = viewModel.effect.first()
-        assertEquals(MediaSnackbarMessage.SignOutFailed, (effect as MediaEffect.ShowSnackbar).message)
+            assertEquals(MediaSnackbarMessage.SignOutFailed, (awaitItem() as MediaEffect.ShowSnackbar).message)
+            cancelAndConsumeRemainingEvents()
+        }
     }
 
     @Test
@@ -544,13 +559,15 @@ class MediaViewModelTest {
         val viewModel = createViewModel()
         advanceUntilIdle()
 
-        // Act
-        viewModel.deleteUser()
-        advanceUntilIdle()
+        // Act & Assert
+        // Flow: successful account deletion emits deletion navigation effect
+        viewModel.effect.test {
+            viewModel.deleteUser()
+            advanceUntilIdle()
 
-        // Assert
-        val effect = viewModel.effect.first()
-        assertEquals(MediaEffect.NavigateAfterAccountDeletion, effect)
+            assertEquals(MediaEffect.NavigateAfterAccountDeletion, awaitItem())
+            cancelAndConsumeRemainingEvents()
+        }
     }
 
     @Test
@@ -562,13 +579,15 @@ class MediaViewModelTest {
         val viewModel = createViewModel()
         advanceUntilIdle()
 
-        // Act
-        viewModel.deleteUser()
-        advanceUntilIdle()
+        // Act & Assert
+        // Flow: account deletion domain error emits failure snackbar
+        viewModel.effect.test {
+            viewModel.deleteUser()
+            advanceUntilIdle()
 
-        // Assert
-        val effect = viewModel.effect.first()
-        assertEquals(MediaSnackbarMessage.DeleteUserFailed, (effect as MediaEffect.ShowSnackbar).message)
+            assertEquals(MediaSnackbarMessage.DeleteUserFailed, (awaitItem() as MediaEffect.ShowSnackbar).message)
+            cancelAndConsumeRemainingEvents()
+        }
     }
 
     @Test
@@ -580,13 +599,15 @@ class MediaViewModelTest {
         val viewModel = createViewModel()
         advanceUntilIdle()
 
-        // Act
-        viewModel.deleteUser()
-        advanceUntilIdle()
+        // Act & Assert
+        // Flow: account deletion exception emits failure snackbar
+        viewModel.effect.test {
+            viewModel.deleteUser()
+            advanceUntilIdle()
 
-        // Assert
-        val effect = viewModel.effect.first()
-        assertEquals(MediaSnackbarMessage.DeleteUserFailed, (effect as MediaEffect.ShowSnackbar).message)
+            assertEquals(MediaSnackbarMessage.DeleteUserFailed, (awaitItem() as MediaEffect.ShowSnackbar).message)
+            cancelAndConsumeRemainingEvents()
+        }
     }
 
     @Test

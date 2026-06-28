@@ -6,12 +6,15 @@
 
 - JUnit 5
 - MockK
+- Turbine
 - `kotlinx-coroutines-test`
 - Arrange / Act / Assert
 
 既存テストに合わせ、テストだけ別スタイルにしません。
 
 ## 命名
+
+`src/test` の純粋ロジック / JVM UnitTest は backtick 名を使います。
 
 形式:
 
@@ -41,16 +44,26 @@ fun `doWork returns retry when upload fails with temporary error`()
 禁止:
 
 - `test`、`should`、`verify` prefix
-- snake_case
+- `src/test` での snake_case
 - 日本語テスト名
 - `works`、`handles`、`correctly`、`properly`
 - `success case`、`failure case`、`happy path`、`error case`
 - 曖昧な `success` / `failure`
 - 未許可動詞の `updates`
 
+`src/androidTest` の UI / 実機依存テストは D8/DEX の制約でスペースを含む backtick 名を使えないため、
+同じ意味を保った snake_case 名を使います。
+
+```kotlin
+fun upsertAll_returnsStoredRecords_whenDatabaseIsEmpty()
+fun scheduleUpload_returnsSingleUploadWork_whenCalledTwice()
+```
+
 ## 構造
 
 - Arrange、Act、Assertを空行で分ける。
+- `// Arrange`、`// Act`、`// Assert` のAAAラベルを基本形にする。
+- Turbineの `.test {}` などで操作と検証が交錯する場合は `// Act & Assert` を使う。
 - 1テスト1理由にする。
 - Mockは境界の依存だけに使う。
 - Mapper、value object、domain modelは可能な限り実体でテストする。
@@ -64,7 +77,60 @@ fun `doWork returns retry when upload fails with temporary error`()
 - 即時実行が目的のときだけ `UnconfinedTestDispatcher` を使う。
 - `advanceUntilIdle()` などで仮想時間を明示的に進める。
 - `CancellationException` の契約は `rethrows` で確認する。
-- Flow収集は既存ヘルパーや既存パターンに合わせる。
+- Flow、StateFlow、SharedFlowのemit検証はTurbineを使う。
+- emitの回数と順序は `awaitItem()` で1件ずつ確認する。
+- 完了するFlowは `awaitComplete()` を確認し、継続するFlowやSharedFlowは `cancelAndConsumeRemainingEvents()` で購読解除する。
+- StateFlowは初期値が即座に流れることを、必要に応じて最初の `awaitItem()` で確認する。
+- Flowの例外契約は `awaitError()` または収集時の `assertThrows` で、期待する型と必要なメッセージを確認する。
+
+例:
+
+```kotlin
+repository.getMediaListFlow().test {
+    assertEquals(expectedMediaList, awaitItem())
+    awaitComplete()
+}
+```
+
+## テスト観点
+
+新規追加または大幅刷新するテストでは、レビュー時に意図が分かるように観点コメントを置きます。
+AAAラベルは残したまま、`// Act` または `// Act & Assert` の直下に `// 観点: 意図` の形で1行添えます。
+複数観点が絡む場合は `Flow/Error` のように `/` で連結します。
+
+```kotlin
+// Flow: sign in success emits navigation effect
+```
+
+主な観点:
+
+- `Normal`: 代表的な入力、期待される戻り値、状態遷移
+- `Error`: 例外、エラーハンドリング、フォールバック
+- `Boundary`: 空、null相当、0、上下限、1件/多数/重複
+- `StateTransition`: 初期状態、LoadingからSuccess/Error、不正遷移なし、冪等性
+- `Interaction`: MockKの引数、回数、順序、余計な呼び出しなし
+- `Flow`: emit回数、順序、初期値、完了、購読解除
+- `Coroutine`: suspend完了、仮想時間、キャンセル、Dispatcher差し替え
+
+例:
+
+```kotlin
+@Test
+fun `onSubmit emits NavigateToResetPassword when reset password succeeds`() = runTest(testDispatcher) {
+    // Arrange
+    viewModel.onEmailChanged("test@example.com")
+    coEvery { resetPasswordUseCase(any()) } returns AuthResult.Success(Unit)
+
+    // Act & Assert
+    // Flow: reset password success emits navigation effect
+    viewModel.effect.test {
+        viewModel.onSubmit()
+        advanceUntilIdle()
+        assertEquals(expectedEffect, awaitItem())
+        cancelAndConsumeRemainingEvents()
+    }
+}
+```
 
 ## ViewModel
 

@@ -77,6 +77,15 @@ ORG_GRADLE_PROJECT_DEV_COGNITO_CLIENT_ID=xxxxx
 5. ライセンス、バイナリサイズ、メンテナンス状況に問題がないか。
 6. 検証スコープは `docs/verification-policy.md` に合っているか。
 
+## テスト / カバレッジ依存
+
+- UnitTestはJUnit 5を維持し、MockK、Turbine、`kotlinx-coroutines-test` はJupiter上の部品として追加する。
+- 依存バージョンは `gradle/libs.versions.toml` に集約する。
+- Flow、StateFlow、SharedFlow検証が必要なモジュールには `testImplementation(libs.turbine)` を追加する。
+- KoverはKotlin公式のGradle pluginを使い、カバレッジXMLはPRコメント投稿用にCIで生成する。
+- GitHub ActionsでPRコメントを投稿するworkflowには `pull-requests: write` 権限を付ける。
+- カバレッジ値はPR上の可視化に使う。閾値でCIを失敗させる場合は、別途方針を決めてから設定する。
+
 ## build-logic
 
 触ってよい例:
