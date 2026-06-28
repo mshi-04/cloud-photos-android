@@ -17,7 +17,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+  lint:
     runs-on: ubuntu-latest
 
     env:
@@ -71,23 +71,73 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Set dummy secrets for Fork PRs
+      - name: Run Lint Checks
+        run: bundle exec fastlane lint
+
+  unit-test:
+    runs-on: ubuntu-latest
+
+    env:
+      BUNDLE_PATH: vendor/bundle
+      RUBY_VERSION: '4.0.1'
+      BUNDLER_VERSION: '4.0.3'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: ${{ github.event_name == 'pull_request' }}
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ env.RUBY_VERSION }}
+          bundler: ${{ env.BUNDLER_VERSION }}
+          bundler-cache: false
+
+      - name: Restore bundle cache
+        id: bundle-cache-restore
+        uses: actions/cache/restore@v5
+        with:
+          path: vendor/bundle
+          key: ${{ runner.os }}-ruby-${{ env.RUBY_VERSION }}-bundler-${{ env.BUNDLER_VERSION }}-${{ hashFiles('**/Gemfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-ruby-${{ env.RUBY_VERSION }}-bundler-${{ env.BUNDLER_VERSION }}-
+
+      - name: Install gems
+        run: |
+          bundle config set path "$BUNDLE_PATH"
+          bundle install --jobs 4 --retry 3
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Set dummy environment values for Fork PRs
         run: |
           echo "DEV_API_BASE_URL=${DEV_API_BASE_URL:-http://localhost:8080/dummy}" >> $GITHUB_ENV
           echo "DEV_COGNITO_CLIENT_ID=${DEV_COGNITO_CLIENT_ID:-dummy_client_id}" >> $GITHUB_ENV
           echo "DEV_S3_BUCKET_NAME=${DEV_S3_BUCKET_NAME:-dummy_bucket_name}" >> $GITHUB_ENV
+          echo "ORG_GRADLE_PROJECT_DEV_API_BASE_URL=${DEV_API_BASE_URL:-http://localhost:8080/dummy}" >> $GITHUB_ENV
+          echo "ORG_GRADLE_PROJECT_DEV_COGNITO_CLIENT_ID=${DEV_COGNITO_CLIENT_ID:-dummy_client_id}" >> $GITHUB_ENV
+          echo "ORG_GRADLE_PROJECT_DEV_S3_BUCKET_NAME=${DEV_S3_BUCKET_NAME:-dummy_bucket_name}" >> $GITHUB_ENV
         env:
           DEV_API_BASE_URL: ${{ secrets.DEV_API_BASE_URL }}
           DEV_COGNITO_CLIENT_ID: ${{ secrets.DEV_COGNITO_CLIENT_ID }}
           DEV_S3_BUCKET_NAME: ${{ secrets.DEV_S3_BUCKET_NAME }}
 
-      - name: Run Lint Checks
-        run: bundle exec fastlane lint
-
       - name: Execute Unit Tests
         run: bundle exec fastlane test
 
-      - name: Generate Kover XML Reports
+      - name: Generate Unit Test Kover XML Reports
         if: github.event_name == 'pull_request'
         run: |
           ./gradlew \
@@ -110,3 +160,48 @@ jobs:
           title: Unit Test Coverage
           update-comment: true
           coverage-counter-type: LINE
+
+  instrumented-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: ${{ github.event_name == 'pull_request' }}
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Set dummy Gradle properties for Fork PRs
+        run: |
+          echo "ORG_GRADLE_PROJECT_DEV_API_BASE_URL=${DEV_API_BASE_URL:-http://localhost:8080/dummy}" >> $GITHUB_ENV
+          echo "ORG_GRADLE_PROJECT_DEV_COGNITO_CLIENT_ID=${DEV_COGNITO_CLIENT_ID:-dummy_client_id}" >> $GITHUB_ENV
+          echo "ORG_GRADLE_PROJECT_DEV_S3_BUCKET_NAME=${DEV_S3_BUCKET_NAME:-dummy_bucket_name}" >> $GITHUB_ENV
+        env:
+          DEV_API_BASE_URL: ${{ secrets.DEV_API_BASE_URL }}
+          DEV_COGNITO_CLIENT_ID: ${{ secrets.DEV_COGNITO_CLIENT_ID }}
+          DEV_S3_BUCKET_NAME: ${{ secrets.DEV_S3_BUCKET_NAME }}
+
+      - name: Enable KVM group permissions
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Execute Instrumented Tests
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 36
+          arch: x86_64
+          target: google_apis
+          script: ./gradlew :feature:media:data:connectedDebugAndroidTest
