@@ -14,6 +14,8 @@
 
 ## 命名
 
+`src/test` の純粋ロジック / JVM UnitTest は backtick 名を使います。
+
 形式:
 
 ```text
@@ -42,12 +44,20 @@ fun `doWork returns retry when upload fails with temporary error`()
 禁止:
 
 - `test`、`should`、`verify` prefix
-- snake_case
+- `src/test` での snake_case
 - 日本語テスト名
 - `works`、`handles`、`correctly`、`properly`
 - `success case`、`failure case`、`happy path`、`error case`
 - 曖昧な `success` / `failure`
 - 未許可動詞の `updates`
+
+`src/androidTest` の UI / 実機依存テストは D8/DEX の制約でスペースを含む backtick 名を使えないため、
+同じ意味を保った snake_case 名を使います。
+
+```kotlin
+fun upsertAll_returnsStoredRecords_whenDatabaseIsEmpty()
+fun scheduleUpload_returnsSingleUploadWork_whenCalledTwice()
+```
 
 ## 構造
 

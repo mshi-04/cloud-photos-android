@@ -13,18 +13,20 @@ import kotlinx.coroutines.flow.map
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
-class SettingsDataSourceImpl @Inject constructor(@param:ApplicationContext private val context: Context) :
-    SettingsDataSource {
+class SettingsDataSourceImpl internal constructor(private val dataStore: DataStore<Preferences>) : SettingsDataSource {
+
+    @Inject
+    constructor(@ApplicationContext context: Context) : this(context.dataStore)
 
     override val gridColumnCount: Flow<Int> =
-        context.dataStore.data.map { preferences ->
+        dataStore.data.map { preferences ->
             val stored = preferences[KEY_GRID_COLUMN_COUNT]
             if (stored == null || stored <= 0) DEFAULT_GRID_COLUMN_COUNT else stored
         }
 
     override suspend fun setGridColumnCount(count: Int) {
         if (count <= 0) return
-        context.dataStore.edit { preferences ->
+        dataStore.edit { preferences ->
             preferences[KEY_GRID_COLUMN_COUNT] = count
         }
     }
