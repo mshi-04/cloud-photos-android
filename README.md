@@ -73,7 +73,7 @@ Firebase Cloud Messaging（FCM）によるプッシュ通知を受信します�
 | ローカル DB     | Room 2.8                                       |
 | 設定保存        | DataStore Preferences 1.2                      |
 | Lint        | ktlint 14.2 + detekt 2.0-alpha                 |
-| テスト         | JUnit 5 + MockK 1.14 + kotlinx-coroutines-test |
+| テスト         | JUnit 5 + MockK + Turbine + kotlinx-coroutines-test + Kover |
 | Min SDK     | 29（Android 10）                                 |
 | Compile SDK | 36                                             |
 | JDK         | 17                                             |
@@ -200,7 +200,8 @@ bundle exec fastlane build_prod
 bundle exec fastlane test
 ```
 
-テストは **JUnit 5 + MockK + kotlinx-coroutines-test** を使用し、Arrange / Act / Assert 構造に従います。
+テストは **JUnit 5 + MockK + Turbine + kotlinx-coroutines-test** を使用し、Arrange / Act / Assert 構造に従います。
+カバレッジ計測には Kover を使用します。
 
 ### CI（継続的インテグレーション）
 
@@ -210,8 +211,10 @@ bundle exec fastlane test
 |------|-----------------------------|-------------------|
 | Lint | `bundle exec fastlane lint` | ktlint + detekt   |
 | Test | `bundle exec fastlane test` | dev フレーバーのユニットテスト |
+| Coverage | Kover XML + PR comment | PR上にUnitTestカバレッジを表示 |
 
 CI がパスしない PR はマージできません。フォーク PR ではダミーシークレットが自動設定されます。
+カバレッジコメントは可視化目的で、現時点では閾値によるCI failは設定していません。
 
 ### CD（継続的デリバリー）
 

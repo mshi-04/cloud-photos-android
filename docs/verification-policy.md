@@ -31,7 +31,8 @@ Kotlinソース、resource、文書のみの変更では通常不要です。
 | 同一フィーチャー複数レイヤー | 触れた各レイヤーのtest |
 | `app` | `./gradlew test`、必要に応じてassemble |
 | `core:*` | `./gradlew test` |
-| Gradle / 依存 / build-logic | `./gradlew test`、`ktlintCheck detekt`、必要に応じてassemble |
+| Gradle / 依存 / build-logic | `./gradlew test`、`ktlintCheck detekt`、Kover XML生成、必要に応じてassemble |
+| CI / GitHub Actions | 対象workflowの構文確認、関連Gradleタスク、PRコメント権限と投稿条件の確認 |
 | media Worker/Scheduler/SyncStatus | `:feature:media:data:test` と関連domain/uiテスト |
 
 迷った場合は `./gradlew test` を選びます。
@@ -64,6 +65,23 @@ CIは最終ゲートです。ローカルで通っていても、CIが赤なら�
 bundle exec fastlane lint
 bundle exec fastlane test
 ```
+
+カバレッジCIを変更した場合は、PRコメント用のKover XML生成も確認します。
+
+```bash
+./gradlew :app:koverXmlReportDevDebug \
+  :core:common:koverXmlReportJvm \
+  :core:data:koverXmlReportDebug \
+  :core:ui:koverXmlReportDebug \
+  :feature:auth:domain:koverXmlReportJvm \
+  :feature:auth:data:koverXmlReportDebug \
+  :feature:auth:ui:koverXmlReportDebug \
+  :feature:media:domain:koverXmlReportJvm \
+  :feature:media:data:koverXmlReportDebug \
+  :feature:media:ui:koverXmlReportDebug
+```
+
+Koverのカバレッジコメントは可視化目的です。閾値でCIを失敗させる場合は、導入前に方針を明記します。
 
 ## 報告形式
 

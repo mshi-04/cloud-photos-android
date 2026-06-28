@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write
 
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
@@ -85,3 +86,27 @@ jobs:
 
       - name: Execute Unit Tests
         run: bundle exec fastlane test
+
+      - name: Generate Kover XML Reports
+        if: github.event_name == 'pull_request'
+        run: |
+          ./gradlew \
+            :app:koverXmlReportDevDebug \
+            :core:common:koverXmlReportJvm \
+            :core:data:koverXmlReportDebug \
+            :core:ui:koverXmlReportDebug \
+            :feature:auth:domain:koverXmlReportJvm \
+            :feature:auth:data:koverXmlReportDebug \
+            :feature:auth:ui:koverXmlReportDebug \
+            :feature:media:domain:koverXmlReportJvm \
+            :feature:media:data:koverXmlReportDebug \
+            :feature:media:ui:koverXmlReportDebug
+
+      - name: Add coverage report to PR
+        if: github.event_name == 'pull_request'
+        uses: mi-kas/kover-report@v2
+        with:
+          path: ${{ github.workspace }}/**/build/reports/kover/**/*.xml
+          title: Unit Test Coverage
+          update-comment: true
+          coverage-counter-type: LINE

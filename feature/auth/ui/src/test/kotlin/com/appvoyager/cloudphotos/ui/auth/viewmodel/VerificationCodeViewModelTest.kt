@@ -1,6 +1,7 @@
 package com.appvoyager.cloudphotos.ui.auth.viewmodel
 
 import androidx.lifecycle.SavedStateHandle
+import app.cash.turbine.test
 import com.appvoyager.cloudphotos.domain.auth.model.AuthError
 import com.appvoyager.cloudphotos.domain.auth.model.AuthResult
 import com.appvoyager.cloudphotos.domain.auth.usecase.ConfirmSignUpUseCase
@@ -12,8 +13,6 @@ import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -58,25 +57,43 @@ class VerificationCodeViewModelTest {
 
     @Test
     fun `uiState sets codes to empty when viewModel is initialized`() {
+        // Arrange
+        // State: freshly created viewModel exposes empty verification code fields
+
+        // Act
         val state = viewModel.uiState.value
-        Assertions.assertEquals(List(6) { "" }, state.codes)
-        Assertions.assertFalse(state.isLoading)
-        Assertions.assertNull(state.codeError)
-        Assertions.assertEquals(60, state.resendTimerSeconds)
-        Assertions.assertFalse(state.isResendEnabled)
+
+        // Assert
+        Assertions.assertEquals(VerificationCodeSnapshot(), VerificationCodeSnapshot.from(state))
     }
 
     @Test
     fun `onCodeChanged sets single digit when single character is entered`() {
+        // Arrange
+        // State: code fields start empty before single digit input
+
+        // Act
+        // State: single digit input updates only the targeted field
         viewModel.onCodeChanged(0, "1")
         val state = viewModel.uiState.value
-        Assertions.assertEquals("1", state.codes[0])
-        Assertions.assertEquals("", state.codes[1])
+
+        // Assert
+        Assertions.assertEquals(
+            VerificationCodeSnapshot(codes = listOf("1", "", "", "", "", "")),
+            VerificationCodeSnapshot.from(state)
+        )
     }
 
     @Test
     fun `onCodeChanged sets all digits when paste input of 6 characters is entered`() {
+        // Arrange
+        // State: code fields start empty before paste input
+
+        // Act
+        // Boundary: six pasted digits fill all verification fields
         viewModel.onCodeChanged(0, "123456")
+
+        // Assert
         Assertions.assertEquals(
             listOf("1", "2", "3", "4", "5", "6"),
             viewModel.uiState.value.codes
@@ -85,31 +102,39 @@ class VerificationCodeViewModelTest {
 
     @Test
     fun `isCodeComplete returns true when all 6 digits are filled`() {
+        // Arrange
         repeat(6) { i -> viewModel.onCodeChanged(i, (i + 1).toString()) }
-        Assertions.assertTrue(viewModel.uiState.value.isCodeComplete)
+
+        // Act
+        // Boundary: exactly six filled digits complete the code
+        val isCodeComplete = viewModel.uiState.value.isCodeComplete
+
+        // Assert
+        Assertions.assertTrue(isCodeComplete)
     }
 
     @Test
     fun `onVerify emits NavigateToHome when confirmation succeeds`() = runTest(testDispatcher) {
         // Arrange
+        // Flow: confirmation success emits home navigation effect
         coEvery { confirmSignUpUseCase(any()) } returns AuthResult.Success(Unit)
 
         fillCode("12345")
 
-        // Act
-        var effect: VerificationEffect? = null
-        val job = launch { effect = viewModel.effect.first() }
-        viewModel.onCodeChanged(5, "6")
-        advanceUntilIdle()
+        // Act & Assert
+        viewModel.effect.test {
+            viewModel.onCodeChanged(5, "6")
+            advanceUntilIdle()
 
-        // Assert
-        Assertions.assertTrue(effect is VerificationEffect.NavigateToHome)
-        job.cancel()
+            Assertions.assertEquals(VerificationEffect.NavigateToHome, awaitItem())
+            cancelAndConsumeRemainingEvents()
+        }
     }
 
     @Test
     fun `onVerify sets codeError when confirmation returns CodeMismatch`() = runTest(testDispatcher) {
         // Arrange
+        // Error: code mismatch maps to code field error
         coEvery { confirmSignUpUseCase(any()) } returns AuthResult.Error(
             AuthError.CodeMismatch("wrong code")
         )
@@ -130,6 +155,7 @@ class VerificationCodeViewModelTest {
     @Test
     fun `onVerify sets codeError when confirmation returns CodeExpired`() = runTest(testDispatcher) {
         // Arrange
+        // Error: expired code maps to code field error
         coEvery { confirmSignUpUseCase(any()) } returns AuthResult.Error(
             AuthError.CodeExpired("expired")
         )
@@ -150,26 +176,30 @@ class VerificationCodeViewModelTest {
     @Test
     fun `onVerify emits ShowSnackbar when confirmation returns Network error`() = runTest(testDispatcher) {
         // Arrange
+        // Flow: network error emits snackbar effect
         coEvery { confirmSignUpUseCase(any()) } returns AuthResult.Error(
             AuthError.Network("offline")
         )
 
         fillCode("12345")
 
-        // Act
-        var effect: VerificationEffect? = null
-        val job = launch { effect = viewModel.effect.first() }
-        viewModel.onCodeChanged(5, "6")
-        advanceUntilIdle()
+        // Act & Assert
+        viewModel.effect.test {
+            viewModel.onCodeChanged(5, "6")
+            advanceUntilIdle()
 
-        // Assert
-        Assertions.assertTrue(effect is VerificationEffect.ShowSnackbar)
-        job.cancel()
+            Assertions.assertEquals(
+                VerificationEffect.ShowSnackbar(AuthSnackbarMessage.Network),
+                awaitItem()
+            )
+            cancelAndConsumeRemainingEvents()
+        }
     }
 
     @Test
     fun `onResend emits ShowSnackbar when resend succeeds`() = runTest(testDispatcher) {
         // Arrange
+        // Coroutine/Flow: elapsed resend timer allows resend and emits snackbar
         coEvery { resendSignUpCodeUseCase(any()) } returns AuthResult.Success(Unit)
 
         repeat(61) {
@@ -177,36 +207,43 @@ class VerificationCodeViewModelTest {
             testDispatcher.scheduler.runCurrent()
         }
 
-        Assertions.assertTrue(
-            viewModel.uiState.value.resendTimerSeconds <= 0,
-            "Timer should have elapsed, but was ${viewModel.uiState.value.resendTimerSeconds}"
-        )
+        // Act & Assert
+        viewModel.effect.test {
+            viewModel.onResend()
 
-        // Act
-        var effect: VerificationEffect? = null
-        val job = launch { effect = viewModel.effect.first() }
+            testDispatcher.scheduler.advanceTimeBy(100L)
+            testDispatcher.scheduler.runCurrent()
 
-        viewModel.onResend()
-
-        testDispatcher.scheduler.advanceTimeBy(100L)
-        testDispatcher.scheduler.runCurrent()
-
-        // Assert
-        Assertions.assertTrue(effect is VerificationEffect.ShowSnackbar)
-        Assertions.assertEquals(
-            AuthSnackbarMessage.CodeResent,
-            (effect as VerificationEffect.ShowSnackbar).message
-        )
-        Assertions.assertTrue(
-            viewModel.uiState.value.resendTimerSeconds > 0,
-            "Timer should have been reset"
-        )
-        job.cancel()
+            Assertions.assertEquals(
+                VerificationEffect.ShowSnackbar(AuthSnackbarMessage.CodeResent),
+                awaitItem()
+            )
+            cancelAndConsumeRemainingEvents()
+        }
     }
 
     private fun fillCode(code: String) {
         code.take(6).forEachIndexed { i, ch ->
             viewModel.onCodeChanged(i, ch.toString())
+        }
+    }
+
+    private data class VerificationCodeSnapshot(
+        val codes: List<String> = List(6) { "" },
+        val isLoading: Boolean = false,
+        val codeError: AuthFieldError? = null,
+        val resendTimerSeconds: Int = 60,
+        val isResendEnabled: Boolean = false
+    ) {
+        companion object {
+            fun from(state: com.appvoyager.cloudphotos.ui.auth.uistate.VerificationCodeUiState) =
+                VerificationCodeSnapshot(
+                    codes = state.codes,
+                    isLoading = state.isLoading,
+                    codeError = state.codeError,
+                    resendTimerSeconds = state.resendTimerSeconds,
+                    isResendEnabled = state.isResendEnabled
+                )
         }
     }
 }

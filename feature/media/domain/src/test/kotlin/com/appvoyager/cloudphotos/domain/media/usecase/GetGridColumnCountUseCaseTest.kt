@@ -1,11 +1,11 @@
 package com.appvoyager.cloudphotos.domain.media.usecase
 
+import app.cash.turbine.test
 import com.appvoyager.cloudphotos.domain.media.repository.SettingsRepository
 import com.appvoyager.cloudphotos.domain.media.valueobject.GridColumnCount
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
@@ -28,11 +28,11 @@ class GetGridColumnCountUseCaseTest {
         val expectedCount = GridColumnCount.of(3)
         every { settingsRepository.gridColumnCount } returns flowOf(expectedCount)
 
-        // Act
-        val result = getGridColumnCountUseCase().toList()
-
-        // Assert
-        assertEquals(1, result.size)
-        assertEquals(expectedCount, result.first())
+        // Act & Assert
+        // Flow: repository grid column count is emitted once and completes
+        getGridColumnCountUseCase().test {
+            assertEquals(expectedCount, awaitItem())
+            awaitComplete()
+        }
     }
 }
