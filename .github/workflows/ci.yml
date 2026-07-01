@@ -50,7 +50,7 @@ jobs:
 
       - name: Restore bundle cache
         id: bundle-cache-restore
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@v6
         with:
           path: vendor/bundle
           key: ${{ runner.os }}-ruby-${{ env.RUBY_VERSION }}-bundler-${{ env.BUNDLER_VERSION }}-${{ hashFiles('**/Gemfile.lock') }}
@@ -64,7 +64,7 @@ jobs:
 
       - name: Save bundle cache
         if: (github.event_name == 'push') && (github.ref_name == 'main' || github.ref_name == 'develop')
-        uses: actions/cache/save@v5
+        uses: actions/cache/save@v6
         with:
           path: vendor/bundle
           key: ${{ steps.bundle-cache-restore.outputs.cache-primary-key }}
@@ -107,7 +107,7 @@ jobs:
 
       - name: Restore bundle cache
         id: bundle-cache-restore
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@v6
         with:
           path: vendor/bundle
           key: ${{ runner.os }}-ruby-${{ env.RUBY_VERSION }}-bundler-${{ env.BUNDLER_VERSION }}-${{ hashFiles('**/Gemfile.lock') }}
