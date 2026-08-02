@@ -22,9 +22,12 @@ domain の `mediaUploadedAt` と Entity の `uploadedAt` のように名前が�
 
 `valueOf` だと未知の文字列で `IllegalArgumentException` が飛ぶ。DB には過去バージョンのアプリが
 書いた行やリネーム前の enum 名が残り得るため、読み出しが例外で止まると同期処理全体が回復不能になる。
-ここは握り潰しではなく「未知の状態は再同期対象の ERROR として扱う」という意図的な劣化。
-新しい `SyncStatus` を追加するときは、旧バージョンのアプリがその行を `ERROR` として読むことを前提に、
-再同期で復帰できる状態遷移になっているか確認する。
+ここは握り潰しではなく「未知の状態は ERROR として隔離する」という意図的な劣化。
+`ERROR` は `getPendingMediaIds()` の `IN ('PENDING_UPLOAD', 'PENDING_DELETE')` に含まれないため、
+自動では再同期されない。復帰させるには別の経路で status を戻す必要がある。
+
+新しい `SyncStatus` を追加するときは、旧バージョンのアプリがその行を `ERROR` として読み、
+そのまま同期対象から外れることを前提に、復旧経路が要るかどうかを判断する。
 
 なお `toDomain` は status 以外の列に対しては寛容ではない。`cloudStoragePath` が空文字なら
 `CloudStoragePath.of()` の `require` で落ちる。空文字を書き込まないことは書き込み側の責務。
