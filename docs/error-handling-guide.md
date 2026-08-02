@@ -116,7 +116,7 @@ domain/UIへ漏らさないもの:
 | 永続的エラー | `ERROR` へ更新しretryしない |
 | 削除時の既存孤立許容ケース | 既存仕様に従い処理継続 |
 
-分類を変更する場合は `docs/media-upload-flow.md` とテストを更新します。
+分類を変更する場合は [docs/media-upload-flow.md](media-upload-flow.md) とテストを更新します。
 
 ## テスト観点
 

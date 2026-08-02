@@ -123,7 +123,7 @@ PENDING_UPLOAD / PENDING_DELETE
 | 永続的エラー | retryしない | `ERROR` |
 | 削除時の孤立許容ケース | 処理継続 | レコード削除される場合あり |
 
-`docs/error-handling-guide.md` と一致させます。
+[docs/error-handling-guide.md](error-handling-guide.md) と一致させます。
 
 ## WorkManager契約
 
