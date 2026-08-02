@@ -1,6 +1,6 @@
 # Android規約
 
-Android実装時の具体ルールです。配置判断は `docs/implementation-rules.md` を優先します。
+Android実装時の具体ルールです。配置判断は [docs/implementation-rules.md](implementation-rules.md) を優先します。
 
 ## Compose
 

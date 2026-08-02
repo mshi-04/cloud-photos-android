@@ -1,5 +1,7 @@
 # CloudPhotos
 
+[English](README.en.md)
+
 写真・動画をクラウドストレージにアップロード・管理する Android アプリです。
 
 ## 機能
@@ -198,10 +200,14 @@ bundle exec fastlane build_prod
 
 # Fastlane 経由（CI と同一環境）
 bundle exec fastlane test
+
+# InstrumentedTest（エミュレータまたは実機が必要）
+./gradlew :feature:media:data:connectedDebugAndroidTest
 ```
 
-テストは **JUnit 5 + MockK + Turbine + kotlinx-coroutines-test** を使用し、Arrange / Act / Assert 構造に従います。
-カバレッジ計測には Kover を使用します。
+ユニットテストは **JUnit 5 + MockK + Turbine + kotlinx-coroutines-test** を使用し、Arrange / Act / Assert 構造に従います。
+InstrumentedTest は `AndroidJUnitRunner` 上で動くため **JUnit 4** を使用し、Room・DataStore・WorkManager を実体で検証します。
+カバレッジ計測には Kover を使用します（対象はユニットテストのみ）。
 
 ### CI（継続的インテグレーション）
 
@@ -212,6 +218,7 @@ bundle exec fastlane test
 | Lint | `bundle exec fastlane lint` | ktlint + detekt   |
 | Test | `bundle exec fastlane test` | dev フレーバーのユニットテスト |
 | Coverage | Kover XML + PR comment | PR上にUnitTestカバレッジを表示 |
+| Instrumented Test | `./gradlew :feature:media:data:connectedDebugAndroidTest` | API 36 エミュレータで Room / DataStore / WorkManager を検証 |
 
 CI がパスしない PR はマージできません。フォーク PR ではダミーシークレットが自動設定されます。
 カバレッジコメントは可視化目的で、現時点では閾値によるCI failは設定していません。
@@ -234,13 +241,13 @@ CI がパスしない PR はマージできません。フォーク PR ではダ
 
 詳細は以下のドキュメントを参照してください。
 
-- [`docs/architecture-decisions.md`](docs/architecture-decisions.md) — アーキテクチャ上の意思決定と理由
-- [`docs/media-upload-flow.md`](docs/media-upload-flow.md) — アップロード / 削除フローと SyncStatus
+- [docs/architecture-decisions.md](docs/architecture-decisions.md) — アーキテクチャ上の意思決定と理由
+- [docs/media-upload-flow.md](docs/media-upload-flow.md) — アップロード / 削除フローと SyncStatus
   遷移
-- [`docs/error-handling-guide.md`](docs/error-handling-guide.md) — CancellationException
+- [docs/error-handling-guide.md](docs/error-handling-guide.md) — CancellationException
   とエラーマッピングのパターン
-- [`AGENTS.md`](AGENTS.md) — 開発ルール（人間・AI エージェント共通）
+- [AGENTS.md](AGENTS.md) — 開発ルール（人間・AI エージェント共通）。[CLAUDE.md](CLAUDE.md) は skill のパスだけが異なる同内容の写しです
 
 ## セキュリティ
 
-脆弱性の報告手順については [`SECURITY.md`](SECURITY.md) を参照してください。
+脆弱性の報告手順については [SECURITY.md](SECURITY.md) を参照してください。

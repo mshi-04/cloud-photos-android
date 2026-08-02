@@ -75,7 +75,7 @@ ORG_GRADLE_PROJECT_DEV_COGNITO_CLIENT_ID=xxxxx
 3. 追加先は最小モジュールか。
 4. KSP、Hilt、Room、Compose、AGP設定変更が必要か。
 5. ライセンス、バイナリサイズ、メンテナンス状況に問題がないか。
-6. 検証スコープは `docs/verification-policy.md` に合っているか。
+6. 検証スコープは [docs/verification-policy.md](verification-policy.md) に合っているか。
 
 ## テスト / カバレッジ依存
 

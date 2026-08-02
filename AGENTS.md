@@ -5,9 +5,9 @@
 
 ## 主要文書
 
-- [docs/implementation-rules.md](docs/implementation-rules.md): 配置、依存方向、UseCase/Repository/値オブジェクト
+- [docs/implementation-rules.md](docs/implementation-rules.md): 配置、依存方向、UseCase/Repository/値オブジェクト、コメント
 - [docs/android-conventions.md](docs/android-conventions.md): Compose、ViewModel、coroutines、Hilt、Navigation、WorkManager
-- [docs/testing-conventions.md](docs/testing-conventions.md): テスト命名、AAA、coroutines/Flow/ViewModel/Workerテスト
+- [docs/testing-conventions.md](docs/testing-conventions.md): テスト命名、AAA、coroutines/Flow/ViewModel/Workerテスト、InstrumentedTest、Room migration
 - [docs/verification-policy.md](docs/verification-policy.md): 変更種別ごとの検証スコープ
 - [docs/build-environment.md](docs/build-environment.md): Gradle、flavor、環境値、依存追加
 - [docs/error-handling-guide.md](docs/error-handling-guide.md): CancellationException、Result、provider error mapping
@@ -16,7 +16,7 @@
 
 ## AI skills
 
-作業内容に応じて [.agents/skills/](.agents/skills/) の該当 `SKILL.md` を読む。
+作業内容に応じて [.agents/skills/](.agents/skills/) の該当スキルを読む。
 
 - [ui-implementation](.agents/skills/ui-implementation/SKILL.md): UI 層の設計・実装・修正
 - [domain-implementation](.agents/skills/domain-implementation/SKILL.md): Domain 層の設計・実装・修正
@@ -27,3 +27,10 @@
 - [implementation-review](.agents/skills/implementation-review/SKILL.md): 実装差分のレビュー
 - [ci-build-troubleshooting](.agents/skills/ci-build-troubleshooting/SKILL.md): build / CI / 静的解析の調査・修正
 - [media-sync-implementation](.agents/skills/media-sync-implementation/SKILL.md): media 同期・Worker・SyncStatus の設計・実装・修正
+
+## 開発フロー
+
+- フィーチャー開発は `develop` から分岐する。`main` と `develop` へ直接 push しない。
+- PR の説明は [.github/pull_request_template.md](.github/pull_request_template.md) に従う。
+- 背景、トレードオフ、採用しなかった案は PR の説明か [docs/](docs/) へ書き、コードへ残さない。
+- 実行した検証と実行しなかった検証を報告する。判断基準は [docs/verification-policy.md](docs/verification-policy.md)。
