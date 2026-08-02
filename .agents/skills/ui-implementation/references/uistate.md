@@ -1,6 +1,6 @@
 # UiState
 
-`uistate/` パッケージに置く、画面が表示に使う状態のまとまり。命名は `<Screen>UiState`。
+`uistate/` パッケージに置く、画面が表示に使う状態をまとめたもの。命名は `<Screen>UiState`。
 形は 1 つではなく、排他状態の有無で 3 通りある。実物は
 `feature/media/ui/src/main/kotlin/com/appvoyager/cloudphotos/ui/media/uistate/MediaUiState.kt`、
 `feature/media/ui/src/main/kotlin/com/appvoyager/cloudphotos/ui/media/uistate/CameraUiState.kt`、

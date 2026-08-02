@@ -1,7 +1,8 @@
 # ViewModel
 
 `viewmodel/` パッケージに置く `@HiltViewModel` 付きの `ViewModel`。UseCase を
-constructor injection で受け取り、公開するのは `uiState` と `effect` の 2 つだけ。実物は
+constructor injection で受け取り、公開する状態は `uiState` と `effect` の 2 つ。`LoginViewModel.isFormValid`
+のような表示用の派生値を read-only property として足すことはある。実物は
 `feature/media/ui/src/main/kotlin/com/appvoyager/cloudphotos/ui/media/viewmodel/MediaViewModel.kt`、
 `feature/media/ui/src/main/kotlin/com/appvoyager/cloudphotos/ui/media/viewmodel/CameraViewModel.kt`、
 `feature/auth/ui/src/main/kotlin/com/appvoyager/cloudphotos/ui/auth/viewmodel/LoginViewModel.kt`。

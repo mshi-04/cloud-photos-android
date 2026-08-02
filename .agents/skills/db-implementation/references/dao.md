@@ -27,6 +27,9 @@ enum 名を変えても SQL はコンパイルエラーにならず、単に 0 �
 `PENDING_UPLOAD` と `PENDING_DELETE` が含まれることを 1 ケースずつ検証し、
 失敗メッセージで「DAO の SQL を直せ」と指示する。
 
+守れるのは enum 名の存在だけで、SQL 側のリテラルは読んでいない。
+綴り違いや片方の status の書き漏らしは検出できないので、query の実挙動は androidTest 側で確認する。
+
 新しく status リテラルを SQL へ埋め込む query を足すときは、このガードテストへ同じ形のケースを追加する。
 逆に、リテラルを避けられるなら埋め込まない。`UploadRecordLocalDataSourceImpl` は
 `SyncStatus.PENDING_UPLOAD.name` を引数として渡すことで、status 一致の query をハードコードなしで使っている。

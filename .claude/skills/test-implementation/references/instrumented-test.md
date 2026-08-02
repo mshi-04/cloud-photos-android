@@ -53,6 +53,8 @@ unique work 名は production の定数（`UploadMediaWorker.WORK_NAME`）を参
 
 `ExistingWorkPolicy.KEEP` の確認は、schedule 関数を 2 回呼んでから
 `workManager.getWorkInfosForUniqueWork(name).get().size` が 1 であることで行います。
+件数だけでは `REPLACE` と区別できません。最初の work が保たれたことまで見るなら、
+1 回目の work id を控え、2 回目の後も同じ id が残ることを確認します。
 
 ## DataStore
 

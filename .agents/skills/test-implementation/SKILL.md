@@ -9,7 +9,7 @@ description: テスト追加・修正・レビューに使う。JUnit 5、MockK�
 
 1. 変更対象のレイヤーと実行すべき Gradle タスクを決める。
 2. `src/test` と `src/androidTest` のどちらに置くか決める。端末 API がないと確認できないもの（Room DAO、DataStore、WorkManager の enqueue 契約）だけ `src/androidTest` に置き、JUnit 4 と実体で書く。それ以外は `src/test` に置く。
-3. 対象 production class の既存テストを探し、JUnit 5、MockK、`kotlinx-coroutines-test`、Arrange / Act / Assert の形を合わせる。近い既存テストがない場合は、参考資料の該当種別を読んでから書き始める。
+3. 対象 production class の既存テストを探して形を合わせる。`src/test` は JUnit 5、MockK、`kotlinx-coroutines-test`、`src/androidTest` は JUnit 4 と実体を使い、どちらも Arrange / Act / Assert に従う。近い既存テストがない場合は、参考資料の該当種別を読んでから書き始める。
 4. テスト名は `src/test` では `` `[対象関数名] [期待結果] when [条件]` ``、`src/androidTest` では同じ意味の snake_case にし、期待結果が state、effect、戻り値、例外、呼び出し、無視のどれか分かる名前にする。
 5. UI/ViewModel では UseCase 呼び出しだけで終わらせず、画面契約として見える state/effect を assert する。
 6. Domain では value object の正規化・境界値・不正値、UseCase の success/error/validation/cancellation を必要な範囲で追加する。

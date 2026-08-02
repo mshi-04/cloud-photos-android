@@ -10,7 +10,7 @@ class 名は `<動詞><対象>UseCase`。依存は `@Inject constructor` で受�
 
 - provider 越しの操作は `AuthResult<T>` / `UploadResult<T>` をそのまま返す。UseCase 側で成功・失敗を解釈しない。
 - 継続監視する読み出しは `Flow<T>` を返し、`suspend` を付けない。`GetMediaListUseCase` と `GetGridColumnCountUseCase` がこれ。
-- ローカル DB 更新や scheduler 起動は `suspend` で `Unit` を返す。
+- ローカル DB 更新や scheduler 起動を行う UseCase は `suspend` で `Unit` を返す。`ScheduleUploadUseCase` が呼ぶ `UploadScheduler.scheduleUpload()` 自体は非 `suspend` で、`suspend` なのは UseCase 側だけ。
 
 引数が 2 つ以上になるなら `request/` の data class ひとつにまとめる。value object 2 つで完結する場合だけ直接並べてよく、`RecordMediaUploadUseCase` が `mediaId` と `mediaUploadedAt` を取るのがその例。引数なしの操作は `invoke()` のみ。
 

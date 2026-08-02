@@ -41,7 +41,8 @@ header、body を組み、method（`Amplify.API.get` / `post` / `delete` / `put`
 
 `UploadDataSourceImpl.uploadMedia` は try/catch 形式で、`catch (e: CancellationException) { throw e }` を
 一般の `catch (e: Exception)` より前に置く。`AuthDataSourceImpl` は `runCatching { }.fold(...)` 形式が基本で、
-`Result` を検査する箇所では private 拡張 `rethrowIfCancellation()` を `onFailure` や `onFailure` 側の分岐で先に呼ぶ。
+`Result` を検査する箇所では private 拡張 `rethrowIfCancellation()` を、`runCatching {}.onFailure {}`、
+`fold` の `onFailure` 引数、`exceptionOrNull()` で取り出した直後の 3 形態で先に呼ぶ。
 どちらでも「mapper へ渡す前に再スローする」という順序が要点。
 
 `AuthDataSourceImpl.deleteUser` は、backend の REST 削除が成功した場合のみ Cognito 削除へ進む二段構成で、
