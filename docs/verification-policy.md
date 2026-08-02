@@ -34,8 +34,12 @@ Kotlinソース、resource、文書のみの変更では通常不要です。
 | Gradle / 依存 / build-logic | `./gradlew test`、`ktlintCheck detekt`、Kover XML生成、必要に応じてassemble |
 | CI / GitHub Actions | 対象workflowの構文確認、関連Gradleタスク、PRコメント権限と投稿条件の確認 |
 | media Worker/Scheduler/SyncStatus | `:feature:media:data:test` と関連domain/uiテスト |
+| Room DAO/Entity、DataStore、WorkManager enqueue契約 | 上記に加えて `:feature:media:data:connectedDebugAndroidTest` |
 
 迷った場合は `./gradlew test` を選びます。
+
+InstrumentedTestはエミュレータまたは実機を必要とします。
+ローカルで実行できない場合は、CIの `instrumented-test` jobに委ねたことを未検証範囲として報告します。
 
 ## 開発中
 
@@ -59,11 +63,19 @@ Kotlinソース、resource、文書のみの変更では通常不要です。
 
 CIは最終ゲートです。ローカルで通っていても、CIが赤ならマージしません。
 
-主なCI相当:
+CIのjobは `lint`、`unit-test`、`instrumented-test` の3つです。
+
+`lint` と `unit-test` のローカル相当:
 
 ```bash
 bundle exec fastlane lint
 bundle exec fastlane test
+```
+
+`instrumented-test` はfastlaneを経由せず、API 36のエミュレータ上で次を実行します。
+
+```bash
+./gradlew :feature:media:data:connectedDebugAndroidTest
 ```
 
 カバレッジCIを変更した場合は、PRコメント用のKover XML生成も確認します。

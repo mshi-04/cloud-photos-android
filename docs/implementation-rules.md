@@ -96,6 +96,7 @@ UseCaseはmain-safeにします。重いCPU処理やブロッキングI/Oが必�
 - Repository実装に画面都合の分岐を入れない。
 - ビジネスルールが増えたらUseCaseへ移す。
 - `CancellationException` を握り潰さない。
+- Room DB versionを上げる変更では、migration方針を先に決める。[docs/testing-conventions.md](testing-conventions.md) のRoom migrationを読む。
 
 ## ui
 
@@ -169,7 +170,29 @@ UseCaseを作る基準:
 - 設定永続化、DataStore、Repository実装は `feature:media:data`。
 - 設定UIは `feature:media:ui`。
 
-Worker/Scheduler/SyncStatusに触れる場合は `docs/media-upload-flow.md` を読む。
+Worker/Scheduler/SyncStatusに触れる場合は [docs/media-upload-flow.md](media-upload-flow.md) を読む。
+
+## コメント
+
+字面から読み取れる説明をコメントへ書きません。
+説明を書きたくなったら、コードで表現できていない合図として扱います。
+コードでは名前、値オブジェクト、早期リターン、関数分割で意図を表します。
+設定ファイルではkey、job名、step名、task名で意図を表します。
+
+字面から読み取れない事情に限り書きます。
+
+- 呼び出し側から見えない並行性の制約（排他制御、実行順序、冪等性）
+- 不具合に見える意図的な挙動、外部都合のworkaroundの理由
+- ツールや法的要件が要求するもの（警告抑制の理由、ライセンス表記）
+- 依存のpinに添えるバージョン注記
+
+背景、トレードオフ、採用しなかった案は、PRの説明か [docs/](../docs/) に書き、コードへ残しません。
+
+対象はテストコードを除くすべてのファイルです。
+GitHub Actionsのworkflow、Gradleスクリプト、その他の設定ファイルを含みます。
+テストのAAAラベルと観点コメントは [docs/testing-conventions.md](testing-conventions.md) に従います。
+
+既存ファイル全体の一括整理は、意図した移行作業でない限り行いません。
 
 ## 禁止パターン
 

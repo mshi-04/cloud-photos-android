@@ -1,14 +1,27 @@
 # テスト規約
 
-テストの書き方を定義します。実行範囲は `docs/verification-policy.md` を参照してください。
+テストの書き方を定義します。実行範囲は [docs/verification-policy.md](verification-policy.md) を参照してください。
 
 ## スタック
+
+`src/test` のUnitTest:
 
 - JUnit 5
 - MockK
 - Turbine
 - `kotlinx-coroutines-test`
 - Arrange / Act / Assert
+
+`src/androidTest` のInstrumentedTest:
+
+- JUnit 4
+- `androidx.test`（`ApplicationProvider` など）
+- 対象に応じた公式テスト補助（`room-testing`、`work-testing`）
+- `kotlinx-coroutines-test`
+- Arrange / Act / Assert
+
+InstrumentedTestは `AndroidJUnitRunner` 上で動くためJUnit 5を使えません。
+`org.junit.Test`、`org.junit.Before`、`org.junit.After`、`org.junit.Assert` を使います。
 
 既存テストに合わせ、テストだけ別スタイルにしません。
 
@@ -107,6 +120,7 @@ AAAラベルは残したまま、`// Act` または `// Act & Assert` の直下�
 - `Normal`: 代表的な入力、期待される戻り値、状態遷移
 - `Error`: 例外、エラーハンドリング、フォールバック
 - `Boundary`: 空、null相当、0、上下限、1件/多数/重複
+- `State`: ある時点のstateの内容
 - `StateTransition`: 初期状態、LoadingからSuccess/Error、不正遷移なし、冪等性
 - `Interaction`: MockKの引数、回数、順序、余計な呼び出しなし
 - `Flow`: emit回数、順序、初期値、完了、購読解除
@@ -138,7 +152,7 @@ fun `onSubmit emits NavigateToResetPassword when reset password succeeds`() = ru
 - event後のstate/effectを確認する。
 - UseCase呼び出しの有無だけで終わらせない。
 - 画面契約として見える結果をassertする。
-- Main dispatcher差し替えは既存Ruleを使う。
+- Main dispatcherは `@BeforeEach` で `Dispatchers.setMain(testDispatcher)`、`@AfterEach` で `Dispatchers.resetMain()` を呼ぶ。JUnit 5 に `@Rule` はない。
 
 ## Domain
 
@@ -153,9 +167,46 @@ fun `onSubmit emits NavigateToResetPassword when reset password succeeds`() = ru
 - Workerは `Result.success()` / `Result.retry()` / `Result.failure()` と状態更新を検証する。
 - WorkManagerのunique name、constraints、input Dataを変える場合は契約をテストまたは報告する。
 
+## InstrumentedTest
+
+端末やエミュレータのAPIがないと確認できないものだけを `src/androidTest` に置きます。
+現在の対象は `feature:media:data` のRoom DAO、DataStore、WorkManager Schedulerです。
+
+- JVMで再現できるロジックは `src/test` に置く。
+- 依存は `androidTestImplementation` に追加する。
+- 実体を組み立てて検証する。Roomは `Room.inMemoryDatabaseBuilder()`、WorkManagerは `WorkManagerTestInitHelper`、DataStoreは一時ファイルを使う。
+- `@Before` で構築し、`@After` でclose、cancel、一時ファイル削除まで行う。
+- MockKは使わない。依存を差し替えたくなった時点で、`src/test` に置くべきロジックかを見直す。
+- AAAラベルと観点コメントはUnitTestと同じ形式を使う。
+
+Koverの集計対象はUnitTestだけです。InstrumentedTestを追加してもカバレッジコメントは変わりません。
+
+実行にはエミュレータまたは実機が必要です。
+
+```bash
+./gradlew :feature:media:data:connectedDebugAndroidTest
+```
+
+CIでは `instrumented-test` jobがAPI 36のエミュレータで同じタスクを実行します。
+ローカルで実行できなかった場合は、その理由と未検証範囲を報告します。
+
+## Room migration
+
+`CloudPhotosDatabase` は `version = 1`、`exportSchema = false` で、migrationを定義していません。
+`DatabaseModule` の `Room.databaseBuilder()` は destructive migration のフォールバックを設定していないため、
+DB versionを上げてmigrationを与えないと、既存インストールで実行時に失敗します。
+
+DB versionを上げる変更では、どちらを選ぶかを先に決めて報告します。
+
+- 既存データを保持する: `exportSchema = true` とschema出力先を設定し、`MigrationTestHelper` を使うmigration testを `src/androidTest` に追加する。
+- 保持しない: フォールバック設定を明示的に追加し、失われるローカル状態と利用者への影響を報告する。
+
+Entityの列や制約を変えた場合、versionを据え置くとRoomのschema検証が実行時に失敗します。
+DAO queryだけの変更はschemaに影響しないため、versionは据え置きます。
+
 ## Annotation
 
-許可:
+`src/test` で許可:
 
 - `@Test`
 - `@BeforeEach`
@@ -178,13 +229,33 @@ fun `onSubmit emits NavigateToResetPassword when reset password succeeds`() = ru
 
 MockKでは通常 `mockk<>()` を直接使います。`@ExtendWith(MockKExtension::class)` は原則不要です。
 
+`src/androidTest` で許可:
+
+- `@Test`
+- `@Before`
+- `@After`
+
+いずれも `org.junit` のJUnit 4 annotationです。JUnit 5のannotationは実行されません。
+
 ## 主なGradleターゲット
 
+UnitTest:
+
 ```bash
+./gradlew :core:common:test
+./gradlew :core:data:test
+./gradlew :core:ui:test
 ./gradlew :feature:auth:domain:test
 ./gradlew :feature:auth:data:test
 ./gradlew :feature:auth:ui:test
 ./gradlew :feature:media:domain:test
 ./gradlew :feature:media:data:test
 ./gradlew :feature:media:ui:test
+./gradlew :app:test
+```
+
+InstrumentedTest:
+
+```bash
+./gradlew :feature:media:data:connectedDebugAndroidTest
 ```
