@@ -240,10 +240,11 @@ Dependencies flow `ui → domain ← data`; the reverse direction is not allowed
 
 See the following documents for details. They are written in Japanese.
 
-- [docs/architecture-decisions.md](docs/architecture-decisions.md) — architectural decisions and the reasoning behind them
-- [docs/media-upload-flow.md](docs/media-upload-flow.md) — upload / delete flow and SyncStatus transitions
-- [docs/error-handling-guide.md](docs/error-handling-guide.md) — CancellationException and error mapping patterns
-- [AGENTS.md](AGENTS.md) — development rules shared by humans and AI agents. [CLAUDE.md](CLAUDE.md) is an identical copy that differs only in the skill paths
+- [docs/architecture.md](docs/architecture.md) — module boundaries, layer responsibilities and architectural decisions
+- [docs/media-sync.md](docs/media-sync.md) — upload / delete / remote sync flow and SyncStatus transitions
+- [docs/authentication.md](docs/authentication.md) — authentication session, account operations and FCM device token contracts
+- [docs/implementation-guidelines.md](docs/implementation-guidelines.md) — CancellationException, error handling and implementation guidelines
+- [AGENTS.md](AGENTS.md) — development rules and entry point to technical docs and skills. [CLAUDE.md](CLAUDE.md) is the matching entry point for Claude Code
 
 ## Security
 
