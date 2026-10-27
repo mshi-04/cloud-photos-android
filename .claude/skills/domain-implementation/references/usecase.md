@@ -1,41 +1,33 @@
 # UseCase
 
-`feature/<name>/domain/.../usecase/` に置く、1 操作 1 class の呼び出し単位。
+1 操作 1 class の呼び出し単位として `feature/<name>/domain/.../usecase/` に置く。作成基準と省略条件は [`docs/architecture.md`](../../../../docs/architecture.md) の「UseCase と Domain Abstraction」を正本とする。
 
-## 構造
+## 確認する対象
 
-class 名は `<動詞><対象>UseCase`。依存は `@Inject constructor` で受け、フィールドはすべて `private val` の Repository または Scheduler。公開メンバーは `operator fun invoke` ひとつだけで、他の public メソッドは持たない。
+- [`feature/media/domain/src/main/kotlin/com/appvoyager/cloudphotos/domain/media/usecase/`](../../../../feature/media/domain/src/main/kotlin/com/appvoyager/cloudphotos/domain/media/usecase/)（`DeleteMediaUseCase.kt`、`PrepareUploadQueueUseCase.kt`、`SyncUploadRecordsUseCase.kt`、`GetPendingMediaUseCase.kt`、`RecordMediaUploadUseCase.kt` ほか）
+- [`feature/auth/domain/src/main/kotlin/com/appvoyager/cloudphotos/domain/auth/usecase/`](../../../../feature/auth/domain/src/main/kotlin/com/appvoyager/cloudphotos/domain/auth/usecase/)
+- [`feature/auth/domain/src/main/kotlin/com/appvoyager/cloudphotos/domain/auth/request/`](../../../../feature/auth/domain/src/main/kotlin/com/appvoyager/cloudphotos/domain/auth/request/) / [`feature/media/domain/src/main/kotlin/com/appvoyager/cloudphotos/domain/media/request/`](../../../../feature/media/domain/src/main/kotlin/com/appvoyager/cloudphotos/domain/media/request/)
+- メディア同期の業務契約: [`docs/media-sync.md`](../../../../docs/media-sync.md)
 
-戻り値は 3 種類に分かれる。
+## 実装時の注意
 
-- provider 越しの操作は `AuthResult<T>` / `UploadResult<T>` をそのまま返す。UseCase 側で成功・失敗を解釈しない。
-- 継続監視する読み出しは `Flow<T>` を返し、`suspend` を付けない。`GetMediaListUseCase` と `GetGridColumnCountUseCase` がこれ。
-- ローカル DB 更新や scheduler 起動を行う UseCase は `suspend` で `Unit` を返す。`ScheduleUploadUseCase` が呼ぶ `UploadScheduler.scheduleUpload()` 自体は非 `suspend` で、`suspend` なのは UseCase 側だけ。
+- **必須制約**:
+  - クラス名は `<動詞><対象>UseCase` とし、`@Inject constructor` で Repository / Scheduler / `Clock`（`core:common`）を受け取る。
+  - 公開メンバーは `operator fun invoke` 1 つだけとする。
+  - 現在時刻が必要な場合は `System.currentTimeMillis()` を直接呼ばず、`core:common` の `Clock` interface を注入してテストで時刻を固定できるようにする。
+  - 保存と scheduler 起動のように順序が意味を持つ一連の操作（例: `RecordMediaUploadUseCase`、`DeleteMediaUseCase`、`PrepareUploadQueueUseCase`）は、呼び出し側に分解させず UseCase 内にまとめる。
+- **既存実装のパターン**:
+  - 戻り値は操作の性質に応じて、(1) provider 越しの操作は `AuthResult<T>` / `UploadResult<T>`、(2) 継続監視は非 `suspend` の `Flow<T>`、(3) ローカル DB 更新や scheduler 起動は `suspend` の値または `Unit` を使い分ける。
+  - 引数が複数ある場合は `request/` パッケージの data class にまとめることが多い（value object 2 個で完結する `RecordMediaUploadUseCase(mediaId, mediaUploadedAt)` のように直接並べる形も可）。
+  - `feature/auth/domain` の既存 UseCase は Repository への 1 行委譲になっているが、新規 UseCase 追加時は [`docs/architecture.md`](../../../../docs/architecture.md) の基準（複数依存の調整・状態遷移・分割取得など）に照らして必要性を判断する。
+- **波及先**:
+  - メディア同期系 UseCase（`DeleteMediaUseCase` の未アップロード物理削除分岐、`SyncUploadRecordsUseCase` の pending 保護、`GetPendingMediaUseCase` の 900 件分割取得など）を変更する場合は、[`docs/media-sync.md`](../../../../docs/media-sync.md) の契約と Worker 側の前提が崩れないか確認する。
 
-引数が 2 つ以上になるなら `request/` の data class ひとつにまとめる。value object 2 つで完結する場合だけ直接並べてよく、`RecordMediaUploadUseCase` が `mediaId` と `mediaUploadedAt` を取るのがその例。引数なしの操作は `invoke()` のみ。
+## テスト判断
 
-依存フィールド名は、Repository が 1 つなら `repository`、複数を取り分ける必要があるときは `localRepository` / `remoteRepository` のように役割を付ける。
+- 新規・変更した UseCase は `src/test/.../usecase/XxxUseCaseTest` で正常系・分岐・早期 return・例外伝播を JVM Unit Test で検証する（[`docs/testing.md`](../../../../docs/testing.md) の「対象別のテストの書き方」を参照）。
 
-## 薄い委譲と調整型
+## 検証観点
 
-`feature/auth/domain/.../usecase/` の 10 個はすべて Repository の同名メソッドへ 1 行で委譲するだけで、分岐も検証も持たない。auth だけを読むと「UseCase とは委譲層」という誤った像を得るので、新規追加の参考にはしない。
-
-実際の調整は `feature/media/domain/.../usecase/` にある。模倣すべきはこちら。
-
-- `DeleteMediaUseCase` — `LocalUploadRecordsRepository` と `DeleteScheduler` を取る。`syncStatus` が `PENDING_UPLOAD` ならレコードを物理削除して早期 return し、それ以外は `isDeleted` と `syncStatus` を差し替えた copy を保存してから scheduler を起動する。未アップロードのレコードはクラウド側に存在せず、`PENDING_DELETE` にしても消す相手がないための分岐。
-- `PrepareUploadQueueUseCase` — `LocalMediaRepository` / `LocalUploadRecordsRepository` / `UploadScheduler` / `Clock` の 4 依存。既存レコードとの差分だけを新規 `UploadRecord` として組み立てる。media が空のとき、差分が空のときにそれぞれ早期 return し、無駄な scheduler 起動を避ける。
-- `SyncUploadRecordsUseCase` — リモート取得結果から `getPendingRecordMediaIds()` に含まれる分を除外してから保存する。リモートの状態でローカルの未送信操作を上書きしないための保護。
-- `GetPendingMediaUseCase` — media 一覧と upload record を突き合わせ、記録のないものだけを返す。ID リストを 900 件ずつ `chunked` して `getUploadRecords` を呼ぶ。SQLite のバインド変数上限を超えないための分割で、data 側ではなく domain に置かれている。
-- `RecordMediaUploadUseCase` — `UploadRecord` を組み立てて保存し、続けて `scheduleUpload()` を呼ぶ。保存と起動が必ず対になる。
-
-`ScheduleUploadUseCase` / `ScheduleDeleteUseCase` も薄い委譲だが、Worker と UI の双方から同じ操作を呼ぶ入口を揃えるために残してある。
-
-## 注意点
-
-現在時刻は `core/common` の `Clock` interface を注入して `getCurrentTime()` で取る。`System.currentTimeMillis()` を直接呼ぶと、テストで時刻を固定できなくなる。
-
-Repository のメソッドを 1 対 1 でラップするだけの UseCase は、名前が増えるだけで domain の意味が増えない。新規追加は「複数 Repository の調整」「状態遷移」「validation」のいずれかを持つときに限る。
-
-保存と scheduler 起動のように順序が意味を持つ処理は、呼び出し側に分解させず UseCase 内にまとめる。片方だけ呼ばれる経路ができると同期状態が壊れる。
-
-- 配置と依存方向: `../../../../docs/implementation-rules.md`
+- 複数ステップの途中で早期 return すべき条件（空リスト、差分 0 件、`PENDING_UPLOAD` の削除など）で無駄な書き込みや scheduler 起動が走らないか。
+- 時刻や外部状態がハードコードされず注入可能になっているか。

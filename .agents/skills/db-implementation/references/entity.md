@@ -1,49 +1,34 @@
-# Entity
+# Entity / Entity Mapper
 
-このリポジトリの Room Entity は `feature/media/data/src/main/kotlin/com/appvoyager/cloudphotos/data/media/db/entity/`
-に置く。現存するのは `UploadRecordEntity` の 1 つだけで、これが記述の粒度の基準になる。
+`upload_records` テーブルの `UploadRecordEntity` と、domain `UploadRecord` との双方向変換を担う `UploadRecordEntityMapper`。保存値と null 許容列の意味、未知 status の扱いは [`docs/data-model.md`](../../../../docs/data-model.md) を正本とする。
 
-## 構造
+## 確認する対象
 
-`@Entity(tableName = "upload_records")` を付けた data class で、列は 5 つ。
-`@PrimaryKey` を付けた `mediaId` の `String`、nullable な `cloudStoragePath` の `String?`、
-削除フラグの `isDeleted` の `Boolean`、`SyncStatus` の enum NAME を保持する `syncStatus` の `String`、
-epoch millis の `uploadedAt` の `Long`。
+- [`UploadRecordEntity.kt`](../../../../feature/media/data/src/main/kotlin/com/appvoyager/cloudphotos/data/media/db/entity/UploadRecordEntity.kt)
+- [`UploadRecordEntityMapper.kt`](../../../../feature/media/data/src/main/kotlin/com/appvoyager/cloudphotos/data/media/db/UploadRecordEntityMapper.kt)
+- [`UploadRecordLocalDataSourceImpl.kt`](../../../../feature/media/data/src/main/kotlin/com/appvoyager/cloudphotos/data/media/datasource/UploadRecordLocalDataSourceImpl.kt)
+- [`docs/data-model.md`](../../../../docs/data-model.md) の「`upload_records` テーブルと Domain 対応」「保存値の互換性と Entity Mapper の契約」
 
-列はすべて Room がそのまま扱える primitive と `String` で、`TypeConverter` は 1 つも定義していない。
-domain の `UploadRecord` は `MediaId` / `CloudStoragePath` / `IsDeleted` / `MediaUploadedAt` の
-value object と `SyncStatus` enum を持つが、Entity 側はその表現を持ち込まない。
-domain の `mediaUploadedAt` が Entity では `uploadedAt` になるように、名前が 1 対 1 で対応しない列がある。
-対応関係は entity mapper が唯一の定義箇所になる。
+## 実装時の注意
 
-value object をそのまま列にしないのは、`CloudStoragePath.of()` のような `require` を伴う生成が
-DB 読み出し時に走ると、過去に書き込んだ行が読めなくなって復旧手段がなくなるため。
-検証は domain へ寄せ、DB は素の値だけを持つ。
+- **必須制約**:
+  - Entity のフィールドは Room がそのまま扱えるプリミティブと `String`（`String?`）で定義し、domain の value object や `@TypeConverter` を Entity に直接持ち込まない（DB 読み出し時に古い行がコンストラクタ検証で読めなくなるのを防ぐため）。
+  - domain との変換は `UploadRecordEntityMapper` の `toDomain` / `toEntity` に集約する。`toDomain` で `syncStatus` を復元する際は `SyncStatus.valueOf` を使わず、未知の文字列を `SyncStatus.ERROR` へフォールバックさせる契約を維持する。
+  - `cloudStoragePath` などの非 status 列へ空文字列を書き込むと `toDomain` の `CloudStoragePath.of()` で `IllegalArgumentException` になるため、未確定値は必ず `null` として扱う。
+- **変更時の波及先**:
+  - Entity の列・型・nullability を変更した場合は、以下を同時に更新する。
+    1. `UploadRecordEntityMapper` の `toDomain` / `toEntity`（往復の可逆性を保つ）
+    2. `UploadRecordDao` の `@Query` 文字列（列名を指定している箇所）
+    3. `CloudPhotosDatabase` の `version` と migration（[`migration.md`](migration.md) を参照）
+    4. テストのレコード生成ヘルパー（`UploadRecordDaoInstrumentedTest` の `createRecord` や `testutil/` の fixture）
 
-## null を許す列
+## テスト判断
 
-`cloudStoragePath` だけが nullable。アップロード完了前のレコードにはクラウド側のパスが存在しない。
-Entity に nullable 列を足すときは、mapper 側の null 分岐と、対応する domain フィールドの
-nullability を同じ変更単位で合わせる。
+- `UploadRecordEntityMapper` の往復変換（`toEntity` → `toDomain`）や未知 status の `SyncStatus.ERROR` フォールバック、nullable 列の境界は JVM Unit Test で検証する。
+- Entity の列変更を伴う場合は `UploadRecordDaoInstrumentedTest` と migration テストの要否も判断する（[`docs/testing.md`](../../../../docs/testing.md) を参照）。
 
-## 変更時に一緒に動くもの
+## 検証観点
 
-Entity の列・型・制約を変えた場合、以下が同時にずれる。
-
-- `UploadRecordEntityMapper` の `toDomain` / `toEntity`
-- `UploadRecordDao` の `@Query` 文字列（列名を直接書いている）
-- `UploadRecordLocalDataSourceImpl` 経由の Repository 入出力
-- テスト fixture（`UploadRecordDaoInstrumentedTest` の `createRecord` など）
-
-さらに `@Database` の `version` を上げないと、Room の schema 検証が起動時に失敗する。
-`DatabaseModule` は destructive migration のフォールバックを持たないため、version を上げるだけでも
-既存インストールは migration がない限り起動時に落ちる。
-
-## テスト fixture の作り方
-
-instrumented test では列を直接組み立てる private ヘルパーを 1 つ置き、`mediaId` と `syncStatus` を必須引数、
-`cloudStoragePath` と `uploadedAt` をデフォルト値付きにして、テスト本体からは差分だけ渡す。
-
-fixture でも `syncStatus` は `SyncStatus.PENDING_UPLOAD.name` の形で enum から導出し、
-`"PENDING_UPLOAD"` を直接書かない。DAO の SQL リテラルだけがハードコードの唯一の例外で、
-それはガードテストで守っている。
+- `toEntity` と `toDomain` の両方が更新され、往復で値が欠落・変質しないか。
+- 未知の `syncStatus` 文字列で例外が飛ばず `SyncStatus.ERROR` に隔離されるか。
+- スキーマ変更時に DB version と migration の対応が漏れていないか。

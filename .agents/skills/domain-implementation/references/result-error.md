@@ -1,35 +1,36 @@
-# Result と Error
+# Result / Error / SyncStatus
 
-domain の失敗契約は操作ごとに異なる。provider 由来の予期される失敗を呼び出し側が分岐する操作は
-sealed class の Result を返し、ローカル DB 操作などは生の値や Unit を返して例外を伝播する。
-Result / Error 型は feature ごとに独立している。
+provider 由来の失敗を表す `AuthResult` / `UploadResult`・`AuthError` / `UploadError` と、同期状態を表す `SyncStatus` の構造と波及先。Result と例外の使い分けは [`docs/implementation-guidelines.md`](../../../../docs/implementation-guidelines.md) の「エラー処理と CancellationException」を正本とする。
 
-## Result 型の構造
+## 確認する対象
 
-`AuthResult<out T>` は sealed class で、`Success<T>(val value: T)` と `Error(val error: AuthError)` の 2 つの data class を持つ。`Error` が `AuthResult<Nothing>` を継承しているのが要点で、`out T` と組み合わさることで `map` / `flatMap` の Error 分岐が `this` をそのまま返せる。再ラップも `AuthResult.Error(error)` の書き直しも要らない。
+- Auth: [`AuthResult.kt`](../../../../feature/auth/domain/src/main/kotlin/com/appvoyager/cloudphotos/domain/auth/model/AuthResult.kt)、[`AuthError.kt`](../../../../feature/auth/domain/src/main/kotlin/com/appvoyager/cloudphotos/domain/auth/model/AuthError.kt)、[`docs/authentication.md`](../../../../docs/authentication.md)
+- Media: [`UploadResult.kt`](../../../../feature/media/domain/src/main/kotlin/com/appvoyager/cloudphotos/domain/media/model/UploadResult.kt)、[`UploadError.kt`](../../../../feature/media/domain/src/main/kotlin/com/appvoyager/cloudphotos/domain/media/model/UploadError.kt)、[`SyncStatus.kt`](../../../../feature/media/domain/src/main/kotlin/com/appvoyager/cloudphotos/domain/media/model/SyncStatus.kt)、[`docs/media-sync.md`](../../../../docs/media-sync.md)、[`docs/data-model.md`](../../../../docs/data-model.md)
 
-`AuthResult.kt` は class の外、同じファイル内に 4 つの top-level 拡張を置いている。`getOrNull()` と `errorOrNull()` は安全キャストで値を取り出す形、`map()` と `flatMap()` は `inline fun` で `when` の網羅分岐を書く形。
+## 実装時の注意
 
-`UploadResult<out T>` は `Success` / `Error` の構造だけ同じで、拡張関数を一切持たない。呼び出し側の `UploadMediaWorker` が `is UploadResult.Success` / `is UploadResult.Error` で分岐して WorkManager の `Result` へ変換するため、値の取り出しより網羅分岐が必要になるから。新しい Result 型を作るときも、実際に使う拡張だけを足す。
+- **必須制約**:
+  - `AuthError` / `UploadError` は provider の例外型名ではなく、呼び出し側（UI の表示分岐や Worker の retry/永続失敗判定）が必要とする単位で定義する。
+  - domain の Error 型に `cause: Throwable` や SDK 固有型を持たせない（Amplify 等の例外型が domain へ漏れるのを防ぐため）。想定外の例外を受ける受け皿として `Unknown` を用意する。
+  - `SyncStatus` の enum 名（`PENDING_UPLOAD` / `SYNCED` / `PENDING_DELETE` / `ERROR`）は Room の `upload_records.syncStatus` 保存文字列および `UploadRecordDao` の SQL リテラルと直結しているため、安易にリネームしない。
+- **変更時の波及先**:
+  - **`AuthError` を変更した場合**:
+    - Data: [`AuthErrorMapper.kt`](../../../../feature/auth/data/src/main/kotlin/com/appvoyager/cloudphotos/data/auth/util/AuthErrorMapper.kt)
+    - UI: `LoginViewModel`、`ForgotPasswordViewModel`、`ResetPasswordViewModel`、`VerificationCodeViewModel`、および必要に応じた `AuthSnackbarMessage` / `AuthFieldError`
+    - 契約: [`docs/authentication.md`](../../../../docs/authentication.md) のアカウント列挙防止ルール
+  - **`UploadError` を変更した場合**:
+    - Data: [`UploadErrorMapper.kt`](../../../../feature/media/data/src/main/kotlin/com/appvoyager/cloudphotos/data/media/util/UploadErrorMapper.kt)、[`UploadMediaWorker.kt`](../../../../feature/media/data/src/main/kotlin/com/appvoyager/cloudphotos/data/media/worker/UploadMediaWorker.kt)（永続失敗と retry の振り分け）
+  - **`SyncStatus` を変更した場合**:
+    - Domain: `DeleteMediaUseCase`、`PrepareUploadQueueUseCase`、`RecordMediaUploadUseCase`
+    - Data / DB: [`UploadRecordEntityMapper.kt`](../../../../feature/media/data/src/main/kotlin/com/appvoyager/cloudphotos/data/media/db/UploadRecordEntityMapper.kt)、[`UploadRecordDao.kt`](../../../../feature/media/data/src/main/kotlin/com/appvoyager/cloudphotos/data/media/db/dao/UploadRecordDao.kt)、[`RemoteUploadRecordMapper.kt`](../../../../feature/media/data/src/main/kotlin/com/appvoyager/cloudphotos/data/media/util/RemoteUploadRecordMapper.kt)、`UploadMediaWorker`、`DeleteMediaWorker`
+    - 契約: [`docs/media-sync.md`](../../../../docs/media-sync.md) と [`docs/data-model.md`](../../../../docs/data-model.md)
 
-## Error 型の構造
+## テスト判断
 
-`AuthError` と `UploadError` は同形。`open val message: String?` を primary constructor に持つ sealed class を親にし、各バリアントを `override val message: String? = null` を持つ data class として並べる。デフォルト値があるので、呼び出し側はメッセージなしでも生成できる。
+- `AuthResult` 等の拡張関数を変更した場合は domain の Unit Test を更新する。
+- `AuthError` / `UploadError` / `SyncStatus` のバリアントを変更した場合は、波及先の Mapper テスト、ViewModel テスト、Worker テスト、DAO 契約テスト（`UploadRecordDaoSyncStatusTest`）を合わせて更新する。
 
-`AuthError` のバリアントは `CodeExpired` / `CodeMismatch` / `InvalidCredentials` / `InvalidPassword` / `Network` / `TooManyRequests` / `UserNotConfirmed` / `UsernameAlreadyExists` / `Unknown`。`UploadError` は `AccessDenied` / `NotAuthenticated` / `StorageLimitExceeded` / `Network` / `FileNotFound` / `Unknown`。
+## 検証観点
 
-分類は provider の例外名ではなく、UI が出し分ける単位で切る。`Unknown` は data 層で想定外の例外を受けたときの逃げ道で、`AuthError.Unknown` にはその旨のコメントが付いている。原因の `Throwable` は domain に持ち込まず data 側のログに留める。domain の型に `cause: Throwable` を持たせると、Amplify の例外型が domain へ漏れる。
-
-## 変更時の追随箇所
-
-Result / Error / `SyncStatus` は data の mapper と UI が対で依存している。片側だけ変えると対応がずれる。
-
-`AuthError` を変更した場合は `feature/auth/data/.../util/AuthErrorMapper.kt` と、`feature/auth/ui/.../viewmodel/` の 4 つ（`LoginViewModel` / `ForgotPasswordViewModel` / `ResetPasswordViewModel` / `VerificationCodeViewModel`）。
-
-`UploadError` を変更した場合は `feature/media/data/.../util/UploadErrorMapper.kt` と `feature/media/data/.../worker/UploadMediaWorker.kt`（retry と failure の判定）。
-
-`SyncStatus`（`PENDING_UPLOAD` / `SYNCED` / `PENDING_DELETE` / `ERROR`）を変更した場合は data 側が `db/UploadRecordEntityMapper.kt`、`db/dao/UploadRecordDao.kt`、`util/RemoteUploadRecordMapper.kt`、`worker/UploadMediaWorker.kt`、`worker/DeleteMediaWorker.kt`。domain 側は `DeleteMediaUseCase` / `PrepareUploadQueueUseCase` / `RecordMediaUploadUseCase` が値を参照している。
-
-`SyncStatus` の enum 名は DAO の query 文字列と DB 保存値そのものなので、リネームは migration を伴う。
-
-- 例外と Result の扱い: `../../../../docs/error-handling-guide.md`
+- 新しいエラーバリアントを追加した際、Mapper 側と UI / Worker 側の `when` 分岐が網羅されているか。
+- `SyncStatus` 変更時に既存 DB 行の復元（未知 status が `ERROR` に落ちる挙動）や未同期抽出 SQL との整合が保たれているか。
