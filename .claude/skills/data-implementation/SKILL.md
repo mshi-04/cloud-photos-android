@@ -1,44 +1,51 @@
 ---
 name: data-implementation
-description: Data 層の設計・実装・修正に使う。Repository 実装、DataSource、Mapper、DTO、SDK/API client、Amplify REST/S3、DataStore、WorkManager 連携、feature data モジュールの変更で使用する。
+description: Repository 実装、DataSource、SDK / REST API 呼び出し、例外・JSON mapper、DataStore 設定永続化、MediaStore I/O、WorkManager の Worker / Scheduler を変更する依頼で使う。Cloud Photos の Data 層（core:data、feature:*:data）および app モジュールの Worker・DI 配線・FCM token 連携を担当する。画面表示のみの変更や Room のテーブル構造・SQL のみの変更は対象外。
 ---
 
-# Data Implementation
+# 目的
 
-## 実装手順
+Cloud Photos の Data 層（`core:data`、`feature:auth:data`、`feature:media:data`）および `app` のバックグラウンド処理・DI 配線で、domain の contract を外部 SDK（Amplify Auth / Storage / API、Firebase Messaging）、Room、DataStore、MediaStore、WorkManager に接続し、実装詳細を UI / Domain へ漏らさない。
 
-1. 変更対象を Repository 実装、DataSource、Mapper、DTO、SDK/API client、DataStore、Worker/Scheduler に分ける。
-2. 既存の `feature:<name>:data` で同じ責務の class を確認し、Repository 実装から DataSource を呼び、Mapper で domain contract へ戻す流れに合わせる。同種が見つからない場合は、参考資料の該当種別を読む。
-3. SDK/API/Room/DataStore から得た model や例外を domain/UI へ渡さず、DataSource または Mapper で domain model/result/error に変換する。
-4. 例外処理を追加・変更する場合は、`CancellationException` を再スローする経路を先に作ってから provider error mapping を実装する。
-5. Repository 実装に画面都合の分岐や business rule が入りそうな場合は、domain UseCase に移すか、既存 UseCase の変更に切り分ける。
-6. Room/DAO/Entity を触る場合は `db-implementation`、Worker/Scheduler/SyncStatus を触る場合は `media-sync-implementation`、認証 data を触る場合は `auth-implementation` も併用する。
+# 条件別の参照先
 
-## 注意点
+全技術文書を一律に読まず、変更内容に該当する文書・節だけを確認する。
 
-- provider の model や例外を domain/UI へ渡すと、SDK の差し替えや API 変更が UI まで波及する。mapper 境界で閉じる。
-- `runCatching` は `CancellationException` も捕まえる。再スローしないと、キャンセル済みの処理が続行する。
-- Repository 実装に画面都合の分岐が入ると、別の画面から同じ Repository を使えなくなる。
-- 同じ変換を Repository と DataSource へ分散させると、片方だけ直された状態が生まれる。
-- DTO/Entity を domain model として使い回すと、外部フォーマットの変更が domain を壊す。
+- Repository / DataSource / Worker の責務分担、`app` の DI module 構成を確認するとき: [`docs/architecture.md`](../../../docs/architecture.md) の「Repository / DataSource / Mapper」「Worker と Scheduler の分離」「`:app`（Composition Root）」
+- `CancellationException` の再スロー、coroutines / Dispatcher、Hilt、WorkManager、ログの規約を確認するとき: [`docs/implementation-guidelines.md`](../../../docs/implementation-guidelines.md) の該当節
+- 認証・サインアウト・退会の処理順、provider 例外の分類、FCM device token の登録・解除（`RegisterDeviceTokenWorker`、`FcmTokenRegistrar`、`DeviceTokenDataSource`）に関わるとき: [`docs/authentication.md`](../../../docs/authentication.md)
+- メディアのアップロード・削除・リモート同期の処理順、永続失敗と一時失敗（retry）の分類、`completeUpload()`、WorkManager 契約、通知（`UploadNotificationHelper` / FCM `upload_completed`）に関わるとき: [`docs/media-sync.md`](../../../docs/media-sync.md)
+- `upload_records` の保存値や `SyncStatus` の復元に関わるとき: [`docs/data-model.md`](../../../docs/data-model.md)
+- 対象モジュールの実装とテスト:
+  - [`core/data/src/main/`](../../../core/data/src/main/) / [`core/data/src/test/`](../../../core/data/src/test/)
+  - [`feature/auth/data/src/main/`](../../../feature/auth/data/src/main/) / [`feature/auth/data/src/test/`](../../../feature/auth/data/src/test/)
+  - [`feature/media/data/src/main/`](../../../feature/media/data/src/main/) / [`feature/media/data/src/test/`](../../../feature/media/data/src/test/) / [`feature/media/data/src/androidTest/`](../../../feature/media/data/src/androidTest/)
+  - [`app/src/main/kotlin/com/appvoyager/cloudphotos/`](../../../app/src/main/kotlin/com/appvoyager/cloudphotos/) / [`app/src/test/`](../../../app/src/test/)
 
-## 検証手順
+# 役割クラスと参照先
 
-1. Repository 実装は DataSource 呼び出し、Mapper 適用、domain result をテストする。
-2. Mapper は DTO/Entity 変換と provider 例外 mapping をテストする。
-3. 単一 data モジュール変更は `./gradlew :feature:<name>:data:test` を実行する。
+変更対象の役割を見分け、該当する reference だけを読んでから実装する。複数に跨る場合は関連する reference を併読する。
 
-## 参考資料
+| 役割 | 参照 |
+| --- | --- |
+| Repository 実装 | [`references/repository-implementation.md`](references/repository-implementation.md) |
+| DataSource / 具体 I/O（`MediaStoreCapturedPhotoWriter`・`ContentTypeResolver`・`DeviceTokenDataSource` を含む） | [`references/datasource.md`](references/datasource.md) |
+| Mapper（例外・enum・JSON・Entity 変換） | [`references/mapper.md`](references/mapper.md) |
+| Worker（`UploadMediaWorker`・`DeleteMediaWorker`・`RegisterDeviceTokenWorker`） | [`references/worker.md`](references/worker.md) |
+| Scheduler（`UploadSchedulerImpl`・`DeleteSchedulerImpl`） | [`references/scheduler.md`](references/scheduler.md) |
+| Hilt DI module の単純な binding 追加 | [`docs/architecture.md`](../../../docs/architecture.md) の「`:app`（Composition Root）」と [`docs/implementation-guidelines.md`](../../../docs/implementation-guidelines.md) の「Hilt / DI」に従う |
 
-このリポジトリでの書き方。対象の種別だけ読む。
+# 手順
 
-- [references/repository-impl.md](references/repository-impl.md): Repository 実装が持つ責任と持たない責任
-- [references/datasource.md](references/datasource.md): DataSource の interface 規約と SDK callback の橋渡し
-- [references/mapper.md](references/mapper.md): Mapper の形、provider 例外の変換、部分失敗の扱い
+1. 変更対象の役割を判定し、該当する reference と必要な技術文書の節だけを読む。
+2. domain interface の契約と、provider / SDK / OS API 側の制約（キャンセル可否、スレッド、例外型）を分けて確認する。
+3. reference の実装時の注意と波及先に沿って実装し、新規実装クラスを追加した場合は `app/src/main/kotlin/com/appvoyager/cloudphotos/di/` の対応する Hilt module の binding も確認する。
+4. 変更した振る舞いに応じて [`test-implementation`](../test-implementation/SKILL.md)（および [`docs/testing.md`](../../../docs/testing.md)）に沿って JVM Unit Test または `androidTest` を追加・更新する。
+5. 変更範囲に応じたローカル検証を [`docs/development-setup.md`](../../../docs/development-setup.md) の「ローカル検証の選び方とコマンド」から選んで実行する。
+6. 変更内容、実行した検証と結果、未実施の検証と理由を簡潔に報告する。
 
-規約:
+# 注意事項
 
-- [docs/implementation-rules.md](../../../docs/implementation-rules.md)
-- [docs/error-handling-guide.md](../../../docs/error-handling-guide.md)
-- [docs/android-conventions.md](../../../docs/android-conventions.md)
-- [docs/architecture-decisions.md](../../../docs/architecture-decisions.md): provider を data に閉じ込めている理由
+- Amplify SDK、Firebase、Room Entity、HTTP ステータスコードなどの詳細を domain / UI の型シグネチャへ漏らさない。
+- Room の Entity 定義、DAO SQL、DB version / migration を変更する場合は [`db-implementation`](../db-implementation/SKILL.md) を併用する。
+- domain の interface、`AuthError` / `UploadError`、`SyncStatus` を変更する場合は [`domain-implementation`](../domain-implementation/SKILL.md) を併用する。
