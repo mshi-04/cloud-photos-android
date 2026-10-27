@@ -1,47 +1,50 @@
 ---
 name: ui-implementation
-description: UI 層の設計・実装・修正に使う。Compose screen/component、ViewModel、UI state/effect/event、Navigation、Camera/Media UI、表示文字列、core:ui テーマや共有 UI を触る作業で使用する。
+description: 画面の表示、操作、画面遷移、表示文言、UI state、Snackbar・ダイアログの振る舞いを変更する依頼で使う。Cloud Photos の UI 層（app、core:ui、feature:*:ui）の Compose Screen / Content、ViewModel、UiState、Effect、Navigation、strings.xml を担当する。ドメインの業務ルール・入力検証や Data 層の通信・永続化だけの変更は対象外。
 ---
 
-# UI Implementation
+# 目的
 
-## 実装手順
+Cloud Photos の UI 層（`app`、`core:ui`、`feature:auth:ui`、`feature:media:ui`）を、既存の Compose / MVVM 構成とレイヤー境界に沿って変更する。
 
-1. 変更対象が `feature:<name>:ui`、`app`、`core:ui` のどこに入るか決める。
-2. 既存の Screen、Content、ViewModel、UI state/effect/event の分け方を確認し、同じ単方向データフローに沿って変更点を置く。新規画面や新規 state/effect を足す場合は、参考資料の該当種別を読んでから形を決める。
-3. Composable では表示に必要な state と event callback を受け取り、永続状態や通信状態は ViewModel/domain/data 側へ流す。
-4. ViewModel では UseCase または domain abstraction を呼び、画面に見える state/effect を更新する。DAO、SDK、Repository 実装、Worker が必要になったら対象レイヤーの skill に切り替える。
-5. Navigation、snackbar、permission request、カメラ起動などの一回限りの動作は既存 effect 型に追加するか、既存 effect の使い方に合わせる。
-6. 表示文字列、テーマ、共有 UI component を追加する場合は、既存 resource と `core:ui` の利用状況を確認して最小の配置にする。
-7. 認証 UI は `auth-implementation`、media grid/camera/detail/同期表示は `media-sync-implementation` も併用する。
+# 条件別の参照先
 
-## 注意点
+全技術文書を一律に読まず、変更内容に該当する文書・節だけを確認する。
 
-- 永続状態や通信状態を Composable が持つと、結果が再コンポジションのタイミングに依存し、ViewModel テストから画面契約を確認できなくなる。`SnackbarHostState` や権限の再確認キーのような画面限定の一時状態は `remember` で持ってよい。
-- 一回限りの動作を state として持つと、再コンポジションや画面回転で再実行され、二重遷移や通知の重複になる。
-- `core:ui` は共有先が増えるほど変更の波及範囲が広がる。汎用的に見えるという理由では選ばない。
-- 表示文字列やテーマ値を直書きすると、ローカライズとテーマ切り替えの経路から外れる。
-- ViewModel テストで UseCase 呼び出しだけを確認しても、画面が実際に何を出すかは検証できない。
-- `app` の NavGraph、start destination、認証状態遷移は他フィーチャーの入口を変えるため、影響が単一モジュールに収まらない。
+- モジュール境界・ViewModel の依存先（UseCase と `CapturedPhotoWriter` などの domain abstraction の使い分け）を判断するとき: [`docs/architecture.md`](../../../docs/architecture.md) の「モジュール境界と依存方向」「UI 層と単方向データフロー」「UseCase と Domain Abstraction」
+- Compose、ViewModel、coroutines、Resource / テーマ、キャンセル伝播の規約を確認するとき: [`docs/implementation-guidelines.md`](../../../docs/implementation-guidelines.md) の該当節
+- 認証・アカウント操作のエラー出し分け（アカウント列挙防止を含む）やセッション状態遷移に関わるとき: [`docs/authentication.md`](../../../docs/authentication.md)
+- メディア一覧の同期契機、権限復帰時の再同期、撮影保存フローに関わるとき: [`docs/media-sync.md`](../../../docs/media-sync.md)
+- 対象モジュールの実装とテスト:
+  - [`app/src/main/kotlin/com/appvoyager/cloudphotos/`](../../../app/src/main/kotlin/com/appvoyager/cloudphotos/)
+  - [`core/ui/src/main/`](../../../core/ui/src/main/)
+  - [`feature/auth/ui/src/main/`](../../../feature/auth/ui/src/main/) / [`feature/auth/ui/src/test/`](../../../feature/auth/ui/src/test/)
+  - [`feature/media/ui/src/main/`](../../../feature/media/ui/src/main/) / [`feature/media/ui/src/test/`](../../../feature/media/ui/src/test/)
 
-## 検証手順
+# 役割クラスと参照先
 
-1. UI contract が変わった場合は ViewModel テストで state/effect を確認する。
-2. 単一 UI モジュール変更は `./gradlew :feature:<name>:ui:test` を実行する。
-3. `app` の NavGraph、start destination、認証状態遷移に触れた場合は `./gradlew test` も検討する。
+変更対象の役割を見分け、該当する reference だけを読んでから実装する。複数に跨る場合は関連する reference を併読する。
 
-## 参考資料
+| 役割 | 参照 |
+| --- | --- |
+| Screen / Content / Preview | [`references/screen.md`](references/screen.md) |
+| ViewModel | [`references/viewmodel.md`](references/viewmodel.md) |
+| UiState / FieldError | [`references/ui-state.md`](references/ui-state.md) |
+| UI event（callback / Effect / Snackbar message） | [`references/ui-event.md`](references/ui-event.md) |
+| Navigation（`NavGraph` / route 定義） | [`references/navigation.md`](references/navigation.md) |
+| テーマ・共通 UI・strings.xml のみの変更 | reference なし。[`docs/implementation-guidelines.md`](../../../docs/implementation-guidelines.md) の「Compose」「Resource / Theme」に従う |
 
-このリポジトリでの書き方。対象の種別だけ読む。
+# 手順
 
-- [references/screen.md](references/screen.md): Screen と Content の分割、effect の購読
-- [references/viewmodel.md](references/viewmodel.md): ViewModel の骨格、Flow 購読、Job 管理
-- [references/uistate.md](references/uistate.md): UI state の形
-- [references/effect.md](references/effect.md): effect の形と公開方法
+1. 変更対象の役割を判定し、該当する reference と必要な技術文書の節だけを読む。
+2. `feature:*:ui -> feature:*:domain` および `app`（composition root）の依存方向を保つ。
+3. reference の実装時の注意と波及先に沿って変更する。
+4. ViewModel の状態遷移・effect・エラー分岐を変更した場合は [`test-implementation`](../test-implementation/SKILL.md)（および [`docs/testing.md`](../../../docs/testing.md) の「対象別のテストの書き方」の ViewModel 節）に沿ってテストを追加・更新する。
+5. 変更範囲に応じたローカル検証を [`docs/development-setup.md`](../../../docs/development-setup.md) の「ローカル検証の選び方とコマンド」から選んで実行する。
+6. 変更内容、実行した検証と結果、未実施の検証と理由を簡潔に報告する。
 
-規約:
+# 注意事項
 
-- [docs/implementation-rules.md](../../../docs/implementation-rules.md)
-- [docs/android-conventions.md](../../../docs/android-conventions.md)
-- [docs/testing-conventions.md](../../../docs/testing-conventions.md)
-- [docs/architecture-decisions.md](../../../docs/architecture-decisions.md): 単方向データフローや provider 隔離を選んでいる理由
+- `feature:*:ui` から `feature:*:data`、Room Entity、DAO、Amplify SDK 型、Repository 実装を直接参照しない。
+- UI 変更が Domain（入力制約・UseCase・Result/Error 型）や Data（ErrorMapper・DataSource）へ波及する場合は、[`domain-implementation`](../domain-implementation/SKILL.md) や [`data-implementation`](../data-implementation/SKILL.md) を併用する。
+- ViewModel に `Context` や `R.string` を持ち込まず、表示文字列への変換は UI 層（Screen ファイルの拡張関数など）で行う。

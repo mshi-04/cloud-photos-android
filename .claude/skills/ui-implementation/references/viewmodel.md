@@ -1,68 +1,34 @@
 # ViewModel
 
-`viewmodel/` パッケージに置く `@HiltViewModel` 付きの `ViewModel`。UseCase を
-constructor injection で受け取り、公開する状態は `uiState` と `effect` の 2 つ。`LoginViewModel.isFormValid`
-のような表示用の派生値を read-only property として足すことはある。実物は
-`feature/media/ui/src/main/kotlin/com/appvoyager/cloudphotos/ui/media/viewmodel/MediaViewModel.kt`、
-`feature/media/ui/src/main/kotlin/com/appvoyager/cloudphotos/ui/media/viewmodel/CameraViewModel.kt`、
-`feature/auth/ui/src/main/kotlin/com/appvoyager/cloudphotos/ui/auth/viewmodel/LoginViewModel.kt`。
+`@HiltViewModel` で UseCase または domain abstraction を受け取り、`uiState` と `effect` を公開する。
 
-## 骨格
+## 確認する対象
 
-state は private な `MutableStateFlow` を `asStateFlow()` で `StateFlow` として公開する。
-更新は必ず `_uiState.update { it.copy(...) }` を使い、`_uiState.value` への直接代入はしない。
-UiState が sealed class そのものの場合 (`CameraViewModel`) は
-`MutableStateFlow<CameraUiState>(CameraUiState.CheckingPermission)` と型引数を明示する。
+- [`feature/media/ui/src/main/kotlin/com/appvoyager/cloudphotos/ui/media/viewmodel/`](../../../../feature/media/ui/src/main/kotlin/com/appvoyager/cloudphotos/ui/media/viewmodel/)（`MediaViewModel.kt`、`CameraViewModel.kt`）
+- [`feature/auth/ui/src/main/kotlin/com/appvoyager/cloudphotos/ui/auth/viewmodel/`](../../../../feature/auth/ui/src/main/kotlin/com/appvoyager/cloudphotos/ui/auth/viewmodel/)（`LoginViewModel.kt` ほか）
+- [`app/src/main/kotlin/com/appvoyager/cloudphotos/ui/MainViewModel.kt`](../../../../app/src/main/kotlin/com/appvoyager/cloudphotos/ui/MainViewModel.kt)
+- 基本規約: [`docs/implementation-guidelines.md`](../../../../docs/implementation-guidelines.md) の「ViewModel と UI State / Effect」「Coroutines / Flow」「エラー処理と CancellationException」
 
-effect の公開方法は `effect` 側の規約に従う。
+## 実装時の注意
 
-イベントの受け口は `onScreenResumed()`、`loadMediaList()`、`onEmailChanged(value)` のような
-public 関数。UI event を表す sealed class や `onEvent(event)` のディスパッチャは持たない。
-1 行で終わる更新は `fun onShowSettingsDialog() = _uiState.update { ... }` の式形式にする。
+- **必須制約**:
+  - 依存先は UseCase または domain abstraction（例: `CameraViewModel` が注入する `CapturedPhotoWriter`）までに限り、Repository 実装、DataSource、DAO、SDK client、`Context` は注入しない。判断基準は [`docs/architecture.md`](../../../../docs/architecture.md) の「UseCase と Domain Abstraction」に従う。
+  - `uiState` は `_uiState.update { it.copy(...) }`（または sealed state の置換）で更新し、`_uiState.value` への直接代入は行わない。
+  - UI 操作の受け口は `onScreenResumed()`、`onEmailChanged(value)` のような個別 public 関数とし、単一の `onEvent(event)` ディスパッチャは導入しない。
+  - `CancellationException` は catch 節や `runCatching` で握り潰さず再スローする。
+- **プロジェクト固有の契約**:
+  - **購読の張り直しと同期 Job の直列化**: `MediaViewModel.loadMediaList()` のように購読を張り直す場合は前の `Job` を `cancel()` してから `launch` する。一方、`MediaViewModel.onScreenResumed()` は Room と WorkManager を触るため、新しい `launch` 内で前の `syncJob?.cancelAndJoin()` を待ってから同期処理を順に実行する。
+  - **画面復帰の間引きとテスト差し替え口**: `LifecycleResumeEffect` は権限ダイアログの開閉でも発火するため、`MediaViewModel.onScreenResumed()` は `MIN_RESUME_INTERVAL_MS` 未満の連続呼び出しを無視する。時刻取得は Hilt へ漏らさず JVM テストで差し替えられるよう `internal var elapsedRealtimeProvider: () -> Long` と `internal const val MIN_RESUME_INTERVAL_MS` を使う。
+  - **多重実行防止フラグ**: サインアウト・退会・認証送信などの非同期処理は `isSigningOut` / `isDeletingUser` / `isLoading` で二重起動を防ぎ、解除は必ず `finally` に置く。
+- **波及先**:
+  - `AuthError` の分岐を変える場合は [`docs/authentication.md`](../../../../docs/authentication.md) のエラー表現（アカウント列挙防止を含む）と、4 つの auth ViewModel（`Login` / `ForgotPassword` / `ResetPassword` / `VerificationCode`）の整合を確認する。
 
-依存は UseCase か domain の abstraction まで。DAO、SDK client、Repository 実装は注入しない。
+## テスト判断
 
-## エラーハンドリング
+- 状態遷移、effect 送信、エラー分岐、二重実行ガード、間引き処理を変更した場合は `src/test/.../viewmodel/XxxViewModelTest` を追加・更新する。書き方は [`docs/testing.md`](../../../../docs/testing.md) の「対象別のテストの書き方」の ViewModel 節に従う。
 
-Flow の購読は `.catch { }` を挟んでから `.collect { }` する。`MediaViewModel.loadMediaList()`
-は `catch` の中で `SecurityException` を `ScreenState.PermissionRequired` に、それ以外を
-`ScreenState.Error(cause)` と `ShowSnackbar` に振り分ける。
+## 検証観点
 
-suspend の 1 回呼び出しは `runCatching { }.onFailure { }` か `try` / `catch (e: Exception)` /
-`finally`。いずれの形でも `CancellationException` は握り潰さず、判定して rethrow する。
-握り潰すと ViewModel の破棄や job の cancel まで「失敗」として扱われ、画面を離れた直後に
-snackbar が出る。分類の詳細は `../../../../docs/error-handling-guide.md`。
-
-`AuthResult` を返す UseCase は `when` で `AuthResult.Success` / `AuthResult.Error` を分ける。
-`LoginViewModel` は `AuthError` の branch ごとに、field error として UiState に載せるか
-snackbar effect として送るかを決めている。
-
-## Job の管理
-
-張り直す購読は Job を property に保持し、前の Job を明示的に止める。
-`loadMediaList()` は `mediaListJob?.cancel()` してから `viewModelScope.launch` し直す。
-
-`onScreenResumed()` は `cancel()` ではなく、新しい `launch` の内側で前の Job を
-`cancelAndJoin()` してから同期処理を順に呼ぶ。同期は Room と WorkManager を触るため、
-前回の完了を待たずに次を始めると重複登録になる。
-
-`onScreenResumed()` にはもう 1 つ、`MIN_RESUME_INTERVAL_MS` 未満の連続呼び出しを
-早期 return で捨てる間引きがある。`LifecycleResumeEffect` は permission ダイアログの
-開閉でも発火するため、これがないと画面を開いただけで同期が何度も走る。
-
-## 進行中フラグ
-
-サインアウトのように多重実行を防ぎたい処理は、UiState の boolean で自分を守る。
-`MediaViewModel.signOut()` / `deleteUser()` は `launch` の内側で `isSigningOut` /
-`isDeletingUser` を見て `return@launch` し、`true` を立ててから処理し、`finally` で戻す。
-`LoginViewModel.onSignIn()` / `onSignUp()` は `launch` の外側で `isLoading` と
-`validateForm()` を判定してから `launch` する。どちらの形でも解除は `finally` に置く。
-
-## テスト用の差し替え口
-
-`MediaViewModel` は `internal var elapsedRealtimeProvider: () -> Long` を持ち、既定値で
-`SystemClock.elapsedRealtime()` を返す。`SystemClock` は JVM テストで動かないが、
-constructor 引数にすると Hilt module と本番の呼び出し側にテスト都合が漏れる。
-`internal var` なら `MediaViewModelTest` が代入で置き換えられる。
-閾値の `MIN_RESUME_INTERVAL_MS` も `companion object` の `internal const` にして、
-テストが同じ定数を参照できるようにしてある。
+- `CancellationException` が失敗状態や Snackbar に化けていないか。
+- 進行中フラグの解除が `finally` で保証されているか。
+- 連続タップや画面復帰の連発で同期・送信が重複実行されないか。

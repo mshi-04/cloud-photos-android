@@ -1,73 +1,34 @@
-# Screen
+# Screen / Content
 
-`screen/` パッケージに置く Compose の画面本体。1 ファイルに public な Screen と
-private な Content、その画面専用の sub-component をまとめる。実物は
-`feature/media/ui/src/main/kotlin/com/appvoyager/cloudphotos/ui/media/screen/MediaScreen.kt`、
-`feature/media/ui/src/main/kotlin/com/appvoyager/cloudphotos/ui/media/screen/CameraScreen.kt`、
-`feature/auth/ui/src/main/kotlin/com/appvoyager/cloudphotos/ui/auth/screen/LoginScreen.kt`。
+ViewModel と接続する public な `XxxScreen` と、ViewModel を参照しない private な `XxxContent` の 2 段構成で画面を組み立てる。
 
-## 2 段構成
+## 確認する対象
 
-public な `MediaScreen` / `LoginScreen` / `CameraScreen` は、第 1 引数にデフォルト値
-`hiltViewModel()` を付けた `viewModel` を取り、残りは `onNavigateToCamera`、
-`onNavigateToLogin`、`onMediaClick` のような navigation callback だけを取る。
-NavController は受け取らない。state は `viewModel.uiState` を
-`collectAsStateWithLifecycle()` で読み、`SnackbarHostState` は `remember` で持つ。
-`Scaffold` を組み立てるのもこの層。
+- [`feature/media/ui/src/main/kotlin/com/appvoyager/cloudphotos/ui/media/screen/`](../../../../feature/media/ui/src/main/kotlin/com/appvoyager/cloudphotos/ui/media/screen/)（`MediaScreen.kt`、`CameraScreen.kt`、`MediaDetailScreen.kt`）
+- [`feature/auth/ui/src/main/kotlin/com/appvoyager/cloudphotos/ui/auth/screen/`](../../../../feature/auth/ui/src/main/kotlin/com/appvoyager/cloudphotos/ui/auth/screen/)（`LoginScreen.kt` ほか）
+- 文字列リソースとテーマ: [`core/ui/src/main/res/values/`](../../../../core/ui/src/main/res/values/)、[`docs/implementation-guidelines.md`](../../../../docs/implementation-guidelines.md) の「Compose」「Resource / Theme」
+- effect 購読の契約: [`ui-event.md`](ui-event.md)
 
-private な `MediaContent` / `LoginContent` は `viewModel` を一切参照せず、表示に必要な値と
-`onX: () -> Unit` 形式の callback だけを受け取る。`MediaContent` は `MediaUiState` 全体では
-なく `screenState` と `gridColumnCount` を個別に受け取り、`LoginContent` は `email`、
-`password`、`isPasswordVisible`、`emailError`、`isFormValid`、`isLoading` と展開して受け取る。
-Content が ViewModel から切れているため、Preview と将来の UI テストが同じ関数を直接呼べる。
-Screen 側は `viewModel.onShowSettingsDialog()` のような呼び出しを lambda に包んで渡す。
+## 実装時の注意
 
-ViewModel を持たない Screen もある。`MediaDetailScreen` は `mediaList`、`initialMediaId`、
-`onNavigateBack` を直接受け取る。永続状態も通信もない画面には ViewModel を作らない。
+- **必須制約**:
+  - public な `XxxScreen` は `viewModel: XxxViewModel = hiltViewModel()` と遷移 callback（`onNavigateToXxx`）を受け取り、`NavController` は直接受け取らない。永続状態や通信を持たない画面（例: `MediaDetailScreen`）には ViewModel を作らず、必要な値と callback を直接受け取る。
+  - private な `XxxContent` は ViewModel を参照せず、表示に必要な状態と `onXxx: () -> Unit` 形式の callback のみを受け取る。
+  - 画面復帰時の処理は `LifecycleResumeEffect(Unit)` に置き、末尾を `onPauseOrDispose` で閉じる（例: `MediaScreen` の `onScreenResumed()` と通知権限確認、`CameraScreen` の `cameraPreviewManager.stopCamera()`）。
+- **既存実装のパターン**:
+  - 権限要求（`rememberLauncherForActivityResult`）や復帰時の再確認トリガーには `mutableIntStateOf(0)` の key（`permissionCheckKey` / `resumeKey`）をインクリメントして `LaunchedEffect(key)` を再実行させている。
+  - 画面固有の sub-component は同一ファイル内の private Composable に置き、複数画面・複数 feature で共有する部品のみ `component/` や `core:ui` に切り出す。
+  - Preview は Hilt なしで描画できるよう private な `XxxContent` を `CloudPhotosTheme` で包み、主要な状態（`Success` / `Error` / `PermissionRequired` など）ごとに用意する。
+- **波及先**:
+  - Screen の引数（navigation callback）を変更した場合は [`app/src/main/kotlin/com/appvoyager/cloudphotos/ui/NavGraph.kt`](../../../../app/src/main/kotlin/com/appvoyager/cloudphotos/ui/NavGraph.kt) の呼び出し箇所も更新する。
 
-## effect の購読
+## テスト判断
 
-effect は `LaunchedEffect(Unit)` の中で `LocalLifecycleOwner.current` の
-`repeatOnLifecycle(Lifecycle.State.STARTED)` に入り、`viewModel.effect.collect` で受ける。
-分岐は `when` で全 branch を列挙し `else` を書かない。effect 型に branch を足したときに
-Screen 側の対応漏れをコンパイルエラーにするため。
+- Screen / Content 単体の見た目調整のみであれば ViewModel テストの追加は不要。
+- 画面操作に伴って ViewModel の状態遷移や effect 発火条件が変わる場合は、対応する `XxxViewModelTest` を追加・更新する。
 
-collect ブロックから呼ぶ callback と `LocalContext.current` は、事前に
-`rememberUpdatedState` で包んだ `latestOnNavigateToLogin`、`latestContext` を経由して呼ぶ。
-`LaunchedEffect(Unit)` は再コンポジションで再起動しないため、直接参照すると初回の
-callback インスタンスを掴んだままになり、親が渡し直した新しい callback が呼ばれない。
+## 検証観点
 
-`MediaScreen` は `NavigateToLogin` と `NavigateAfterAccountDeletion` の両方で
-同じ `onNavigateToLogin` を呼ぶが、branch は分けたまま列挙している。
-
-## Lifecycle と permission
-
-画面復帰時の処理は `LifecycleResumeEffect(Unit)` に置き、末尾を `onPauseOrDispose` で閉じる。
-`MediaScreen` はここで `viewModel.onScreenResumed()` と通知権限の要求を行い、
-`CameraScreen` は `onPauseOrDispose` で `cameraPreviewManager.stopCamera()` を呼ぶ。
-
-permission は `rememberLauncherForActivityResult` と
-`ActivityResultContracts.RequestPermission` / `RequestMultiplePermissions` で扱う。
-再確認のトリガーには `mutableIntStateOf(0)` の key を持ち、インクリメントで
-`LaunchedEffect(key)` を再実行させる。`MediaScreen` の `permissionCheckKey`、
-`CameraScreen` の `resumeKey` がこれにあたる。
-
-## 表示文字列の解決
-
-Snackbar と field error の文字列解決はファイル末尾の private 拡張関数が担う。
-collect ブロックから呼ぶものは `Context.getString` を使う非 Composable 関数
-(`MediaSnackbarMessage.toMessage(context)`、`AuthSnackbarMessage.toMessage(context)`)、
-Composable から呼ぶものは `stringResource` を使う `@Composable` 関数
-(`AuthFieldError.toEmailMessage()`、`toPasswordMessage()`) にする。
-文字列 ID の参照元は常に `com.appvoyager.cloudphotos.core.ui.R`。
-
-## sub-component と Preview
-
-`MediaAppBar`、`MediaGridItem`、`EmptyContent`、`ErrorContent`、
-`PermissionRequiredContent`、`LogoutConfirmDialog`、`WithdrawConfirmDialog` は
-すべて同一ファイル内の private な Composable。複数 feature で使うものだけ
-`ui/media/component/`、`ui/auth/component/` へ切り出す。
-
-Preview は private Content を `CloudPhotosTheme` で包み、`ScreenState.Success` /
-`Error` / `PermissionRequired` のように状態ごとに 1 つずつ用意する。
-Screen ではなく Content を対象にすることで Hilt なしで描画できる。
+- 状態ごと（ローディング、空、エラー、権限未付与、コンテンツ表示）の分岐が漏れなく描画されるか。
+- `LifecycleResumeEffect` の `onPauseOrDispose` でカメラ等のリソース停止が漏れていないか。
+- 文字列解決が `core.ui.R` のリソース経由になっており、ハードコード文字列がないか。
