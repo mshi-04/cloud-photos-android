@@ -241,12 +241,11 @@ CI がパスしない PR はマージできません。フォーク PR ではダ
 
 詳細は以下のドキュメントを参照してください。
 
-- [docs/architecture-decisions.md](docs/architecture-decisions.md) — アーキテクチャ上の意思決定と理由
-- [docs/media-upload-flow.md](docs/media-upload-flow.md) — アップロード / 削除フローと SyncStatus
-  遷移
-- [docs/error-handling-guide.md](docs/error-handling-guide.md) — CancellationException
-  とエラーマッピングのパターン
-- [AGENTS.md](AGENTS.md) — 開発ルール（人間・AI エージェント共通）。[CLAUDE.md](CLAUDE.md) は skill のパスだけが異なる同内容の写しです
+- [docs/architecture.md](docs/architecture.md) — モジュール境界・責務分担・アーキテクチャ上の意思決定と理由
+- [docs/media-sync.md](docs/media-sync.md) — アップロード / 削除 / リモート同期フローと SyncStatus 遷移
+- [docs/authentication.md](docs/authentication.md) — 認証セッション・アカウント操作・FCM デバイストークンの契約
+- [docs/implementation-guidelines.md](docs/implementation-guidelines.md) — CancellationException・エラーハンドリングと実装規約
+- [AGENTS.md](AGENTS.md) — 開発ルールと技術文書・Skill の入口（人間・AI エージェント共通）。[CLAUDE.md](CLAUDE.md) は Claude Code 向けの同内容の入口です
 
 ## セキュリティ
 
