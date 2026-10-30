@@ -102,6 +102,8 @@ D8 / DEX の制約でスペースを含む backtick 名が使えないため、�
 ### ViewModel（例: [`LoginViewModelTest`](../feature/auth/ui/src/test/kotlin/com/appvoyager/cloudphotos/ui/auth/viewmodel/LoginViewModelTest.kt)、[`MediaViewModelTest`](../feature/media/ui/src/test/kotlin/com/appvoyager/cloudphotos/ui/media/viewmodel/MediaViewModelTest.kt)）
 
 - `@BeforeEach` で `Dispatchers.setMain(testDispatcher)`、`@AfterEach` で `Dispatchers.resetMain()` を呼ぶ。`SavedStateHandle` は mock ではなく実体の `SavedStateHandle()` を渡す。
+- **初期化時の Flow 購読**:
+  - `init` で購読する UseCase の Flow は、ViewModel の生成前に `every { ... } returns flowOf(...)` などで stub する。テストごとに戻り値を変える場合は、生成を `private fun createViewModel()` に切り出す。非同期の初期化後の state を検証する際は、生成後に `advanceUntilIdle()` で初期化処理を進めてから assert する。
 - **State の assert（private Snapshot）**:
   - 複数フィールドを持つ UiState では、無関係なフィールド追加で既存テストが壊れないよう、テストクラス内に比較対象フィールドだけを持つ `private data class XxxSnapshot`（デフォルト値と `companion object.from(state)` 付き）を定義して `assertEquals` する。1 フィールドや sealed class 分岐のみを見る場合は直接 assert してよい。
 - **Effect の assert**:
@@ -118,5 +120,7 @@ D8 / DEX の制約でスペースを含む backtick 名が使えないため、�
 
 - MockK は使わず、すべて実体で組み立て、`@After` で確実に後始末する。
   - **Room DAO**: `Room.inMemoryDatabaseBuilder(...).allowMainThreadQueries().build()` を `@Before` で作り、`@After` で `database.close()` する。空 ID リスト、不在 ID、削除の冪等性、upsert 置換、全 `SyncStatus` を投入した絞り込みを確認する。
-  - **WorkManager Scheduler**: `WorkManagerTestInitHelper.initializeTestWorkManager` で初期化し、`@After` で `cancelAllWork()` する。`WorkSpec` から unique work 件数、`ENQUEUED` 状態、Worker クラス名、`NetworkType.CONNECTED`、空の input Data、および 2 回呼び出し時に `KEEP` で初回 work ID が保たれることを確認する。
+    - 順序を保証しない query の結果は、期待値と実測値の両方を `sortedBy { it.mediaId }` で揃えて比較する。重複件数を検証する必要がない場合は `toSet()` で比較してもよい。
+  - **WorkManager Scheduler**: `WorkManagerTestInitHelper.initializeTestWorkManager` で初期化し、`@After` で `workManager.cancelAllWork().result.get()` を呼び、キャンセル操作の完了を待ってから後始末を終える。`WorkInfo` と `WorkSpec` から unique work 件数、`ENQUEUED` 状態、Worker クラス名、`NetworkType.CONNECTED`、空の input Data、および 2 回呼び出し時に `KEEP` で初回 work ID が保たれることを確認する。
+    - 現行の `MediaSchedulerInstrumentedTest` では、unique work 名から取得した `WorkInfo.id` を使い、`WorkManagerImpl.getInstance(context).workDatabase.workSpecDao().getWorkSpec(id.toString())` で `WorkSpec` を取得する。内部 API の利用はテスト内の private helper に閉じ込め、その helper に `@Suppress("RestrictedApi")` を付ける。
   - **DataStore**: テスト間の競合を避けるため `settings-test-${UUID.randomUUID()}` の一時ファイルと専用 `CoroutineScope` で `PreferenceDataStoreFactory.create` を組み立て、`@After` で `scope.cancel()` とファイル削除を行う。
