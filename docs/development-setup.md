@@ -52,6 +52,8 @@ CI / CD の実行条件と workflow 構成は [`docs/ci.md`](ci.md) を、テス
 ### Gradle Sync が必要な変更
 
 - `build.gradle.kts`、`settings.gradle.kts`、`gradle/libs.versions.toml`、`build-logic` の変更
+- `gradle.properties` の変更
+- `gradle/wrapper/gradle-wrapper.properties` の変更
 - モジュールの追加・削除
 - AGP、Kotlin、KSP、Hilt、Compose compiler などのビルド設定の変更
 
