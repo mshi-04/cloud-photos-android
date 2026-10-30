@@ -1,4 +1,4 @@
 interface:
-  display_name: "Implementation Review"
-  short_description: "Review implementation diffs against project rules."
-  default_prompt: "Review the current implementation diff against this repository's architecture and testing rules."
+  display_name: "実装レビュー"
+  short_description: "レイヤー境界・責務分離・契約整合性・テスト不足をレビューする"
+  default_prompt: "$implementation-review を使い、比較範囲を確定して実装差分をレビューしてください。"

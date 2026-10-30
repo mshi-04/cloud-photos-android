@@ -1,67 +1,37 @@
-# DataSource
+# DataSource / 具体 I/O
 
-`data/<name>/datasource/` に interface と `XxxDataSourceImpl` を並べて置き、provider（Amplify、DataStore、MediaStore、Room）を閉じ込める class。
+外部 SDK（Amplify Auth / Storage / API、Firebase Messaging）、Room DAO、DataStore、MediaStore / ContentResolver を直接扱う実装クラス。
 
-## interface の宣言
+## 確認する対象
 
-interface の関数は domain の型だけで宣言する。`UploadDataSource` は `UploadResult<CloudStoragePath>` を返し、
-`AuthDataSource` の全関数は `AuthResult<...>` を返す。Amplify の `AuthSignInResult` や `StorageUploadResult` は
-シグネチャに出さず、impl の内側で domain model へ落とす。impl は public class に `@Inject constructor` を付ける。
+- Core REST / Token: [`AmplifyRestClient.kt`](../../../../core/data/src/main/kotlin/com/appvoyager/cloudphotos/data/common/AmplifyRestClient.kt)、[`DeviceTokenDataSource.kt`](../../../../core/data/src/main/kotlin/com/appvoyager/cloudphotos/data/fcm/DeviceTokenDataSource.kt)
+- Auth: [`AuthDataSourceImpl.kt`](../../../../feature/auth/data/src/main/kotlin/com/appvoyager/cloudphotos/data/auth/datasource/AuthDataSourceImpl.kt)、[`docs/authentication.md`](../../../../docs/authentication.md)
+- Media DataSource: [`feature/media/data/src/main/kotlin/com/appvoyager/cloudphotos/data/media/datasource/`](../../../../feature/media/data/src/main/kotlin/com/appvoyager/cloudphotos/data/media/datasource/)（`LocalMediaDataSourceImpl.kt`、`UploadDataSourceImpl.kt`、`UploadRecordLocalDataSourceImpl.kt`、`UploadRecordRemoteDataSourceImpl.kt`、`SettingsDataSourceImpl.kt`）
+- Media 具体 I/O: [`MediaStoreCapturedPhotoWriter.kt`](../../../../feature/media/data/src/main/kotlin/com/appvoyager/cloudphotos/data/media/datasource/MediaStoreCapturedPhotoWriter.kt)、[`ContentTypeResolver.kt`](../../../../feature/media/data/src/main/kotlin/com/appvoyager/cloudphotos/data/media/worker/ContentTypeResolver.kt)
+- キャンセル伝播とエラー処理の基本: [`docs/implementation-guidelines.md`](../../../../docs/implementation-guidelines.md) の「Coroutines / Flow」「エラー処理と CancellationException」
 
-## Amplify callback の橋渡し
+## 実装時の注意
 
-Amplify は成功 `Consumer` と失敗 `Consumer` を取る callback API なので、`AuthDataSourceImpl` と
-`UploadDataSourceImpl` は `suspendCancellableCoroutine` で suspend 関数に変換する。成功 callback では
-`CancellableContinuation.resume` の onCancellation handler 付き overload を使い、失敗 callback では
-`resumeWithException` を呼ぶ。onCancellation handler は空実装にしている（kotlinx-coroutines 1.11 では引数 3 つ）。
-Amplify の成功値は解放の要る資源ではないため、ここで返却処理をする必要が無い。
+- **必須制約**:
+  - DataSource interface や domain abstraction（`CapturedPhotoWriter`）のシグネチャは domain 型（またはプリミティブ）のみで宣言し、Amplify 等の SDK 型を公開しない。
+  - `try/catch` や `runCatching` で例外を捕捉して mapper へ渡す前に、必ず `CancellationException` を再スローする（`if (e is CancellationException) throw e` または `rethrowIfCancellation()`）。
+  - ブロッキング I/O（`ContentResolver.query` / `openInputStream` / `insert` / `openOutputStream` など）は `withContext(Dispatchers.IO)` 内で実行し、Stream や Cursor は `use` で確実にクローズする。
+- **プロジェクト固有の契約**:
+  - **SDK callback の橋渡しとキャンセル伝播**: Amplify API / Storage と Firebase Task は `suspendCancellableCoroutine` で橋渡しする。`Cancelable` な operation を返す `Amplify.Storage` や `Amplify.API`（`awaitAmplifyRestCall`）では `invokeOnCancellation { operation?.cancel() }` を繋ぐ。`Amplify.Auth` は `Cancelable` を返さないため待ち側の再開のみとなる（詳細は [`docs/authentication.md`](../../../../docs/authentication.md)・[`docs/media-sync.md`](../../../../docs/media-sync.md)）。
+  - **REST 呼び出し**: バックエンド API 呼び出しは `core:data` の `awaitAmplifyRestCall` を使う。非 2xx 応答は `AmplifyRestException(statusCode, ...)` となり、`isNonServerError`（4xx 等）で retry 可否やエラー分類を判定する。
+  - **サインアウト・退会の順序**: `AuthDataSourceImpl.signOut` / `deleteUser` における FCM cleanup・バックエンド削除・Cognito 操作の順序と失敗時の扱いは [`docs/authentication.md`](../../../../docs/authentication.md) の契約を厳守する。
+  - **DataStore のテスト差し替え口**: `SettingsDataSourceImpl` は `internal constructor(private val dataStore: DataStore<Preferences>)` を主コンストラクタにし、`@Inject constructor(@ApplicationContext context: Context)` から委譲することでテストから任意の `DataStore` を注入できるようにしている。
+  - **撮影画像の保存（`MediaStoreCapturedPhotoWriter`）**: Android Q（API 29）以上では `IS_PENDING = 1` で `MediaStore` に挿入し、ストリーム書き込み完了後に `IS_PENDING = 0` に更新する。ストリーム書き込みや `IS_PENDING` の更新に失敗した場合は、作成したレコードの `contentResolver.delete` を試み、`SavePhotoResult.Error`（容量不足は `STORAGE_FULL`、それ以外は `SAVE_FAILED`）を返す。`CancellationException` は再スローし、この経路ではレコードの削除を行わない。
+- **波及先**:
+  - 新しい DataSource や具体 I/O 実装を追加した場合は、`app/src/main/kotlin/com/appvoyager/cloudphotos/di/` の対応する Hilt module（`AuthDataSourceModule` / `UploadDataSourceModule` / `UploadRecordModule` / `MediaDataModule`）に binding を登録する。
 
-キャンセルの伝播は SDK が `Cancelable` を返すかどうかで変わる。`Amplify.Storage.uploadInputStream` と
-`Amplify.API.*` は operation を返すので、`invokeOnCancellation` で `cancel()` を呼ぶよう繋ぐ。繋がないと
-coroutine のキャンセル後も S3 転送や HTTP 呼び出しが走り続ける。一方 `Amplify.Auth.*` は `Cancelable` を返さないため
-`invokeOnCancellation` を書く対象が無く、キャンセルは待ち側の再開のみで、SDK 側の処理は止まらない。
+## テスト判断
 
-Firebase の `Task`（`AuthDataSourceImpl.cleanUpFcmToken` の token 取得と `deleteToken`）も同じ橋渡しで、
-`addOnSuccessListener` / `addOnFailureListener` を continuation へ繋ぐ。
+- REST / Room / S3 / Auth 呼び出しの変換と `CancellationException` 再スローは `src/test/.../datasource/XxxDataSourceImplTest`（および `core/data/src/test/`）で検証する。
+- `DataStore<Preferences>` の実ファイル読み書きは `feature/media/data/src/androidTest/.../SettingsDataSourceInstrumentedTest` で検証する（[`docs/testing.md`](../../../../docs/testing.md) を参照）。
 
-## REST 呼び出し
+## 検証観点
 
-`core/data` の `awaitAmplifyRestCall` が、API 名の付与、非 2xx レスポンスの `AmplifyRestException` 化、
-`invokeOnCancellation` による operation cancel をまとめている。呼び出し側は `RestOptions.builder()` で path、
-header、body を組み、method（`Amplify.API.get` / `post` / `delete` / `put`）を lambda で渡すだけ。
-`UploadRecordRemoteDataSourceImpl` と `DeviceTokenDataSource` がこの形。
-リクエスト body の `JSONObject` 組み立ては DataSource に置き、レスポンスの domain 変換は mapper へ渡す。
-`AmplifyRestException.isNonServerError` は 2xx でも 5xx でもない応答（主に 4xx）の判定に使い、
-再試行しない分岐や error mapping の切り分けに用いる。
-
-## CancellationException の扱い
-
-`runCatching` と `catch (e: Exception)` は `CancellationException` も掴む。掴んだまま error へ倒すと、
-キャンセル済みの呼び出し元へ成功／失敗の結果が返り処理が続く。書き方は 2 通りが混在している。
-
-`UploadDataSourceImpl.uploadMedia` は try/catch 形式で、`catch (e: CancellationException) { throw e }` を
-一般の `catch (e: Exception)` より前に置く。`AuthDataSourceImpl` は `runCatching { }.fold(...)` 形式が基本で、
-`Result` を検査する箇所では private 拡張 `rethrowIfCancellation()` を、`runCatching {}.onFailure {}`、
-`fold` の `onFailure` 引数、`exceptionOrNull()` で取り出した直後の 3 形態で先に呼ぶ。
-どちらでも「mapper へ渡す前に再スローする」という順序が要点。
-
-`AuthDataSourceImpl.deleteUser` は、backend の REST 削除が成功した場合のみ Cognito 削除へ進む二段構成で、
-REST 失敗時は `rethrowIfCancellation()` の後に `AuthResult.Error` を返す。順序の理由はコード内コメントにある。
-
-## DataStore と ContentResolver
-
-`SettingsDataSourceImpl` は file top の property delegate で `DataStore<Preferences>` を作りつつ、
-primary constructor を `internal` にして `DataStore` を直接受け取り、`@Inject constructor` で `@ApplicationContext`
-の `Context` を取る secondary constructor から委譲する。テストから任意の `DataStore` を差し込むための形で、
-key と既定値は `companion object` に置く。読み出しは `Flow` を `map` する property、書き込みは suspend 関数。
-
-`LocalMediaDataSourceImpl` は `withContext(Dispatchers.IO)` の中で `contentResolver.query(...)` を `use` で回し、
-cursor の列を domain の `Media` へ組み立てる。Amplify 系は SDK 側が非同期なので dispatcher の切り替えを入れない。
-
-`UploadRecordLocalDataSourceImpl` は DAO 呼び出しと Entity mapper の適用だけを行う
-（DAO と Entity 自体は db-implementation の領域）。
-
-## DI
-
-binding は `app/.../di/` の `@Module @InstallIn(SingletonComponent::class)` に `@Binds @Singleton` で書く。
-`AuthDataSourceModule`、`UploadDataSourceModule`、`UploadRecordModule`、`MediaDataModule` が対応する。
+- `CancellationException` が `AuthError.Unknown` や `UploadError.Unknown` に変換されてしまっていないか。
+- `Cancelable` を返す SDK 操作で `invokeOnCancellation` の接続漏れがないか。
+- `ContentResolver` の Cursor や Stream のクローズ漏れ、途中失敗時のゴミデータ残存がないか。

@@ -1,4 +1,4 @@
 interface:
-  display_name: "Test Implementation"
-  short_description: "Add, repair, and review project tests."
-  default_prompt: "Add or update tests following the existing testing conventions."
+  display_name: "テスト実装"
+  short_description: "JVM Unit Test（JUnit 5）・Instrumented Test（JUnit 4）の追加・修正を扱う"
+  default_prompt: "$test-implementation を使い、変更した振る舞いに対応するテストを実装・検証してください。"

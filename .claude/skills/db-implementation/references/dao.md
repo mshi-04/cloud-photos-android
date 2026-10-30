@@ -1,52 +1,32 @@
 # DAO
 
-DAO は `feature/media/data/src/main/kotlin/com/appvoyager/cloudphotos/data/media/db/dao/` に置く。
-`UploadRecordDao` が唯一の実例で、`@Dao` を付けた interface に `suspend` 関数だけを並べる。
-Flow を返す query は今のところ無い。
+Room の `@Dao` インターフェース（`UploadRecordDao`）。クエリの契約、空・不在時の振る舞い、`SyncStatus` 文字列リテラルの扱いは [`docs/data-model.md`](../../../../docs/data-model.md) の「UploadRecordDao の契約」を正本とする。
 
-## 構造
+## 確認する対象
 
-query は `@Query` に SQL を直書きし、書き込みは `@Insert` + `@Update` ではなく `@Upsert` 一本。
-`upsertAll` は Entity の `List` を受け、同じ `mediaId` の行は置き換わる。
-読み出しは `mediaId` の `IN` 句で複数件を引くもの、`syncStatus` の完全一致で絞るもの、
-未同期の `mediaId` だけを返すものの 3 つ。削除は `mediaId` 指定の `DELETE` 文。
+- [`UploadRecordDao.kt`](../../../../feature/media/data/src/main/kotlin/com/appvoyager/cloudphotos/data/media/db/dao/UploadRecordDao.kt)
+- [`UploadRecordLocalDataSourceImpl.kt`](../../../../feature/media/data/src/main/kotlin/com/appvoyager/cloudphotos/data/media/datasource/UploadRecordLocalDataSourceImpl.kt)
+- ガードテスト（JVM）: [`UploadRecordDaoSyncStatusTest.kt`](../../../../feature/media/data/src/test/kotlin/com/appvoyager/cloudphotos/data/media/db/dao/UploadRecordDaoSyncStatusTest.kt)
+- Instrumented Test: [`UploadRecordDaoInstrumentedTest.kt`](../../../../feature/media/data/src/androidTest/kotlin/com/appvoyager/cloudphotos/data/media/db/dao/UploadRecordDaoInstrumentedTest.kt)
 
-引数・戻り値は Entity と primitive のみで、domain の value object や enum は受け取らない。
-単体取得の query は用意せず、1 件だけ欲しい場合も `IN` 句の query に 1 要素の `List` を渡す。
+## 実装時の注意
 
-## SyncStatus 文字列のハードコード
+- **必須制約**:
+  - DAO の引数・戻り値は Entity（`UploadRecordEntity`）とプリミティブ / `String` のみとし、domain の value object や `SyncStatus` enum を直接受け取らない。
+  - SQL 内に `SyncStatus` の文字列リテラル（`'PENDING_UPLOAD'`、`'PENDING_DELETE'` など）を埋め込むのは、複数 status を固定で絞るクエリ（`getPendingMediaIds`）のような必要な箇所だけに限定し、単一 status の検索（`getByStatus`）は呼び出し側の DataSource から `syncStatus.name` を引数で渡す。
+  - SQL 内の status リテラルを変更・追加した場合は、必ず KDoc コメントと `UploadRecordDaoSyncStatusTest` の検証ケースを合わせて更新する。
+- **呼び出し側との境界**:
+  - `IN (:mediaIds)` クエリを大件数で呼ぶ経路では、SQLite のバインド変数上限（999）を超えないよう呼び出し側（例: `GetPendingMediaUseCase` の 900 件 `chunked`）との分担を確認する。
+  - 空リスト入力時の空リスト返却、不在 ID 指定時の空リスト返却、不在 ID 削除の冪等性を崩さない。
+- **波及先**:
+  - DAO のメソッドシグネチャや取得順を変更した場合は、`UploadRecordLocalDataSource` / `UploadRecordLocalDataSourceImpl`、`LocalUploadRecordsRepository`、および呼び出し元の UseCase / Worker への影響を確認する。
 
-未同期一覧を返す query だけは、`syncStatus` の `IN` 句に `'PENDING_UPLOAD'` と `'PENDING_DELETE'` を
-SQL の文字列リテラルとして直接埋め込んでいる。これは `SyncStatus` の enum NAME のコピーで、
-その旨と「enum をリネームしたらこの query も更新する」ことが関数の KDoc に書いてある。
+## テスト判断
 
-enum 名を変えても SQL はコンパイルエラーにならず、単に 0 件を返して通る。
-未同期の media が永久に拾われなくなる形で静かに壊れるため、
-`feature/media/data/src/test/kotlin/com/appvoyager/cloudphotos/data/media/db/dao/UploadRecordDaoSyncStatusTest.kt`
-がガードになっている。このテストは Room を起動せず、`SyncStatus.entries` の名前一覧に
-`PENDING_UPLOAD` と `PENDING_DELETE` が含まれることを 1 ケースずつ検証し、
-失敗メッセージで「DAO の SQL を直せ」と指示する。
+- SQL の実行結果（`@Upsert` の挿入・更新、`IN` 句フィルタ、status フィルタ、削除の冪等性、空リスト入力）は `UploadRecordDaoInstrumentedTest`（`androidTest`）で検証する。
+- SQL 内に埋め込んだ `SyncStatus` enum 名の存在保証は `UploadRecordDaoSyncStatusTest`（JVM Unit Test）で検証する（[`docs/testing.md`](../../../../docs/testing.md) を参照）。
 
-守れるのは enum 名の存在だけで、SQL 側のリテラルは読んでいない。
-綴り違いや片方の status の書き漏らしは検出できないので、query の実挙動は androidTest 側で確認する。
+## 検証観点
 
-新しく status リテラルを SQL へ埋め込む query を足すときは、このガードテストへ同じ形のケースを追加する。
-逆に、リテラルを避けられるなら埋め込まない。`UploadRecordLocalDataSourceImpl` は
-`SyncStatus.PENDING_UPLOAD.name` を引数として渡すことで、status 一致の query をハードコードなしで使っている。
-
-## 呼び出し側との契約（空・不在の扱い）
-
-- `IN` 句に空リストを渡しても例外にはならず、空リストが返る。
-- 存在しない `mediaId` を渡しても空リストで、プレースホルダ行は返らない。
-- 存在しない `mediaId` の削除は既存行を変えない（冪等）。
-
-DAO は「見つからない」を型で表現しないので、要素の存在を前提にした処理は `single()` などで落ちる。
-件数の期待は呼び出し側で明示する。
-
-## テストの置き場所
-
-- SQL の実挙動（`IN` 句、status フィルタ、`@Upsert` の置換、削除の冪等性）は androidTest 側の
-  `UploadRecordDaoInstrumentedTest` で検証する。`Room.inMemoryDatabaseBuilder` に
-  `allowMainThreadQueries` を付けて組み立て、`@After` で `close` する。
-- SQL を実行せずに済む契約（enum 名の存在など）は unit test 側に置き、instrumented test を増やさない。
-- テストの書式と検証範囲は `../../../../docs/testing-conventions.md` に従う。
+- SQL 内のテーブル名・カラム名・status リテラルにタイポがないか（`UploadRecordDaoInstrumentedTest` で実クエリを通しているか）。
+- 新しい DAO を追加した場合、`CloudPhotosDatabase` と `app` の `DatabaseModule` に provider が追加されているか。
