@@ -17,7 +17,7 @@ Cloud Photos の変更した振る舞いや対象クラスの契約を、既存�
 
 1. 検証したい振る舞いを洗い出し、[`docs/testing.md`](../../../docs/testing.md) の「テストスタックと配置の振り分け」に従って `src/test`（JUnit 5）か `src/androidTest`（JUnit 4）かを決める。
 2. 対象モジュールの既存テストと `testutil/` の fixture 命名（domain の value object は `validXxx`・request/model は suffix なし、data は `xxxFixture`、単一テストファイル内ヘルパーは `private fun createXxx`）を確認する。
-3. [`docs/testing.md`](../../../docs/testing.md) の共通規約（命名、`// Arrange` / `// Act` / `// Assert`、1 テスト 1 シナリオ、Dispatcher 統一）と対象別の要点（ViewModel の private Snapshot 比較、Worker の `TestListenableWorkerBuilder`、DAO の in-memory DB など）に沿ってテストを実装する。
+3. [`docs/testing.md`](../../../docs/testing.md) の共通規約（命名、`// Arrange` / `// Act` / `// Assert`、1 テスト 1 シナリオ、Dispatcher 統一）と対象別の要点（ViewModel の private Snapshot 比較、Worker への mock の直接注入と `doWork()` 呼び出し、DAO の in-memory DB など）に沿ってテストを実装する。
 4. [`docs/development-setup.md`](../../../docs/development-setup.md) に従って対象モジュールのテストタスクを実行し、結果を検証する。
 5. 追加・修正したテストケース、実行した検証と結果、未実施の検証（実機/エミュレータ未接続時の `connectedDebugAndroidTest` など）と理由を簡潔に報告する。
 
