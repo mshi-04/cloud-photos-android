@@ -28,7 +28,7 @@ WorkManager のバックグラウンド処理を実行する `CoroutineWorker`�
 
 ## テスト判断
 
-- Worker の分岐・状態遷移・retry/failure/success 戻り値・`CancellationException` 伝播は `TestListenableWorkerBuilder.from(context, XxxWorker::class.java).setWorkerFactory(...)` を用いて JVM Unit Test（`UploadMediaWorkerTest` / `DeleteMediaWorkerTest` / `RegisterDeviceTokenWorkerTest`）で検証する（[`docs/testing.md`](../../../../docs/testing.md) の「対象別のテストの書き方」の Worker 節を参照）。
+- Worker の分岐・状態遷移・retry/failure/success 戻り値・`CancellationException` 伝播は、WorkManager を起動せず Worker コンストラクタに直接 mock を渡して `worker.doWork()` を呼ぶ JVM Unit Test（`UploadMediaWorkerTest` / `DeleteMediaWorkerTest` / `RegisterDeviceTokenWorkerTest`）で検証する（[`docs/testing.md`](../../../../docs/testing.md) の「対象別のテストの書き方」の Worker 節を参照）。
 
 ## 検証観点
 
