@@ -66,7 +66,7 @@ MediaViewModel.onScreenResumed()
 ## 削除フローと `DeleteMediaWorker`
 
 - **削除予約（[`DeleteMediaUseCase`](../feature/media/domain/src/main/kotlin/com/appvoyager/cloudphotos/domain/media/usecase/DeleteMediaUseCase.kt)）**:
-  - 対象レコードの `syncStatus` が `PENDING_UPLOAD` の場合は、まだクラウド側に存在しないためローカル DB から物理削除（`deleteUploadRecord`）して早期 return し、`DeleteScheduler` は起動しない。
+  - 対象レコードの `syncStatus` が `PENDING_UPLOAD` の場合は、ローカル DB から物理削除（`deleteUploadRecord`）して早期 return し、`DeleteScheduler` は起動しない。S3 転送後にリモート API 登録が一時失敗した場合など、`cloudStoragePath` が設定済みでもこの状態に残る。この行を `DeleteMediaUseCase` で削除すると、S3 オブジェクトが削除されず孤立する可能性がある。
   - それ以外は `isDeleted = true, syncStatus = SyncStatus.PENDING_DELETE` に更新して保存し、`DeleteScheduler.scheduleDelete()` を呼ぶ。
 - **`DeleteMediaWorker.doWork()`（[`DeleteMediaWorker`](../feature/media/data/src/main/kotlin/com/appvoyager/cloudphotos/data/media/worker/DeleteMediaWorker.kt)）**:
   - `cloudStoragePath == null` のレコードは未アップロード扱いのため、リモート API 削除と S3 削除をスキップしてローカル DB から物理削除する。

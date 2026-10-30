@@ -53,7 +53,8 @@
   - ローカル DB 操作（`LocalUploadRecordsRepository`）などは Result 型で包まず、生の値や `Unit` を返して例外を伝播させる。同じ API で Result を返しつつ通常失敗を例外でも投げる形にしない。
   - プログラミングエラー、引数制約違反（`require`）、回復不能な初期化失敗は例外で表す。
 - **Provider 例外の隔離**:
-  - Amplify、Cognito、Firebase、Room、HTTP の例外型やレスポンス型を domain / UI へ漏らさず、data 層の Mapper で domain error へ変換する。`AuthError` や `UploadError` に原因の `Throwable` を持たせない。
+  - Amplify、Cognito、Firebase、HTTP の例外型やレスポンス型を domain / UI へ漏らさず、data 層の Mapper で domain error へ変換する。`AuthError` や `UploadError` に原因の `Throwable` を持たせない。
+  - ローカル DB 操作の Room 例外は、この変換対象に含めず、上記の「Result 型と例外の使い分け」に従って伝播させる。
 
 ## Hilt / DI
 

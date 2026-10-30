@@ -20,11 +20,13 @@ CI / CD の実行条件と workflow 構成は [`docs/ci.md`](ci.md) を、テス
 
 ### 解決順序と検証条件
 
-ルート [`build.gradle.kts`](../build.gradle.kts) と [`app/build.gradle.kts`](../app/build.gradle.kts) により、次の順序で解決される。
+ルート [`build.gradle.kts`](../build.gradle.kts) と [`app/build.gradle.kts`](../app/build.gradle.kts) により、次の優先順位（上ほど優先）で解決される。
 
-1. `local.properties`（[`local.properties.sample`](../local.properties.sample) をコピーして作成。**コミット禁止**）
-2. Gradle project property（`-PDEV_API_BASE_URL=...`）
-3. `ORG_GRADLE_PROJECT_*` 環境変数（`ORG_GRADLE_PROJECT_DEV_API_BASE_URL=...`）
+1. Gradle project property（`-PDEV_API_BASE_URL=...`）
+2. `ORG_GRADLE_PROJECT_*` 環境変数（`ORG_GRADLE_PROJECT_DEV_API_BASE_URL=...`）
+3. `local.properties`（[`local.properties.sample`](../local.properties.sample) をコピーして作成。**コミット禁止**）
+
+`local.properties` の値は、`findProperty(key)` が未設定の場合だけ補完する。
 
 `app/build.gradle.kts` の `requireEnvProperty` は、実行タスクが対象 flavor を含む場合（または `assemble` / `build` / `bundle`）に値が未設定だと `GradleException` で失敗させる。ただし、CodeQL 解析時（`CODEQL_ACTION_VERSION` または `CODEQL_DIST` が設定されている場合）と、対象 flavor に関係しないタスク（例: `:feature:auth:domain:test` や `ktlintCheck`）では空文字へフォールバックして通過する。
 
