@@ -29,8 +29,8 @@ Cloud Photos の UI 層（`app`、`core:ui`、`feature:auth:ui`、`feature:media
 | --- | --- |
 | Screen / Content / Preview | [`references/screen.md`](references/screen.md) |
 | ViewModel | [`references/viewmodel.md`](references/viewmodel.md) |
-| UiState / FieldError | [`references/ui-state.md`](references/ui-state.md) |
-| UI event（callback / Effect / Snackbar message） | [`references/ui-event.md`](references/ui-event.md) |
+| UiState / FieldError | [`references/uistate.md`](references/uistate.md) |
+| UI event（callback / Effect / Snackbar message） | [`references/uievent.md`](references/uievent.md) |
 | Navigation（`NavGraph` / route 定義） | [`references/navigation.md`](references/navigation.md) |
 | テーマ・共通 UI・strings.xml のみの変更 | reference なし。[`docs/implementation-guidelines.md`](../../../docs/implementation-guidelines.md) の「Compose」「Resource / Theme」に従う |
 

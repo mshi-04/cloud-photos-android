@@ -7,7 +7,7 @@ ViewModel と接続する public な `XxxScreen` と、ViewModel を参照しな
 - [`feature/media/ui/src/main/kotlin/com/appvoyager/cloudphotos/ui/media/screen/`](../../../../feature/media/ui/src/main/kotlin/com/appvoyager/cloudphotos/ui/media/screen/)（`MediaScreen.kt`、`CameraScreen.kt`、`MediaDetailScreen.kt`）
 - [`feature/auth/ui/src/main/kotlin/com/appvoyager/cloudphotos/ui/auth/screen/`](../../../../feature/auth/ui/src/main/kotlin/com/appvoyager/cloudphotos/ui/auth/screen/)（`LoginScreen.kt` ほか）
 - 文字列リソースとテーマ: [`core/ui/src/main/res/values/`](../../../../core/ui/src/main/res/values/)、[`docs/implementation-guidelines.md`](../../../../docs/implementation-guidelines.md) の「Compose」「Resource / Theme」
-- effect 購読の契約: [`ui-event.md`](ui-event.md)
+- effect 購読の契約: [`uievent.md`](uievent.md)
 
 ## 実装時の注意
 
