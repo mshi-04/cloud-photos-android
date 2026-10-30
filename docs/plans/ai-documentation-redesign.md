@@ -117,7 +117,7 @@ Skillはレイヤー・変更する役割・作業目的で6種類に整理す�
 
 | Skill | 選択する依頼 | 主なreference |
 | --- | --- | --- |
-| `ui-implementation` | 画面の表示、操作、遷移、表示文言、UI stateを変更 | screen / viewmodel / ui-state / ui-event / navigation |
+| `ui-implementation` | 画面の表示、操作、遷移、表示文言、UI stateを変更 | screen / viewmodel / uistate / uievent / navigation |
 | `domain-implementation` | 業務ルール、入力制約、UseCase、domain model、Repository contractを変更 | usecase / value-object / result-error |
 | `data-implementation` | Repository実装、DataSource、SDK / API、mapper、設定永続化、Worker / Schedulerを変更 | repository-implementation / datasource / mapper / worker / scheduler |
 | `db-implementation` | Roomの保存構造、DAO query、保存値の互換性、migrationを変更 | entity / dao / migration |
@@ -216,10 +216,10 @@ referenceは次を基本にする。
 
 | 現行reference | 新しいreference | 技術文書へ移す内容 |
 | --- | --- | --- |
-| UI `screen.md` | `ui/screen` | effectの購読は`ui/ui-event`、表示文字列の解決の基本は`implementation-guidelines.md` |
+| UI `screen.md` | `ui/screen` | effectの購読は`ui/uievent`、表示文字列の解決の基本は`implementation-guidelines.md` |
 | UI `viewmodel.md` | `ui/viewmodel` | エラーハンドリングとJob管理の基本は`implementation-guidelines.md` |
-| UI `uistate.md` | `ui/ui-state` | なし |
-| UI `effect.md` | `ui/ui-event` | なし。effect / Snackbar message型 / 購読契約を現行の方式のまま記述する |
+| UI `uistate.md` | `ui/uistate` | なし |
+| UI `effect.md` | `ui/uievent` | なし。effect / Snackbar message型 / 購読契約を現行の方式のまま記述する |
 | なし | `ui/navigation` | `android-conventions.md`のNavigation節から作る |
 | Domain `usecase.md` | `domain/usecase` | 作成基準は`architecture.md`。`DeleteMediaUseCase`の未アップロード分岐、`SyncUploadRecordsUseCase`のpending保護、`GetPendingMediaUseCase`の分割取得は`media-sync.md` |
 | Domain `valueobject.md` | `domain/value-object` | なし |
