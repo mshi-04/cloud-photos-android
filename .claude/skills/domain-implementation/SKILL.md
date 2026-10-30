@@ -1,45 +1,47 @@
 ---
 name: domain-implementation
-description: Domain 層の設計・実装・修正に使う。UseCase、Repository interface、domain model、value object、domain result/error、純粋 validation、feature domain モジュールの変更で使用する。
+description: 業務ルール、入力制約、値の妥当性、UseCase、domain model、Result / Error 型、SyncStatus、Repository / Scheduler / Writer の公開 contract を変更する依頼で使う。Cloud Photos の Domain 層（feature:*:domain、core:common）を担当する。Compose 画面の見た目や SDK / Room 実装詳細だけの変更は対象外。
 ---
 
-# Domain Implementation
+# 目的
 
-## 実装手順
+Cloud Photos の業務ルール、入力検証、状態遷移、およびレイヤー間の公開 contract を、Android Framework や外部 SDK に依存しない Domain 層（`feature:auth:domain`、`feature:media:domain`、`core:common`）へ閉じる。
 
-1. 変更する概念が UseCase、Repository interface、domain model、value object、domain result/error のどれかを決める。
-2. 既存の `feature:<name>:domain` 内で同種の class を探し、package、命名、constructor injection、`operator fun invoke`、request/model/valueobject の形を合わせる。同種が見つからない場合は、参考資料の該当種別を読む。
-3. UseCase を追加する場合は、複数 Repository の調整、再利用操作、validation、状態遷移など、名前付き操作として残す価値がある処理だけにする。
-4. Repository が必要な場合は interface を domain に追加し、実装は data 側で扱う。provider 型、Entity、DTO、Android framework 型が必要になったら data 側の作業に切り替える。
-5. Value object を追加・修正する場合は、既存の `of(raw: ...)` パターンに合わせて正規化と validation を閉じ込める。
-6. `AuthError`、`UploadError`、`SyncStatus`、Result 型などの domain contract を変えた場合は、data mapper、UI state/effect、テスト、関連 docs の追随箇所を洗い出す。
+# 条件別の参照先
 
-## 注意点
+全技術文書を一律に読まず、変更内容に該当する文書・節だけを確認する。
 
-- domain に Android framework、Room、WorkManager、Amplify/Cognito の型が入ると、JVM だけでテストできなくなり、provider の差し替えが domain まで波及する。
-- Repository メソッドを機械的に UseCase でラップすると、名前が増えるだけで domain の意味は増えない。
-- value object を生プリミティブへ戻すと、検証済みであるという保証がその時点で失われる。
-- `AuthError`、`UploadError`、`SyncStatus`、Result 型は data mapper と UI state が対で依存している。片側だけ変えると、DB 文字列や画面表示との対応がずれる。
-- suspend を main-safe にしないと、呼び出し側が Dispatcher の詳細を知る必要が出る。
+- UseCase の作成基準・省略条件、Repository / Scheduler / Writer interface の分割方針を確認するとき: [`docs/architecture.md`](../../../docs/architecture.md) の「UseCase と Domain Abstraction」「Repository / DataSource / Mapper」
+- Result 型と例外伝播の使い分け、Kotlin 実装規約を確認するとき: [`docs/implementation-guidelines.md`](../../../docs/implementation-guidelines.md) の「エラー処理と CancellationException」「Kotlin」
+- 認証フロー、確認コード、パスワード再設定、アカウント列挙を避ける `AuthError` 分類に関わるとき: [`docs/authentication.md`](../../../docs/authentication.md)
+- アップロード・削除・リモート同期の調整（pending 保護、900 件分割取得、未アップロード削除分岐、`SyncStatus` の業務上の意味）に関わるとき: [`docs/media-sync.md`](../../../docs/media-sync.md)
+- `SyncStatus` の追加・リネームに伴う DB 保存文字列との互換性を確認するとき: [`docs/data-model.md`](../../../docs/data-model.md)
+- 対象モジュールの実装とテスト:
+  - [`core/common/src/main/`](../../../core/common/src/main/)
+  - [`feature/auth/domain/src/main/`](../../../feature/auth/domain/src/main/) / [`feature/auth/domain/src/test/`](../../../feature/auth/domain/src/test/)
+  - [`feature/media/domain/src/main/`](../../../feature/media/domain/src/main/) / [`feature/media/domain/src/test/`](../../../feature/media/domain/src/test/)
 
-## 検証手順
+# 役割クラスと参照先
 
-1. UseCase、value object、domain model の対象テストを追加・更新する。
-2. 単一 domain モジュール変更は `./gradlew :feature:<name>:domain:test` を実行する。
-3. domain contract が data/ui に波及する場合は、触れた各レイヤーのテストも実行する。
+変更対象の役割を見分け、該当する reference だけを読んでから実装する。
 
-## 参考資料
+| 役割 | 参照 |
+| --- | --- |
+| UseCase / Request | [`references/usecase.md`](references/usecase.md) |
+| Value object | [`references/value-object.md`](references/value-object.md) |
+| Result / Error / `SyncStatus` | [`references/result-error.md`](references/result-error.md) |
+| Repository / Scheduler / Writer interface、単純な domain model | reference なし。[`docs/architecture.md`](../../../docs/architecture.md) の「UseCase と Domain Abstraction」「Repository / DataSource / Mapper」に従う |
 
-このリポジトリでの書き方。対象の種別だけ読む。
+# 手順
 
-- [references/usecase.md](references/usecase.md): UseCase の形と、新設する価値がある基準
-- [references/repository-interface.md](references/repository-interface.md): Repository interface の分割単位とシグネチャ
-- [references/valueobject.md](references/valueobject.md): value object の `of()` と validation の書き方
-- [references/result-error.md](references/result-error.md): Result 型、error 型、変更時の波及先
+1. 変更対象の役割を判定し、該当する reference と必要な技術文書の節だけを読む。
+2. 既存の contract で足りるか、新しい UseCase / value object / interface が必要かを [`docs/architecture.md`](../../../docs/architecture.md) の基準に沿って決める。
+3. reference の実装時の注意と波及先に沿って実装する。
+4. 追加・変更した value object、UseCase、Result 拡張などの振る舞いを [`test-implementation`](../test-implementation/SKILL.md)（および [`docs/testing.md`](../../../docs/testing.md)）に沿って JVM Unit Test で検証する。
+5. 変更範囲に応じたローカル検証を [`docs/development-setup.md`](../../../docs/development-setup.md) の「ローカル検証の選び方とコマンド」から選んで実行する。
+6. 変更内容、実行した検証と結果、未実施の検証と理由を簡潔に報告する。
 
-規約:
+# 注意事項
 
-- [docs/implementation-rules.md](../../../docs/implementation-rules.md)
-- [docs/architecture-decisions.md](../../../docs/architecture-decisions.md)
-- [docs/error-handling-guide.md](../../../docs/error-handling-guide.md)
-- [docs/testing-conventions.md](../../../docs/testing-conventions.md)
+- `feature:*:domain` は `core:common` 以外のモジュールや Android Framework（`Context`、`android.net.Uri`）、Room、DataStore、Amplify SDK に依存させない。
+- Domain の contract や `AuthError` / `UploadError` / `SyncStatus` の変更が UI、Data、DB へ波及するときは、[`ui-implementation`](../ui-implementation/SKILL.md)、[`data-implementation`](../data-implementation/SKILL.md)、[`db-implementation`](../db-implementation/SKILL.md) を併用する。

@@ -1,4 +1,4 @@
 interface:
-  display_name: "DB Implementation"
-  short_description: "Design, implement, and repair Room database work."
-  default_prompt: "Update Room database code following existing Entity, DAO, mapper, and validation conventions."
+  display_name: "DB 実装"
+  short_description: "Roomのupload_records・Entity・DAO・保存値互換性・migrationを扱う"
+  default_prompt: "$db-implementation を使い、Room DB の変更対象と影響範囲を判定して実装・検証してください。"
