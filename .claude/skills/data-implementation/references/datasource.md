@@ -21,7 +21,7 @@
   - **REST 呼び出し**: バックエンド API 呼び出しは `core:data` の `awaitAmplifyRestCall` を使う。非 2xx 応答は `AmplifyRestException(statusCode, ...)` となり、`isNonServerError`（4xx 等）で retry 可否やエラー分類を判定する。
   - **サインアウト・退会の順序**: `AuthDataSourceImpl.signOut` / `deleteUser` における FCM cleanup・バックエンド削除・Cognito 操作の順序と失敗時の扱いは [`docs/authentication.md`](../../../../docs/authentication.md) の契約を厳守する。
   - **DataStore のテスト差し替え口**: `SettingsDataSourceImpl` は `internal constructor(private val dataStore: DataStore<Preferences>)` を主コンストラクタにし、`@Inject constructor(@ApplicationContext context: Context)` から委譲することでテストから任意の `DataStore` を注入できるようにしている。
-  - **撮影画像の保存（`MediaStoreCapturedPhotoWriter`）**: Android Q（API 29）以上では `IS_PENDING = 1` で `MediaStore` に挿入し、ストリーム書き込み完了後に `IS_PENDING = 0` に更新する。書き込み途中で失敗した場合は作成したレコードを `contentResolver.delete` で掃除してから例外を送出する。
+  - **撮影画像の保存（`MediaStoreCapturedPhotoWriter`）**: Android Q（API 29）以上では `IS_PENDING = 1` で `MediaStore` に挿入し、ストリーム書き込み完了後に `IS_PENDING = 0` に更新する。ストリーム書き込みや `IS_PENDING` の更新に失敗した場合は、作成したレコードの `contentResolver.delete` を試み、`SavePhotoResult.Error`（容量不足は `STORAGE_FULL`、それ以外は `SAVE_FAILED`）を返す。`CancellationException` は再スローし、この経路ではレコードの削除を行わない。
 - **波及先**:
   - 新しい DataSource や具体 I/O 実装を追加した場合は、`app/src/main/kotlin/com/appvoyager/cloudphotos/di/` の対応する Hilt module（`AuthDataSourceModule` / `UploadDataSourceModule` / `UploadRecordModule` / `MediaDataModule`）に binding を登録する。
 
