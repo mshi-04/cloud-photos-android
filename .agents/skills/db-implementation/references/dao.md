@@ -13,7 +13,7 @@ Room の `@Dao` インターフェース（`UploadRecordDao`）。クエリの�
 
 - **必須制約**:
   - DAO の引数・戻り値は Entity（`UploadRecordEntity`）とプリミティブ / `String` のみとし、domain の value object や `SyncStatus` enum を直接受け取らない。
-  - SQL 内に `SyncStatus` の文字列リテラル（`'PENDING_UPLOAD'`、`'PENDING_DELETE'` など）を埋め込むのは、複数 status を固定で絞るクエリ（`getPendingMediaIds`）のような必要な箇所だけに限定し、単一 status の検索（`getRecordsBySyncStatus`）は呼び出し側の DataSource から `syncStatus.name` を引数で渡す。
+  - SQL 内に `SyncStatus` の文字列リテラル（`'PENDING_UPLOAD'`、`'PENDING_DELETE'` など）を埋め込むのは、複数 status を固定で絞るクエリ（`getPendingMediaIds`）のような必要な箇所だけに限定し、単一 status の検索（`getByStatus`）は呼び出し側の DataSource から `syncStatus.name` を引数で渡す。
   - SQL 内の status リテラルを変更・追加した場合は、必ず KDoc コメントと `UploadRecordDaoSyncStatusTest` の検証ケースを合わせて更新する。
 - **呼び出し側との境界**:
   - `IN (:mediaIds)` クエリを大件数で呼ぶ経路では、SQLite のバインド変数上限（999）を超えないよう呼び出し側（例: `GetPendingMediaUseCase` の 900 件 `chunked`）との分担を確認する。
