@@ -49,6 +49,14 @@ CI / CD の実行条件と workflow 構成は [`docs/ci.md`](ci.md) を、テス
 変更が壊し得る範囲に応じて検証を選び、レイヤーやモジュールを跨ぐ変更では範囲を広げる。
 文書や AI Skill のみの変更では Gradle テストを要求しない。
 
+### Gradle Sync が必要な変更
+
+- `build.gradle.kts`、`settings.gradle.kts`、`gradle/libs.versions.toml`、`build-logic` の変更
+- モジュールの追加・削除
+- AGP、Kotlin、KSP、Hilt、Compose compiler などのビルド設定の変更
+
+Kotlin ソース、resource、文書のみの変更では通常不要とする。
+
 ### 変更種別ごとの検証目安
 
 | 変更対象 | 実行する検証 |
