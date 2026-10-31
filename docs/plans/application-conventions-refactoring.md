@@ -227,7 +227,7 @@ ViewModel は Screen の初回 composition 中に生成され、Main.immediate �
 
 規約に直接対応する小さな整理は、関連する実装を触る段階に含める。
 
-- ConfirmationCode.of の長さと数字の require を分ける。trim、6 文字、Char.isDigit の受理範囲、例外型を維持する。ASCII 数字限定へ変更しない。
+- ConfirmationCode.of の長さと数字の require を分ける。trim、6 文字（コードポイント単位）、Char.isDigit の受理範囲、例外型を維持する。ASCII 数字限定へ変更せず、受理した Unicode 10 進数字は Cognito が照合する ASCII 数字へ正規化して保持する。
 - AuthSignInStepMapper は純粋な変換のため internal object にする。
 - AuthError.Unknown に残る実態と合わない「cause はログ専用」という KDoc を削除する。
 
@@ -279,7 +279,7 @@ ViewModel は Screen の初回 composition 中に生成され、Main.immediate �
 ブランチ案: `feature/01-auth-domain-conventions`。
 
 - 対象: `:feature:auth:domain` の ConfirmationCode と AuthError、および ConfirmationCodeTest。
-- 作業: require を長さ・数字ごとに分け、実態と合わない KDoc を除く。入力の受理範囲、例外型、AuthResult / AuthError の公開 contract は維持する。
+- 作業: require を長さ・数字ごとに分け、受理した Unicode 10 進数字を ASCII へ正規化し、実態と合わない KDoc を除く。入力の受理範囲、例外型、AuthResult / AuthError の公開 contract は維持する。
 - 検証: `./gradlew.bat :feature:auth:domain:test`。メッセージに依存する既存テストの期待値を合わせる。
 - 完了条件: 既存の正常値と不正値の判定が変わらず、各制約の失敗理由を識別できる。Data / UI の実装変更を要求しない。
 
