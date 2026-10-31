@@ -22,7 +22,8 @@ class PrepareUploadQueueUseCase @Inject constructor(
         if (allMedia.isEmpty()) return
 
         val allMediaIds = allMedia.map { it.id }
-        val existingIds = localUploadRecordsRepository.getUploadRecords(allMediaIds)
+        val existingIds = allMediaIds.chunked(MAX_IDS_PER_LOOKUP)
+            .flatMap { mediaIds -> localUploadRecordsRepository.getUploadRecords(mediaIds) }
             .map { it.mediaId }
             .toSet()
 
@@ -42,5 +43,9 @@ class PrepareUploadQueueUseCase @Inject constructor(
 
         localUploadRecordsRepository.saveUploadRecords(newRecords)
         uploadScheduler.scheduleUpload()
+    }
+
+    private companion object {
+        const val MAX_IDS_PER_LOOKUP = 900
     }
 }

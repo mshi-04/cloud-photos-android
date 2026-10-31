@@ -32,7 +32,7 @@ MediaViewModel.onScreenResumed()
 - **キュー準備とチャンク取得**:
   - [`PrepareUploadQueueUseCase`](../feature/media/domain/src/main/kotlin/com/appvoyager/cloudphotos/domain/media/usecase/PrepareUploadQueueUseCase.kt) は端末メディアが空、または未登録の差分が空のときは早期 return し、不要な Scheduler 起動を行わない。
   - [`RecordMediaUploadUseCase`](../feature/media/domain/src/main/kotlin/com/appvoyager/cloudphotos/domain/media/usecase/RecordMediaUploadUseCase.kt) は `PENDING_UPLOAD` レコードの保存と `scheduleUpload()` を一体で実行する。
-  - [`GetPendingMediaUseCase`](../feature/media/domain/src/main/kotlin/com/appvoyager/cloudphotos/domain/media/usecase/GetPendingMediaUseCase.kt) は SQLite のバインド変数上限を超えないよう、メディア ID リストを 900 件ずつ `chunked` して `getUploadRecords` を呼ぶ。
+  - `PrepareUploadQueueUseCase` は SQLite のバインド変数上限を超えないよう、メディア ID リストを 900 件ずつ `chunked` して `getUploadRecords` を呼ぶ。全チャンクの取得が完了してから未登録のレコードをまとめて保存し、その後 `scheduleUpload()` を 1 回だけ呼ぶ。取得中の例外・キャンセルは伝播し、後続の保存・スケジュール要求は行わない。
 
 ## リモート同期と Pending 保護
 

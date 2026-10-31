@@ -1,6 +1,6 @@
 # アプリ本体の規約準拠リファクタリング設計
 
-状態: 設計案。段階 01 以降は未着手。
+状態: 段階 01（PR #138）と段階 02 を実施した。段階 03 以降は未着手。
 調査日: 2026-10-31。
 調査基準: develop `e261bc2` の本番コード・テスト・技術文書。
 
@@ -78,10 +78,10 @@ Mapper の未分類分岐により AuthError.Unknown へ変わり、キャンセ
 
 ### B. アップロード準備の大量 ID 検索を分割する
 
-対象: [PrepareUploadQueueUseCase](../../feature/media/domain/src/main/kotlin/com/appvoyager/cloudphotos/domain/media/usecase/PrepareUploadQueueUseCase.kt)、[GetPendingMediaUseCase](../../feature/media/domain/src/main/kotlin/com/appvoyager/cloudphotos/domain/media/usecase/GetPendingMediaUseCase.kt)。
+対象: [PrepareUploadQueueUseCase](../../feature/media/domain/src/main/kotlin/com/appvoyager/cloudphotos/domain/media/usecase/PrepareUploadQueueUseCase.kt) と、削除する未使用の `GetPendingMediaUseCase` / `GetPendingMediaUseCaseTest`。
 
-現状の `getUploadRecords(allMediaIds)` は端末内の全 ID を一度に DAO の IN 句まで渡す。
-GetPendingMediaUseCase は同じ契約に対して既に 900 件ずつ分割しているが、本番コードからの呼び出しはなく、テストからのみ使われている。
+移行前の `getUploadRecords(allMediaIds)` は端末内の全 ID を一度に DAO の IN 句まで渡していた。
+GetPendingMediaUseCase は同じ契約に対して 900 件ずつ分割していたが、本番コードからの呼び出しはなく、テストからのみ使われていた。
 端末ごとの SQLite 上限を断定せず、[Data Model](../data-model.md) の呼び出し側で 900 件ずつ分割する方針に合わせる。チャンク分割は [Architecture](../architecture.md) が UseCase の責務として挙げているため、domain に置く。
 
 - PrepareUploadQueueUseCase でも 900 件単位に分割し、既存 ID を集合へ集約する。
@@ -291,6 +291,14 @@ ViewModel は Screen の初回 composition 中に生成され、Main.immediate �
 - 作業: 900 件単位の参照、既存 ID の集約、全取得後の保存と 1 回の enqueue を実装する。GetPendingMediaUseCase と GetPendingMediaUseCaseTest を削除し、B に挙げた文書の例示を差し替える。
 - 検証: `./gradlew.bat :feature:media:domain:test`。境界件数、既存・新規混在、後続チャンクの失敗・キャンセルを確認する。文書のリンクと両クライアントの対応箇所を確認する。
 - 完了条件: 大量 ID を 1 回で渡さず、途中の参照失敗で部分的な保存・enqueue をしない。900 件分割の実装と文書の例示が PrepareUploadQueueUseCase の 1 か所に揃っている。Repository interface と DAO は維持する。
+
+実装記録（2026-10-31）:
+
+- develop `a8d8c21` から `feature/02-media-domain-batching` を分岐し、本番コード・テスト・共通文書・両クライアントの reference を更新した。
+- 分割件数は PrepareUploadQueueUseCase の定数 `MAX_IDS_PER_LOOKUP` に置いた。LocalUploadRecordsRepository はシグネチャを維持し、`getUploadRecords` の KDoc に呼び出し側で分割する前提を記した。
+- `./gradlew.bat :feature:media:domain:test :feature:media:domain:ktlintCheck :feature:media:domain:detekt` は成功。Unit Test は 75 件（PrepareUploadQueueUseCaseTest は 12 件）、失敗・スキップとも 0 件。
+- 文書リンク 707 件の参照切れ 0 件、変更した Codex / Claude reference 2 組の不一致 0 件、本番・テストのソース内に削除済み UseCase の参照がないことを確認した。
+- アプリ全体のビルド・実機確認・Instrumented Test は未実施。今回の変更は Domain と文書に限定し、DAO / schema / enqueue 契約を変更していないため。
 
 ### 03. Auth Data
 
