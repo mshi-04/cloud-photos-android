@@ -51,7 +51,7 @@ UseCase を作成・維持する基準:
 
 - 複数の Repository や Scheduler を調整する（例: [`PrepareUploadQueueUseCase`](../feature/media/domain/src/main/kotlin/com/appvoyager/cloudphotos/domain/media/usecase/PrepareUploadQueueUseCase.kt)、[`DeleteMediaUseCase`](../feature/media/domain/src/main/kotlin/com/appvoyager/cloudphotos/domain/media/usecase/DeleteMediaUseCase.kt)、[`RecordMediaUploadUseCase`](../feature/media/domain/src/main/kotlin/com/appvoyager/cloudphotos/domain/media/usecase/RecordMediaUploadUseCase.kt)）。
 - 複数画面・複数 ViewModel・Worker から同じ入口で再利用する（例: [`ScheduleUploadUseCase`](../feature/media/domain/src/main/kotlin/com/appvoyager/cloudphotos/domain/media/usecase/ScheduleUploadUseCase.kt)）。
-- data 操作の前後に入力 validation、保護フィルタ、チャンク分割、状態遷移を伴う（例: [`SyncUploadRecordsUseCase`](../feature/media/domain/src/main/kotlin/com/appvoyager/cloudphotos/domain/media/usecase/SyncUploadRecordsUseCase.kt)、[`GetPendingMediaUseCase`](../feature/media/domain/src/main/kotlin/com/appvoyager/cloudphotos/domain/media/usecase/GetPendingMediaUseCase.kt)）。
+- data 操作の前後に入力 validation、保護フィルタ、チャンク分割、状態遷移を伴う（例: [`SyncUploadRecordsUseCase`](../feature/media/domain/src/main/kotlin/com/appvoyager/cloudphotos/domain/media/usecase/SyncUploadRecordsUseCase.kt)、[`PrepareUploadQueueUseCase`](../feature/media/domain/src/main/kotlin/com/appvoyager/cloudphotos/domain/media/usecase/PrepareUploadQueueUseCase.kt)）。
 
 避けるもの・直接利用の判断:
 
