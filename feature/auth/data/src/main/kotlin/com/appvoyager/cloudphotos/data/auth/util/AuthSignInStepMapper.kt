@@ -3,7 +3,7 @@ package com.appvoyager.cloudphotos.data.auth.util
 import com.amplifyframework.auth.result.step.AuthSignInStep
 import com.appvoyager.cloudphotos.domain.auth.model.SignInStep
 
-object AuthSignInStepMapper {
+internal object AuthSignInStepMapper {
 
     fun mapSignInStep(signInStep: AuthSignInStep): SignInStep = when (signInStep) {
         AuthSignInStep.CONFIRM_SIGN_IN_WITH_CUSTOM_CHALLENGE -> SignInStep.CONFIRM_SIGN_IN_WITH_CUSTOM_CHALLENGE
