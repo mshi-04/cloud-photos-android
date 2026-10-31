@@ -3,6 +3,8 @@ package com.appvoyager.cloudphotos.domain.auth.valueobject
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 
 class ConfirmationCodeTest {
 
@@ -19,7 +21,7 @@ class ConfirmationCodeTest {
     }
 
     @Test
-    fun `of trims and returns code when padded by whitespace`() {
+    fun `of returns trimmed code when padded by whitespace`() {
         // Arrange
         val raw = " 123456 "
 
@@ -30,8 +32,19 @@ class ConfirmationCodeTest {
         assertEquals("123456", code.value)
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = ["１２３４５６", "١٢٣٤٥٦"])
+    fun `of returns code when six Unicode digits`(raw: String) {
+        // Arrange & Act
+        // Boundary: Preserve the Unicode digits accepted by Char.isDigit.
+        val code = ConfirmationCode.of(raw)
+
+        // Assert
+        assertEquals(raw, code.value)
+    }
+
     @Test
-    fun `of throws when blank after trim`() {
+    fun `of throws IllegalArgumentException when blank after trim`() {
         // Arrange
         val raw = "   "
 
@@ -45,7 +58,7 @@ class ConfirmationCodeTest {
     }
 
     @Test
-    fun `of throws when length less than six`() {
+    fun `of throws IllegalArgumentException when length less than six`() {
         // Arrange
         val raw = "12345"
 
@@ -55,11 +68,11 @@ class ConfirmationCodeTest {
         }
 
         // Assert
-        assertEquals("ConfirmationCode must be 6 digits.", ex.message)
+        assertEquals("ConfirmationCode must be 6 characters.", ex.message)
     }
 
     @Test
-    fun `of throws when length greater than six`() {
+    fun `of throws IllegalArgumentException when length greater than six`() {
         // Arrange
         val raw = "1234567"
 
@@ -69,11 +82,11 @@ class ConfirmationCodeTest {
         }
 
         // Assert
-        assertEquals("ConfirmationCode must be 6 digits.", ex.message)
+        assertEquals("ConfirmationCode must be 6 characters.", ex.message)
     }
 
     @Test
-    fun `of throws when contains non digits`() {
+    fun `of throws IllegalArgumentException when contains non digits`() {
         // Arrange
         val raw = "12A456"
 
@@ -83,6 +96,21 @@ class ConfirmationCodeTest {
         }
 
         // Assert
-        assertEquals("ConfirmationCode must be 6 digits.", ex.message)
+        assertEquals("ConfirmationCode must contain only digits.", ex.message)
+    }
+
+    @Test
+    fun `of throws length error when wrong length and contains non digits`() {
+        // Arrange
+        val raw = "12A45"
+
+        // Act
+        // Error: Report the length constraint before checking the character type.
+        val ex = assertThrows<IllegalArgumentException> {
+            ConfirmationCode.of(raw)
+        }
+
+        // Assert
+        assertEquals("ConfirmationCode must be 6 characters.", ex.message)
     }
 }
