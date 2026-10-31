@@ -1,6 +1,6 @@
 # アプリ本体の規約準拠リファクタリング設計
 
-状態: 段階 01（PR #138）と段階 02 を実施した。段階 03 以降は未着手。
+状態: 段階 01（PR #138）と段階 02（PR #139）はマージ済み。段階 03 は実装・ローカル検証済み。段階 04 以降は未着手。
 調査日: 2026-10-31。
 調査基準: develop `e261bc2` の本番コード・テスト・技術文書。
 
@@ -308,6 +308,14 @@ ViewModel は Screen の初回 composition 中に生成され、Main.immediate �
 - 作業: 8 経路を共通 helper 経由に置き換え、A に挙げた操作だけを覆う facade を追加し、mapper を internal 化する。テスト用の差し替え口はこのモジュールに閉じる。
 - 検証: `./gradlew.bat :feature:auth:domain:test :feature:auth:data:test :feature:auth:ui:test`。上位層へキャンセルが伝播しても通常失敗の表示に変わらず、既存の認証分岐を維持することを確認する。
 - 完了条件: AuthDataSourceImplTest が 8 経路すべてのキャンセル再スローを検証しており、キャンセルが AuthError.Unknown に変わらない。通常エラー分類・サインアウト・退会順序が保たれる。
+
+実装記録（2026-10-31）:
+
+- develop `ff5a663` から `feature/03-auth-data-cancellation` を分岐した。8 経路の結果変換を private な `authResult` に共通化し、9 個の SDK callback 操作を internal な AmplifyAuthFacade へ分離した。SDK 型は Data 内に閉じ、AuthSignInStepMapper を internal 化した。
+- AuthDataSourceImpl の internal コンストラクタから facade を差し替え、既存の `@Inject` コンストラクタから本番実体を委譲する。生成された AuthDataSourceImpl_Factory が既存と同じ単一依存で構築することを確認した。
+- `./gradlew.bat :feature:auth:domain:test :feature:auth:data:test :feature:auth:ui:test :feature:auth:data:ktlintCheck :feature:auth:data:detekt` は成功。Domain 63 件・Data 58 件・UI 48 件の計 169 件、失敗・スキップは 0 件。Data の新規テストは AuthDataSourceImplTest 37 件と AmplifyAuthFacadeTest 6 件。
+- `signOut`、`deleteUser`、FCM cleanup と既存のキャンセル helper の処理本体を移行前と照合し、変更がないことを確認した。認証のキャンセル契約を `docs/authentication.md` と両クライアントの DataSource reference に反映した。
+- 文書リンク 710 件の参照切れ 0 件、変更した Codex / Claude DataSource reference の不一致 0 件。実機での Cognito / Firebase 接続、Instrumented Test、アプリ全体のビルドは未実施。Data 内の SDK 境界を JVM テストで確認し、画面・DB・WorkManager・app 配線は変更していないため。
 
 ### 04. Media Data の I/O
 

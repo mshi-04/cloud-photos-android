@@ -30,51 +30,28 @@ import kotlin.coroutines.cancellation.CancellationException
 import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.suspendCancellableCoroutine
 
-class AuthDataSourceImpl @Inject constructor(private val deviceTokenDataSource: DeviceTokenDataSource) :
-    AuthDataSource {
+class AuthDataSourceImpl internal constructor(
+    private val deviceTokenDataSource: DeviceTokenDataSource,
+    private val auth: AmplifyAuthFacade
+) : AuthDataSource {
 
-    override suspend fun signUp(request: SignUpRequest): AuthResult<Unit> = runCatching {
+    @Inject
+    constructor(deviceTokenDataSource: DeviceTokenDataSource) : this(deviceTokenDataSource, AmplifyAuthFacade())
+
+    override suspend fun signUp(request: SignUpRequest): AuthResult<Unit> = authResult {
         val options = AuthSignUpOptions.builder()
             .userAttribute(AuthUserAttributeKey.email(), request.email.value)
             .build()
 
-        suspendCancellableCoroutine { coroutine ->
-            Amplify.Auth.signUp(
-                request.email.value,
-                request.password.value,
-                options,
-                { coroutine.resume(Unit) { _, _, _ -> } },
-                { coroutine.resumeWithException(it) }
-            )
-        }
-    }.fold(
-        onSuccess = { AuthResult.Success(Unit) },
-        onFailure = { AuthResult.Error(AuthErrorMapper.map(it)) }
-    )
+        auth.signUp(request.email.value, request.password.value, options)
+    }
 
-    override suspend fun confirmSignUp(request: ConfirmSignUpRequest): AuthResult<Unit> = runCatching {
-        suspendCancellableCoroutine { coroutine ->
-            Amplify.Auth.confirmSignUp(
-                request.email.value,
-                request.code.value,
-                { coroutine.resume(Unit) { _, _, _ -> } },
-                { coroutine.resumeWithException(it) }
-            )
-        }
-    }.fold(
-        onSuccess = { AuthResult.Success(Unit) },
-        onFailure = { AuthResult.Error(AuthErrorMapper.map(it)) }
-    )
+    override suspend fun confirmSignUp(request: ConfirmSignUpRequest): AuthResult<Unit> = authResult {
+        auth.confirmSignUp(request.email.value, request.code.value)
+    }
 
-    override suspend fun signIn(request: SignInRequest): AuthResult<SignInState> = runCatching {
-        val result = suspendCancellableCoroutine { coroutine ->
-            Amplify.Auth.signIn(
-                request.email.value,
-                request.password.value,
-                { coroutine.resume(it) { _, _, _ -> } },
-                { coroutine.resumeWithException(it) }
-            )
-        }
+    override suspend fun signIn(request: SignInRequest): AuthResult<SignInState> = authResult {
+        val result = auth.signIn(request.email.value, request.password.value)
         if (result.isSignedIn) {
             SignInState.SignedIn
         } else {
@@ -105,10 +82,7 @@ class AuthDataSourceImpl @Inject constructor(private val deviceTokenDataSource: 
                 }
             }
         }
-    }.fold(
-        onSuccess = { AuthResult.Success(it) },
-        onFailure = { AuthResult.Error(AuthErrorMapper.map(it)) }
-    )
+    }
 
     override suspend fun signOut(): AuthResult<Unit> {
         runCatching { cleanUpFcmToken() }
@@ -133,20 +107,9 @@ class AuthDataSourceImpl @Inject constructor(private val deviceTokenDataSource: 
         }
     }
 
-    override suspend fun fetchCurrentUser(): AuthResult<AuthUser> = runCatching {
-        val user = suspendCancellableCoroutine { continuation ->
-            Amplify.Auth.getCurrentUser(
-                { continuation.resume(it) { _, _, _ -> } },
-                { continuation.resumeWithException(it) }
-            )
-        }
-
-        val attributes = suspendCancellableCoroutine { continuation ->
-            Amplify.Auth.fetchUserAttributes(
-                { continuation.resume(it) { _, _, _ -> } },
-                { continuation.resumeWithException(it) }
-            )
-        }
+    override suspend fun fetchCurrentUser(): AuthResult<AuthUser> = authResult {
+        val user = auth.getCurrentUser()
+        val attributes = auth.fetchUserAttributes()
 
         val emailAttribute = attributes.find { it.key == AuthUserAttributeKey.email() }
             ?: throw IllegalStateException("Email attribute not found for current user")
@@ -155,68 +118,26 @@ class AuthDataSourceImpl @Inject constructor(private val deviceTokenDataSource: 
             userId = UserId.of(user.userId),
             email = Email.of(emailAttribute.value)
         )
-    }.fold(
-        onSuccess = { AuthResult.Success(it) },
-        onFailure = { AuthResult.Error(AuthErrorMapper.map(it)) }
-    )
+    }
 
-    override suspend fun getSession(): AuthResult<AuthSession> = runCatching {
-        val signedIn = suspendCancellableCoroutine { coroutine ->
-            Amplify.Auth.fetchAuthSession(
-                { session ->
-                    coroutine.resume(session.isSignedIn) { _, _, _ -> }
-                },
-                { error -> coroutine.resumeWithException(error) }
-            )
-        }
+    override suspend fun getSession(): AuthResult<AuthSession> = authResult {
+        val signedIn = auth.fetchAuthSession().isSignedIn
         AuthSession(
             state = if (signedIn) AuthState.SignedIn else AuthState.Guest
         )
-    }.fold(
-        onSuccess = { AuthResult.Success(it) },
-        onFailure = { AuthResult.Error(AuthErrorMapper.map(it)) }
-    )
+    }
 
-    override suspend fun resendSignUpCode(request: ResendSignUpCodeRequest): AuthResult<Unit> = runCatching {
-        suspendCancellableCoroutine { coroutine ->
-            Amplify.Auth.resendSignUpCode(
-                request.email.value,
-                { coroutine.resume(Unit) { _, _, _ -> } },
-                { coroutine.resumeWithException(it) }
-            )
-        }
-    }.fold(
-        onSuccess = { AuthResult.Success(Unit) },
-        onFailure = { AuthResult.Error(AuthErrorMapper.map(it)) }
-    )
+    override suspend fun resendSignUpCode(request: ResendSignUpCodeRequest): AuthResult<Unit> = authResult {
+        auth.resendSignUpCode(request.email.value)
+    }
 
-    override suspend fun resetPassword(request: ResetPasswordRequest): AuthResult<Unit> = runCatching {
-        suspendCancellableCoroutine { coroutine ->
-            Amplify.Auth.resetPassword(
-                request.email.value,
-                { coroutine.resume(Unit) { _, _, _ -> } },
-                { coroutine.resumeWithException(it) }
-            )
-        }
-    }.fold(
-        onSuccess = { AuthResult.Success(Unit) },
-        onFailure = { AuthResult.Error(AuthErrorMapper.map(it)) }
-    )
+    override suspend fun resetPassword(request: ResetPasswordRequest): AuthResult<Unit> = authResult {
+        auth.resetPassword(request.email.value)
+    }
 
-    override suspend fun confirmResetPassword(request: ConfirmResetPasswordRequest): AuthResult<Unit> = runCatching {
-        suspendCancellableCoroutine { coroutine ->
-            Amplify.Auth.confirmResetPassword(
-                request.email.value,
-                request.newPassword.value,
-                request.code.value,
-                { coroutine.resume(Unit) { _, _, _ -> } },
-                { error -> coroutine.resumeWithException(error) }
-            )
-        }
-    }.fold(
-        onSuccess = { AuthResult.Success(Unit) },
-        onFailure = { AuthResult.Error(AuthErrorMapper.map(it)) }
-    )
+    override suspend fun confirmResetPassword(request: ConfirmResetPasswordRequest): AuthResult<Unit> = authResult {
+        auth.confirmResetPassword(request.email.value, request.newPassword.value, request.code.value)
+    }
 
     override suspend fun deleteUser(): AuthResult<Unit> {
         runCatching { cleanUpFcmToken() }
@@ -254,6 +175,14 @@ class AuthDataSourceImpl @Inject constructor(private val deviceTokenDataSource: 
             }
         )
     }
+
+    private suspend fun <T> authResult(block: suspend () -> T): AuthResult<T> = runCatching { block() }.fold(
+        onSuccess = { AuthResult.Success(it) },
+        onFailure = {
+            it.rethrowIfCancellation()
+            AuthResult.Error(AuthErrorMapper.map(it))
+        }
+    )
 
     private fun Throwable.rethrowIfCancellation() {
         if (this is CancellationException) throw this
