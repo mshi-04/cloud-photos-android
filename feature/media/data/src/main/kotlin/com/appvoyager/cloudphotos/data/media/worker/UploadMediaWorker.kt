@@ -35,11 +35,15 @@ class UploadMediaWorker @AssistedInject constructor(
         val pendingRecords = localRepository.getPendingUploadRecords()
         if (pendingRecords.isEmpty()) return Result.success()
 
-        notificationHelper.show(pendingRecords.size)
+        var primaryFailure: Throwable? = null
         val batchResult = try {
+            notificationHelper.show(pendingRecords.size)
             processPendingRecords(pendingRecords)
+        } catch (failure: Throwable) {
+            primaryFailure = failure
+            throw failure
         } finally {
-            notificationHelper.cancel()
+            cancelNotification(primaryFailure)
         }
 
         if (!batchResult.hasTemporaryFailure && batchResult.successCount > 0) {
@@ -48,6 +52,15 @@ class UploadMediaWorker @AssistedInject constructor(
         }
 
         return if (batchResult.hasTemporaryFailure) Result.retry() else Result.success()
+    }
+
+    private fun cancelNotification(primaryFailure: Throwable?) {
+        try {
+            notificationHelper.cancel()
+        } catch (failure: Throwable) {
+            if (primaryFailure == null) throw failure
+            if (failure !== primaryFailure) primaryFailure.addSuppressed(failure)
+        }
     }
 
     @Suppress("ThrowsCount", "LoopWithTooManyJumpStatements")

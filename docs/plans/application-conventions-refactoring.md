@@ -130,8 +130,8 @@ MediaStoreCapturedPhotoWriter は createContentValues / insert が try の外に
 
 進行中通知の cancel は現在ループ後にしかない。SDK / Room 処理がキャンセル・例外で抜けると到達しない。
 
-- 通知表示後のループを try / finally で囲み、finally で通知を消す。
-- 例外や CancellationException は元の契約どおり伝播させ、retry / success へ変換しない。
+- 通知表示要求とループを try / finally で囲み、finally で通知の終了を試みる。show 自体の失敗時も cancel を 1 回試みる。
+- 例外や CancellationException は元の契約どおり伝播させ、retry / success へ変換しない。先行例外がある場合は、通知終了側の例外を suppressed として追加して先行例外を保持する。先行例外がない場合の通知終了失敗は従来どおり伝播させる。
 - `completeUpload()` は通常のループ完了後、`!hasTemporaryFailure && successCount > 0` の場合だけ 1 回呼ぶ。finally には入れない。
 - pending が空なら通知を表示も cancel もしない。S3 再転送防止、1 件ごとの status 再取得、失敗分類、cleanup 後の PENDING_DELETE は維持する。
 - [Media Sync](../media-sync.md) の `UploadMediaWorker` の処理順とアップロード通知の節に、例外・キャンセルで抜けた場合も finally で進行中通知を消すことを追記する。
@@ -350,9 +350,10 @@ ViewModel は Screen の初回 composition 中に生成され、Main.immediate �
 実装記録（2026-11-01）:
 
 - develop `a12ee83`（PR #141 マージ後）から `feature/05-media-data-worker-cleanup` を分岐した。UploadMediaWorker は通知の寿命管理を doWork に残し、レコードのループを private な processPendingRecords へ分離した。ループを囲む `finally` で通知を終了し、通常完了・未捕捉例外・キャンセルのいずれでも `cancel()` を 1 回呼ぶ。`completeUpload()` は通知終了後の通常経路だけに残し、pending が空の場合の早期 return も維持した。既存ループのネストを増やさず、レコードごとの処理本体・順序・失敗分類は移行前と一致することを確認した。
+- PR #143 の指摘 1 件と Nitpick 1 件に対応し、通知表示も `try / finally` の対象へ含めた。通知終了の失敗が先行する DB 例外・アップロードキャンセルを置き換えないよう suppressed として保持する。先行例外がない場合の終了失敗は通常例外・キャンセルとも伝播し、`completeUpload()` は呼ばない。表示失敗、DB 例外・アップロードキャンセルと通知終了失敗の競合、通知終了単独の失敗を追加の 6 ケースで検証した。
 - UploadMediaWorkerTest は、複数件成功時の成功数・完了要求 1 回と通知終了との順序、先行成功と一時失敗の混在、成功 0 件・pending 空の場合を補強した。追加テストは先行成功後の未捕捉 DB 例外、待機中アップロードの実ジョブキャンセル、S3 cleanup 中のキャンセル、完了要求中のキャンセルを確認する。異常終了したループでは `completeUpload()` を呼ばない。
 - 変更モジュールは `:feature:media:data`。`docs/media-sync.md` と両クライアントの Worker reference に通知終了・完了要求の契約を反映した。公開 domain contract、同期の失敗分類、DB 保存形式、Scheduler の名前・policy・constraints・input Data は変更していない。
-- `bash gradlew :feature:media:domain:test :feature:media:data:test :feature:media:ui:test :feature:media:data:ktlintCheck :feature:media:data:detekt -Pkotlin.compiler.execution.strategy=in-process --max-workers=4 --console=plain` は成功。JVM テストは Domain 75 件・Data 94 件・UI 47 件の計 216 件（UploadMediaWorkerTest は 24 件）、失敗・エラー・スキップはすべて 0 件。
+- `bash gradlew :feature:media:domain:test :feature:media:data:test :feature:media:ui:test :feature:media:data:ktlintCheck :feature:media:data:detekt -Pkotlin.compiler.execution.strategy=in-process --max-workers=4 --console=plain` は成功。JVM テストは Domain 75 件・Data 100 件・UI 47 件の計 222 件（UploadMediaWorkerTest は 30 件）、失敗・エラー・スキップはすべて 0 件。
 - 文書リンク 710 件の参照切れ 0 件、変更した Codex / Claude Worker reference の不一致 0 件、`git diff --check` 成功。
 - アプリ全体のビルド・Instrumented Test・実機の通知表示とクラウド接続は未実施。変更は Worker の終了処理と JVM テスト・文書に限定し、DI / resource / DAO / schema / enqueue 契約は変更していないため。次段階 06 の Auth UI / 共有 resource への影響はない。
 

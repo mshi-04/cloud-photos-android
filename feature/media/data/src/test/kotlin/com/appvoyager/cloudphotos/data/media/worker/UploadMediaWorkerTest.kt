@@ -45,6 +45,8 @@ import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class UploadMediaWorkerTest {
@@ -531,6 +533,104 @@ class UploadMediaWorkerTest {
             notificationHelper.cancel()
             remoteRepository.completeUpload(UploadSuccessCount.of(1))
         }
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = [false, true])
+    fun `doWork rethrows database failure when notification cleanup fails`(cancelWithCancellation: Boolean) = runTest {
+        // Arrange
+        val record = createUploadRecord()
+        val databaseFailure = IllegalStateException("Database unavailable")
+        val cancelFailure = if (cancelWithCancellation) {
+            CancellationException("Notification cancellation interrupted")
+        } else {
+            IllegalStateException("Notification service unavailable")
+        }
+        arrangePendingUploads(record)
+        coEvery { localRepository.getUploadRecords(any()) } throws databaseFailure
+        every { notificationHelper.cancel() } throws cancelFailure
+
+        // Act
+        // Error: cleanup failures are suppressed on the original database exception, including cancellation
+        val thrown = assertThrows<IllegalStateException> { worker.doWork() }
+
+        // Assert
+        assertSame(databaseFailure, thrown)
+        assertEquals(listOf(cancelFailure), thrown.suppressed.toList())
+        verify(exactly = 1) { notificationHelper.cancel() }
+        coVerify(exactly = 0) { remoteRepository.completeUpload(any()) }
+    }
+
+    @Test
+    fun `doWork rethrows upload cancellation when notification cancel also fails`() = runTest {
+        // Arrange
+        val record = createPendingRecord()
+        val cancellation = CancellationException("Upload cancelled")
+        val cancelFailure = IllegalStateException("Notification service unavailable")
+        arrangePendingUploads(record)
+        coEvery { uploadDataSource.uploadMedia(any()) } throws cancellation
+        every { notificationHelper.cancel() } throws cancelFailure
+
+        // Act
+        // Coroutine: a notification failure must not turn an upload cancellation into a different failure
+        val thrown = assertThrows<CancellationException> { worker.doWork() }
+
+        // Assert
+        assertSame(cancellation, thrown)
+        assertEquals(listOf(cancelFailure), thrown.suppressed.toList())
+        verify(exactly = 1) { notificationHelper.cancel() }
+        coVerify(exactly = 0) { localRepository.saveUploadRecords(any()) }
+        coVerify(exactly = 0) { remoteRepository.completeUpload(any()) }
+    }
+
+    @Test
+    fun `doWork rethrows notification show failure when showing progress fails`() = runTest {
+        // Arrange
+        val record = createUploadRecord()
+        val showFailure = SecurityException("Cannot display notification")
+        arrangePendingUploads(record)
+        every { notificationHelper.show(1) } throws showFailure
+
+        // Act
+        // Error: attempt cleanup once even if displaying progress fails before record processing begins
+        val thrown = assertThrows<SecurityException> { worker.doWork() }
+
+        // Assert
+        assertSame(showFailure, thrown)
+        verify(exactly = 1) { notificationHelper.show(1) }
+        verify(exactly = 1) { notificationHelper.cancel() }
+        coVerify(exactly = 0) { localRepository.getUploadRecords(any()) }
+        coVerify(exactly = 0) { uploadDataSource.uploadMedia(any()) }
+        coVerify(exactly = 0) { remoteRepository.completeUpload(any()) }
+        coVerifyOrder {
+            notificationHelper.show(1)
+            notificationHelper.cancel()
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = [false, true])
+    fun `doWork rethrows cancel failure when processing succeeds`(cancelWithCancellation: Boolean) = runTest {
+        // Arrange
+        val record = createUploadRecord()
+        val cancelFailure = if (cancelWithCancellation) {
+            CancellationException("Notification cancellation interrupted")
+        } else {
+            IllegalStateException("Notification service unavailable")
+        }
+        arrangePendingUploads(record)
+        coEvery { remoteRepository.createUploadRecord(any()) } returns record.copy(syncStatus = SyncStatus.SYNCED)
+        every { notificationHelper.cancel() } throws cancelFailure
+
+        // Act
+        // Error/Coroutine: without an earlier failure, notification errors and cancellation still propagate
+        val thrown = assertThrows<Exception> { worker.doWork() }
+
+        // Assert
+        assertSame(cancelFailure, thrown)
+        verify(exactly = 1) { notificationHelper.cancel() }
+        coVerify(exactly = 1) { remoteRepository.createUploadRecord(any()) }
+        coVerify(exactly = 0) { remoteRepository.completeUpload(any()) }
     }
 
     private fun arrangePendingUploads(
