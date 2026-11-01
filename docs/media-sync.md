@@ -57,9 +57,9 @@ MediaViewModel.onScreenResumed()
    - **リモート API 登録（`remoteRepository.createUploadRecord`）**:
      - 成功したら返却されたレコード（`SyncStatus.SYNCED`）をローカル DB に保存し、`successCount` を増やす。
      - 永続失敗した場合は、先にアップロードした S3 オブジェクトの削除（`deleteUploadedObject`）を試みる。S3 削除に成功したら `cloudStoragePath = null, syncStatus = SyncStatus.ERROR` を保存し、S3 削除に失敗したら孤立オブジェクトを残さないよう `SyncStatus.PENDING_DELETE` を保存して削除フローへ引き継ぐ。
-4. ループ終了後に `notificationHelper.cancel()` で進行中通知を消す。
+4. ループを囲む `try / finally` の `finally` で `notificationHelper.cancel()` を 1 回呼び、通常完了・例外・キャンセルのいずれでも進行中通知を消す。未捕捉の例外と `CancellationException` は伝播させる。pending が空の場合は表示も cancel もしない。
 5. **`completeUpload()` の呼び出し単位**:
-   - `!hasTemporaryFailure && successCount > 0` のときだけ、ループの外（Worker 実行単位）で 1 回だけ `remoteRepository.completeUpload(UploadSuccessCount.of(successCount))` を呼ぶ。レコードごとに呼ぶと完了通知が重複するため禁止する。
+   - `!hasTemporaryFailure && successCount > 0` のときだけ、ループが通常完了して通知を消した後（Worker 実行単位）で 1 回だけ `remoteRepository.completeUpload(UploadSuccessCount.of(successCount))` を呼ぶ。レコードごとに呼ぶと完了通知が重複するため禁止する。`completeUpload()` は `finally` に入れず、途中まで成功していてもループが例外・キャンセルで抜けた場合は呼ばない。
    - `completeUpload()` の失敗は `CancellationException` のみ再スローし、アップロード自体の成否は巻き戻さない。
 6. `hasTemporaryFailure` が true なら `Result.retry()`、false なら `Result.success()` を返す。
 
@@ -117,6 +117,6 @@ MediaViewModel.onScreenResumed()
 アップロードに関する通知は 2 種類あり、どちらも `POST_NOTIFICATIONS` 権限（Android 13 以降）を確認してから表示する。通知チャネルは [`CloudPhotosApp.onCreate()`](../app/src/main/kotlin/com/appvoyager/cloudphotos/CloudPhotosApp.kt) で作成する。
 
 - **アップロード進行中通知（[`UploadNotificationHelper`](../feature/media/data/src/main/kotlin/com/appvoyager/cloudphotos/data/media/worker/UploadNotificationHelper.kt)）**:
-  - チャネル ID `"upload_progress"`（`IMPORTANCE_LOW`）。`UploadMediaWorker` が処理開始時に表示し、ループ終了時に `cancel()` する。
+  - チャネル ID `"upload_progress"`（`IMPORTANCE_LOW`）。`UploadMediaWorker` は pending が 1 件以上ある場合だけ表示を要求し、ループを囲む `finally` で `cancel()` する。通常完了だけでなく例外・キャンセルで中断した場合も通知を消す。pending が空の場合は表示も cancel もしない。
 - **アップロード完了プッシュ通知（[`CloudPhotosFirebaseMessagingService.onMessageReceived`](../app/src/main/kotlin/com/appvoyager/cloudphotos/fcm/CloudPhotosFirebaseMessagingService.kt)）**:
   - チャネル ID `"upload_complete"`（`IMPORTANCE_DEFAULT`、silent）。`completeUpload()` 後にバックエンドから配信される FCM notification メッセージを受信し、`MainActivity` を開く `PendingIntent` 付きで表示する。

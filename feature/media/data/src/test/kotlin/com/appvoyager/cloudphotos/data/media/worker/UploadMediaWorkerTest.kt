@@ -18,23 +18,33 @@ import com.appvoyager.cloudphotos.domain.media.valueobject.MediaId
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaUploadedAt
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaUrl
 import com.appvoyager.cloudphotos.domain.media.valueobject.UploadSuccessCount
+import io.mockk.clearAllMocks
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.slot
+import io.mockk.verify
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class UploadMediaWorkerTest {
@@ -52,6 +62,7 @@ class UploadMediaWorkerTest {
 
     @BeforeEach
     fun setUp() {
+        clearAllMocks()
         Dispatchers.setMain(testDispatcher)
         worker = UploadMediaWorker(
             context,
@@ -75,10 +86,14 @@ class UploadMediaWorkerTest {
         coEvery { localRepository.getPendingUploadRecords() } returns emptyList()
 
         // Act
+        // Boundary: an empty queue does not display or cancel a progress notification
         val result = worker.doWork()
 
         // Assert
         assertEquals(ListenableWorker.Result.success(), result)
+        verify(exactly = 0) { notificationHelper.show(any()) }
+        verify(exactly = 0) { notificationHelper.cancel() }
+        coVerify(exactly = 0) { remoteRepository.completeUpload(any()) }
     }
 
     @Test
@@ -186,10 +201,13 @@ class UploadMediaWorkerTest {
             UploadResult.Error(UploadError.Network("timeout"))
 
         // Act
+        // Error: a temporary failure still dismisses progress before retrying
         val result = worker.doWork()
 
         // Assert
         assertEquals(ListenableWorker.Result.retry(), result)
+        verify(exactly = 1) { notificationHelper.show(1) }
+        verify(exactly = 1) { notificationHelper.cancel() }
     }
 
     @Test
@@ -316,28 +334,46 @@ class UploadMediaWorkerTest {
         coEvery { uploadDataSource.deleteUploadedObject(any()) } just runs
 
         // Act
+        // Error: permanent failures finish the loop and dismiss progress without retrying
         val result = worker.doWork()
 
         // Assert
         assertEquals(ListenableWorker.Result.success(), result)
+        verify(exactly = 1) { notificationHelper.cancel() }
     }
 
     @Test
     fun `doWork calls completeUpload with success count when all records upload successfully`() = runTest {
         // Arrange
-        val record = createUploadRecord()
-        val createdRecord = record.copy(syncStatus = SyncStatus.SYNCED)
+        val first = createUploadRecord("external_primary_1")
+        val second = createUploadRecord("external_primary_2")
         val slot = slot<UploadSuccessCount>()
-        arrangePendingUploads(record)
-        coEvery { remoteRepository.createUploadRecord(any()) } returns createdRecord
+        arrangePendingUploads(first)
+        coEvery { localRepository.getPendingUploadRecords() } returns listOf(first, second)
+        coEvery { localRepository.getUploadRecords(listOf(second.mediaId)) } returns listOf(second)
+        coEvery { remoteRepository.createUploadRecord(match { it.mediaId == first.mediaId }) } returns
+            first.copy(syncStatus = SyncStatus.SYNCED)
+        coEvery { remoteRepository.createUploadRecord(match { it.mediaId == second.mediaId }) } returns
+            second.copy(syncStatus = SyncStatus.SYNCED)
         coEvery { remoteRepository.completeUpload(capture(slot)) } just runs
 
         // Act
-        worker.doWork()
+        // Interaction: dismiss progress before sending a single completion for the whole batch
+        val result = worker.doWork()
 
         // Assert
+        assertEquals(ListenableWorker.Result.success(), result)
+        verify(exactly = 1) { notificationHelper.show(2) }
+        verify(exactly = 1) { notificationHelper.cancel() }
         coVerify(exactly = 1) { remoteRepository.completeUpload(any()) }
-        assertEquals(UploadSuccessCount.of(1), slot.captured)
+        assertEquals(UploadSuccessCount.of(2), slot.captured)
+        coVerifyOrder {
+            notificationHelper.show(2)
+            remoteRepository.createUploadRecord(any())
+            remoteRepository.createUploadRecord(any())
+            notificationHelper.cancel()
+            remoteRepository.completeUpload(UploadSuccessCount.of(2))
+        }
     }
 
     @Test
@@ -350,25 +386,35 @@ class UploadMediaWorkerTest {
         coEvery { uploadDataSource.deleteUploadedObject(any()) } just runs
 
         // Act
+        // Boundary: dismiss progress even when no record succeeds, without announcing completion
         worker.doWork()
 
         // Assert
         coVerify(exactly = 0) { remoteRepository.completeUpload(any()) }
+        verify(exactly = 1) { notificationHelper.cancel() }
     }
 
     @Test
     fun `doWork ignores completeUpload when hasTemporaryFailure is true`() = runTest {
         // Arrange
-        val record = createPendingRecord()
-        arrangePendingUploads(record)
+        val first = createUploadRecord("external_primary_1")
+        val second = createPendingRecord("external_primary_2")
+        arrangePendingUploads(first)
+        coEvery { localRepository.getPendingUploadRecords() } returns listOf(first, second)
+        coEvery { localRepository.getUploadRecords(listOf(second.mediaId)) } returns listOf(second)
+        coEvery { remoteRepository.createUploadRecord(any()) } returns first.copy(syncStatus = SyncStatus.SYNCED)
         coEvery { uploadDataSource.uploadMedia(any()) } returns
             UploadResult.Error(UploadError.Network("timeout"))
 
         // Act
-        worker.doWork()
+        // Boundary: a temporary failure suppresses completion even after an earlier success
+        val result = worker.doWork()
 
         // Assert
+        assertEquals(ListenableWorker.Result.retry(), result)
+        coVerify(exactly = 1) { remoteRepository.createUploadRecord(any()) }
         coVerify(exactly = 0) { remoteRepository.completeUpload(any()) }
+        verify(exactly = 1) { notificationHelper.cancel() }
     }
 
     @Test
@@ -385,6 +431,106 @@ class UploadMediaWorkerTest {
 
         // Assert
         assertEquals(ListenableWorker.Result.success(), result)
+    }
+
+    @Test
+    fun `doWork rethrows database failure when a later record cannot be reloaded`() = runTest {
+        // Arrange
+        val first = createUploadRecord("external_primary_1")
+        val second = createUploadRecord("external_primary_2")
+        val failure = IllegalStateException("Database unavailable")
+        arrangePendingUploads(first)
+        coEvery { localRepository.getPendingUploadRecords() } returns listOf(first, second)
+        coEvery { remoteRepository.createUploadRecord(any()) } returns first.copy(syncStatus = SyncStatus.SYNCED)
+        coEvery { localRepository.getUploadRecords(listOf(second.mediaId)) } throws failure
+
+        // Act
+        // Error: dismiss progress on an uncaught DB failure without completing a partially processed batch
+        val thrown = assertThrows<IllegalStateException> { worker.doWork() }
+
+        // Assert
+        assertSame(failure, thrown)
+        verify(exactly = 1) { notificationHelper.show(2) }
+        verify(exactly = 1) { notificationHelper.cancel() }
+        coVerify(exactly = 1) { remoteRepository.createUploadRecord(any()) }
+        coVerify(exactly = 1) { localRepository.saveUploadRecords(listOf(first.copy(syncStatus = SyncStatus.SYNCED))) }
+        coVerify(exactly = 0) { remoteRepository.completeUpload(any()) }
+        coVerifyOrder {
+            remoteRepository.createUploadRecord(any())
+            localRepository.getUploadRecords(listOf(second.mediaId))
+            notificationHelper.cancel()
+        }
+    }
+
+    @Test
+    fun `doWork rethrows cancellation when a running upload is cancelled`() = runTest {
+        // Arrange
+        val record = createPendingRecord()
+        arrangePendingUploads(record)
+        coEvery { uploadDataSource.uploadMedia(any()) } coAnswers { awaitCancellation() }
+        val work = async { worker.doWork() }
+        runCurrent()
+        coVerify(exactly = 1) { uploadDataSource.uploadMedia(any()) }
+        verify(exactly = 1) { notificationHelper.show(1) }
+        verify(exactly = 0) { notificationHelper.cancel() }
+
+        // Act
+        // Coroutine: cancelling the suspended worker dismisses progress without returning success or retry
+        work.cancelAndJoin()
+
+        // Assert
+        assertThrows<CancellationException> { work.await() }
+        verify(exactly = 1) { notificationHelper.cancel() }
+        coVerify(exactly = 0) { localRepository.saveUploadRecords(any()) }
+        coVerify(exactly = 0) { remoteRepository.createUploadRecord(any()) }
+        coVerify(exactly = 0) { remoteRepository.completeUpload(any()) }
+    }
+
+    @Test
+    fun `doWork rethrows cancellation when S3 cleanup is cancelled`() = runTest {
+        // Arrange
+        val record = createUploadRecord()
+        val cancellation = CancellationException("Cleanup cancelled")
+        arrangePendingUploads(record)
+        coEvery { remoteRepository.createUploadRecord(any()) } throws
+            Exception("Unexpected response code 400: Bad Request")
+        coEvery { uploadDataSource.deleteUploadedObject(any()) } throws cancellation
+
+        // Act
+        // Coroutine: cancellation inside nested cleanup also dismisses progress and skips completion
+        val thrown = assertThrows<CancellationException> { worker.doWork() }
+
+        // Assert
+        assertEquals(cancellation.message, thrown.message)
+        verify(exactly = 1) { notificationHelper.show(1) }
+        verify(exactly = 1) { notificationHelper.cancel() }
+        coVerify(exactly = 1) { uploadDataSource.deleteUploadedObject(requireNotNull(record.cloudStoragePath)) }
+        coVerify(exactly = 0) { localRepository.saveUploadRecords(any()) }
+        coVerify(exactly = 0) { remoteRepository.completeUpload(any()) }
+    }
+
+    @Test
+    fun `doWork rethrows cancellation when completion request is cancelled`() = runTest {
+        // Arrange
+        val record = createUploadRecord()
+        val cancellation = CancellationException("Completion cancelled")
+        arrangePendingUploads(record)
+        coEvery { remoteRepository.createUploadRecord(any()) } returns record.copy(syncStatus = SyncStatus.SYNCED)
+        coEvery { remoteRepository.completeUpload(any()) } throws cancellation
+
+        // Act
+        // Coroutine: progress has already ended when cancellation interrupts the completion request
+        val thrown = assertThrows<CancellationException> { worker.doWork() }
+
+        // Assert
+        assertEquals(cancellation.message, thrown.message)
+        verify(exactly = 1) { notificationHelper.cancel() }
+        coVerify(exactly = 1) { remoteRepository.completeUpload(UploadSuccessCount.of(1)) }
+        coVerifyOrder {
+            remoteRepository.createUploadRecord(any())
+            notificationHelper.cancel()
+            remoteRepository.completeUpload(UploadSuccessCount.of(1))
+        }
     }
 
     private fun arrangePendingUploads(

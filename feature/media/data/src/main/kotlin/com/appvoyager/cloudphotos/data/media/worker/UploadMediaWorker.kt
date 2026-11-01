@@ -8,6 +8,7 @@ import com.appvoyager.cloudphotos.data.media.datasource.UploadDataSource
 import com.appvoyager.cloudphotos.domain.media.model.MediaType
 import com.appvoyager.cloudphotos.domain.media.model.SyncStatus
 import com.appvoyager.cloudphotos.domain.media.model.UploadError
+import com.appvoyager.cloudphotos.domain.media.model.UploadRecord
 import com.appvoyager.cloudphotos.domain.media.model.UploadResult
 import com.appvoyager.cloudphotos.domain.media.repository.LocalUploadRecordsRepository
 import com.appvoyager.cloudphotos.domain.media.repository.RemoteUploadRecordsRepository
@@ -30,13 +31,27 @@ class UploadMediaWorker @AssistedInject constructor(
     private val notificationHelper: UploadNotificationHelper
 ) : CoroutineWorker(context, workerParams) {
 
-    @Suppress("ThrowsCount", "LoopWithTooManyJumpStatements")
     override suspend fun doWork(): Result {
         val pendingRecords = localRepository.getPendingUploadRecords()
         if (pendingRecords.isEmpty()) return Result.success()
 
         notificationHelper.show(pendingRecords.size)
+        val batchResult = try {
+            processPendingRecords(pendingRecords)
+        } finally {
+            notificationHelper.cancel()
+        }
 
+        if (!batchResult.hasTemporaryFailure && batchResult.successCount > 0) {
+            runCatching { remoteRepository.completeUpload(UploadSuccessCount.of(batchResult.successCount)) }
+                .onFailure { if (it is CancellationException) throw it }
+        }
+
+        return if (batchResult.hasTemporaryFailure) Result.retry() else Result.success()
+    }
+
+    @Suppress("ThrowsCount", "LoopWithTooManyJumpStatements")
+    private suspend fun processPendingRecords(pendingRecords: List<UploadRecord>): UploadBatchResult {
         var hasTemporaryFailure = false
         var successCount = 0
 
@@ -140,14 +155,7 @@ class UploadMediaWorker @AssistedInject constructor(
             }
         }
 
-        notificationHelper.cancel()
-
-        if (!hasTemporaryFailure && successCount > 0) {
-            runCatching { remoteRepository.completeUpload(UploadSuccessCount.of(successCount)) }
-                .onFailure { if (it is CancellationException) throw it }
-        }
-
-        return if (hasTemporaryFailure) Result.retry() else Result.success()
+        return UploadBatchResult(hasTemporaryFailure, successCount)
     }
 
     private fun isS3PermanentFailure(error: UploadError): Boolean = when (error) {
@@ -166,6 +174,8 @@ class UploadMediaWorker @AssistedInject constructor(
         if (code == 404 || code == 429) return false
         return code in 400..499
     }
+
+    private data class UploadBatchResult(val hasTemporaryFailure: Boolean, val successCount: Int)
 
     companion object {
         const val WORK_NAME = "upload_media_worker"

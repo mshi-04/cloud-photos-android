@@ -18,7 +18,7 @@ WorkManager のバックグラウンド処理を実行する `CoroutineWorker`�
   - **`UploadMediaWorker` / `DeleteMediaWorker`**:
     - `doWork()` の処理順、1 件ごとの再取得と status 確認、`cloudStoragePath` 既存時の S3 スキップ、永続失敗（`SyncStatus.ERROR`）と一時失敗（状態維持 + `Result.retry()`）の分類、`completeUpload()` を Worker 実行単位の末尾で 1 回だけ呼ぶ契約、S3 孤立オブジェクトの扱いは [`docs/media-sync.md`](../../../../docs/media-sync.md) を厳守する。
     - リモート API の `isPermanentFailure` 判定（404・429 を除く 4xx）は `UploadMediaWorker` と `DeleteMediaWorker` の両方に存在するため、変更時は両 Worker の整合を確認する。
-    - `UploadNotificationHelper` の進行中通知は pending が 1 件以上ある場合のみ表示し、ループ終了時に必ず `cancelNotification()` する。
+    - `UploadNotificationHelper` の進行中通知は pending が 1 件以上ある場合のみ表示し、ループを囲む `finally` で、通常完了・例外・キャンセルのいずれでも `cancel()` を 1 回呼ぶ。pending が空なら表示も cancel もしない。`completeUpload()` は `finally` に入れず、ループが通常完了し、一時失敗がなく成功件数が 1 件以上の場合だけ呼ぶ。
   - **`RegisterDeviceTokenWorker`（`app` モジュール）**:
     - Scheduler interface を介さず `companion object` の `enqueue(context, token)` から直接 WorkManager へ登録する。
     - メディア系 Worker（`KEEP`・input Data なし）とは異なり、最新トークンを優先するため `ExistingWorkPolicy.REPLACE`・`KEY_TOKEN` input Data・指数バックオフを使用する。

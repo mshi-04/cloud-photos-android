@@ -1,6 +1,6 @@
 # アプリ本体の規約準拠リファクタリング設計
 
-状態: 段階 01（PR #138）・02（PR #139）・03（PR #140）はマージ済み。段階 04 は実装・JVM テスト・静的解析・ビルド検証済み（端末検証待ち）。段階 05 以降は未着手。
+状態: 段階 01（PR #138）・02（PR #139）・03（PR #140）・04（PR #141）はマージ済み。段階 05 は実装・JVM テスト・静的解析済み。段階 06 以降は未着手。
 調査日: 2026-10-31。
 調査基準: develop `e261bc2` の本番コード・テスト・技術文書。
 
@@ -346,6 +346,15 @@ ViewModel は Screen の初回 composition 中に生成され、Main.immediate �
 - 作業: 通知終了を finally で保証し、通常完了・例外・キャンセルを確認する。`docs/media-sync.md` の処理順とアップロード通知の記述を更新する。
 - 検証: `./gradlew.bat :feature:media:domain:test :feature:media:data:test :feature:media:ui:test`。通知、例外伝播、completeUpload の呼び出し条件・回数を確認する。
 - 完了条件: 通知を表示したループの異常終了でも通知が消え、異常終了時には completeUpload を呼ばない。Scheduler の名前・policy・constraints・input Data と DB 保存形式は変わらない。
+
+実装記録（2026-11-01）:
+
+- develop `a12ee83`（PR #141 マージ後）から `feature/05-media-data-worker-cleanup` を分岐した。UploadMediaWorker は通知の寿命管理を doWork に残し、レコードのループを private な processPendingRecords へ分離した。ループを囲む `finally` で通知を終了し、通常完了・未捕捉例外・キャンセルのいずれでも `cancel()` を 1 回呼ぶ。`completeUpload()` は通知終了後の通常経路だけに残し、pending が空の場合の早期 return も維持した。既存ループのネストを増やさず、レコードごとの処理本体・順序・失敗分類は移行前と一致することを確認した。
+- UploadMediaWorkerTest は、複数件成功時の成功数・完了要求 1 回と通知終了との順序、先行成功と一時失敗の混在、成功 0 件・pending 空の場合を補強した。追加テストは先行成功後の未捕捉 DB 例外、待機中アップロードの実ジョブキャンセル、S3 cleanup 中のキャンセル、完了要求中のキャンセルを確認する。異常終了したループでは `completeUpload()` を呼ばない。
+- 変更モジュールは `:feature:media:data`。`docs/media-sync.md` と両クライアントの Worker reference に通知終了・完了要求の契約を反映した。公開 domain contract、同期の失敗分類、DB 保存形式、Scheduler の名前・policy・constraints・input Data は変更していない。
+- `bash gradlew :feature:media:domain:test :feature:media:data:test :feature:media:ui:test :feature:media:data:ktlintCheck :feature:media:data:detekt -Pkotlin.compiler.execution.strategy=in-process --max-workers=4 --console=plain` は成功。JVM テストは Domain 75 件・Data 94 件・UI 47 件の計 216 件（UploadMediaWorkerTest は 24 件）、失敗・エラー・スキップはすべて 0 件。
+- 文書リンク 710 件の参照切れ 0 件、変更した Codex / Claude Worker reference の不一致 0 件、`git diff --check` 成功。
+- アプリ全体のビルド・Instrumented Test・実機の通知表示とクラウド接続は未実施。変更は Worker の終了処理と JVM テスト・文書に限定し、DI / resource / DAO / schema / enqueue 契約は変更していないため。次段階 06 の Auth UI / 共有 resource への影響はない。
 
 ### 06. Auth UI と共有 resource
 
