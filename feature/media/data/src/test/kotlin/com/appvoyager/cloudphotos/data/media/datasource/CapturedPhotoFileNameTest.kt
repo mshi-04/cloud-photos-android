@@ -14,7 +14,7 @@ class CapturedPhotoFileNameTest {
         "1700000000123, Asia/Tokyo, 2023-11-15-07-13-20-123",
         "0, America/Los_Angeles, 1969-12-31-16-00-00-000"
     )
-    fun `createCapturedPhotoFileName returns formatted timestamp when time and zone are fixed`(
+    fun `create returns formatted timestamp when time and zone are fixed`(
         epochMillis: Long,
         timeZoneId: String,
         expected: String
@@ -24,7 +24,7 @@ class CapturedPhotoFileNameTest {
 
         // Act
         // Boundary: the supplied zone controls date rollover while milliseconds retain three digits
-        val actual = createCapturedPhotoFileName(epochMillis, timeZone)
+        val actual = CapturedPhotoFileName.create(epochMillis, timeZone)
 
         // Assert
         assertEquals(expected, actual)

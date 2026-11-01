@@ -17,6 +17,8 @@ import com.appvoyager.cloudphotos.domain.common.Clock
 import com.appvoyager.cloudphotos.domain.media.model.SavePhotoResult
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaUrl
 import java.io.File
+import java.io.FileDescriptor
+import java.io.FileOutputStream
 import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -74,6 +76,7 @@ class MediaStoreCapturedPhotoWriterInstrumentedTest {
         assertEquals(listOf(provider.insertedUri), provider.updatedUris)
         assertArrayEquals(bytes, provider.bytesAtPublication)
         assertArrayEquals(bytes, provider.file.readBytes())
+        assertEquals(1, provider.closedDescriptorCount)
         assertTrue(provider.deletedUris.isEmpty())
     }
 
@@ -203,6 +206,21 @@ class MediaStoreCapturedPhotoWriterInstrumentedTest {
         assertEquals(listOf("insert", "open", "delete"), provider.events)
         assertEquals(listOf(provider.insertedUri), provider.deletedUris)
         assertTrue(provider.updatedUris.isEmpty())
+        assertEquals(1, provider.closedDescriptorCount)
+    }
+
+    @Test
+    fun write_returnsStorageFull_whenOutputWriteThrowsEnospc() = runTest {
+        // Arrange
+        provider.storageFullOnWrite = true
+        val writer = MediaStoreCapturedPhotoWriter(resolver, clock, StandardTestDispatcher(testScheduler))
+
+        // Act
+        // Error: ENOSPC raised by output.write is reported as storage exhaustion
+        val actual = writer.write(byteArrayOf(1))
+
+        // Assert
+        assertEquals(SavePhotoResult.Error(SavePhotoResult.ErrorType.STORAGE_FULL), actual)
     }
 
     @Test
@@ -367,8 +385,12 @@ private class PhotoProvider(val file: File) : ContentProvider() {
     var nullInsert = false
     var nullStream = false
     var readOnlyStream = false
+    var storageFullOnWrite = false
     var updateCount = 1
     private val descriptors = mutableListOf<ParcelFileDescriptor>()
+    private val openedFileDescriptors = mutableListOf<FileDescriptor>()
+    val closedDescriptorCount: Int
+        get() = openedFileDescriptors.count { !it.valid() }
 
     override fun onCreate(): Boolean = true
 
@@ -392,7 +414,16 @@ private class PhotoProvider(val file: File) : ContentProvider() {
         }
         val descriptor = ParcelFileDescriptor.open(file, descriptorMode)
         descriptors += descriptor
-        return AssetFileDescriptor(descriptor, 0, AssetFileDescriptor.UNKNOWN_LENGTH)
+        openedFileDescriptors += descriptor.fileDescriptor
+        return object : AssetFileDescriptor(descriptor, 0, AssetFileDescriptor.UNKNOWN_LENGTH) {
+            override fun createOutputStream(): FileOutputStream {
+                if (!storageFullOnWrite) return super.createOutputStream()
+                return object : AssetFileDescriptor.AutoCloseOutputStream(this) {
+                    override fun write(buffer: ByteArray): Unit =
+                        throw IOException("Write failed", ErrnoException("write", OsConstants.ENOSPC))
+                }
+            }
+        }
     }
 
     override fun update(uri: Uri, values: ContentValues?, selection: String?, selectionArgs: Array<out String>?): Int {

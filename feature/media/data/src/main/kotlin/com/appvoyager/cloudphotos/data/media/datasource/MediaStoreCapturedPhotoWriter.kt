@@ -79,7 +79,7 @@ class MediaStoreCapturedPhotoWriter internal constructor(
     }
 
     private fun createContentValues(): ContentValues {
-        val name = createCapturedPhotoFileName(clock.getCurrentTime(), TimeZone.getDefault())
+        val name = CapturedPhotoFileName.create(clock.getCurrentTime(), TimeZone.getDefault())
 
         return ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, name)
@@ -94,7 +94,9 @@ class MediaStoreCapturedPhotoWriter internal constructor(
     }
 }
 
-internal fun createCapturedPhotoFileName(epochMillis: Long, timeZone: TimeZone): String =
-    SimpleDateFormat("yyyy-MM-dd-HH-mm-ss-SSS", Locale.US).apply {
-        this.timeZone = timeZone
-    }.format(epochMillis)
+internal object CapturedPhotoFileName {
+    fun create(epochMillis: Long, timeZone: TimeZone): String =
+        SimpleDateFormat("yyyy-MM-dd-HH-mm-ss-SSS", Locale.US).apply {
+            this.timeZone = timeZone
+        }.format(epochMillis)
+}

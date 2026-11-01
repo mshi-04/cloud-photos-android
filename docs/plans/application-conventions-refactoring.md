@@ -112,7 +112,7 @@ MediaStoreCapturedPhotoWriter は createContentValues / insert が try の外に
 - insert 前の失敗では削除を呼ばない。書き込み / pending 解除失敗では作成済みレコードの削除を試みる。
 - CancellationException は再スローし、その経路ではレコードを削除しない現行契約を維持する。NonCancellable cleanup は追加しない。
 - 既存の Clock を注入し、ファイル名を決める時刻だけを差し替えられるようにする。形式、Locale.US、端末の既存 timezone、保存場所、MIME、IS_PENDING の順序を維持する。
-- ファイル名の生成は、epoch millis と TimeZone を受け取る internal な純粋関数に切り出す。本番では Clock の時刻と `TimeZone.getDefault()` を渡す。
+- ファイル名の生成は、epoch millis と TimeZone を受け取る `internal object CapturedPhotoFileName` の純粋関数 `create` に切り出す。本番では Clock の時刻と `TimeZone.getDefault()` を渡す。
 - dispatcher のテスト差し替えは、SettingsDataSourceImpl と同様に internal コンストラクタで受け取り、Inject コンストラクタから委譲する。新しい共有モジュール・DI qualifier は導入しない。
 - data 層で ContentResolver を呼ぶほかのクラスも確認した。LocalMediaDataSourceImpl は既に IO へ切り替えている。ContentTypeResolverImpl は非 suspend の `getType` を呼ぶが、呼び出し元は UploadMediaWorker だけで main thread を通らないため今回の対象外とし、main thread から呼ぶ経路を追加する時に main-safe にする。
 - 両クライアントの `data-implementation/references/datasource.md` にある MediaStoreCapturedPhotoWriter の契約に、insert 失敗・null insert の扱いと Clock 注入を追記する。
@@ -331,9 +331,10 @@ ViewModel は Screen の初回 composition 中に生成され、Main.immediate �
 
 - develop `e8178a3` から `feature/04-media-data-io` を分岐した。変更モジュールは `:feature:media:data` と両クライアントの DataSource reference。この段階では公開 domain contract・保存形式・Worker / Scheduler は変更していない。
 - MediaStoreCapturedPhotoWriter は ContentValues の生成・insert から保存確定までを Result 境界に含め、実際に作成した Uri だけを失敗時に cleanup する。null insert は SAVE_FAILED、ENOSPC は STORAGE_FULL、キャンセル時は再スローして削除しない。Clock を既存 binding から注入し、ファイル名関数を固定時刻・固定 TimeZone で検証できるようにした。
+- PR #141 のレビュー指摘に合わせ、ファイル名生成を `internal object CapturedPhotoFileName` の `create` にまとめた。Nitpick 2 件にも対応し、正常保存と書き込み失敗の戻り直後（teardown 前）に descriptor が閉じていることを確認する assertion と、`output.write` 自体が ENOSPC を原因とする IOException を投げた場合の STORAGE_FULL 分類テストを追加した。
 - UploadDataSourceImpl は注入した dispatcher の同じ IO context 内で stream の open / use / close を所有する。Amplify callback 待機・operation.cancel と UploadResult の分類を維持した。dispatcher は両クラスの internal コンストラクタから差し替え、Inject コンストラクタは Dispatchers.IO へ委譲する。app DI の変更は不要。
-- JVM テストではファイル名の 4 条件と、アップロードの成功・SDK 失敗・同期例外・null / open 失敗・キャンセルを確認する。成功時には open / SDK 呼び出し / close の dispatcher も検証する。Android テストは ContentResolver.wrap(ContentProvider) と実ファイル・descriptor で保存の 17 条件を検証する構成とし、追加のテスト framework・Gradle 設定は導入していない。
-- `bash gradlew :feature:media:data:test :feature:media:data:ktlintCheck :feature:media:data:detekt :feature:media:data:assembleDebugAndroidTest -Pkotlin.compiler.execution.strategy=in-process --max-workers=4 --console=plain` は成功。JVM テスト 90 件（新規はアップロード 8 件・ファイル名 4 件）、失敗・エラー・スキップはすべて 0 件。Android テスト 17 件は APK のビルドまで確認した。
+- JVM テストではファイル名の 4 条件と、アップロードの成功・SDK 失敗・同期例外・null / open 失敗・キャンセルを確認する。成功時には open / SDK 呼び出し / close の dispatcher も検証する。Android テストは ContentResolver.wrap(ContentProvider) と実ファイル・descriptor で保存の 18 条件を検証する構成とし、追加のテスト framework・Gradle 設定は導入していない。
+- `bash gradlew :feature:media:data:test :feature:media:data:ktlintCheck :feature:media:data:detekt :feature:media:data:assembleDebugAndroidTest -Pkotlin.compiler.execution.strategy=in-process --max-workers=4 --console=plain` は成功。JVM テスト 90 件（新規はアップロード 8 件・ファイル名 4 件）、失敗・エラー・スキップはすべて 0 件。Android テスト 18 件は APK のビルドまで確認した。
 - `bash gradlew :app:assembleDevDebug -PDEV_API_BASE_URL=http://localhost:8080/dummy -PDEV_COGNITO_CLIENT_ID=dummy_client_id -PDEV_S3_BUCKET_NAME=dummy_bucket_name -Pkotlin.compiler.execution.strategy=in-process --max-workers=4 --console=plain` は成功。既存 ClockModule と ApplicationContext で Hilt が解決することを確認した。環境値が未設定のため CI の Fork PR と同じダミー接続値を用いたコンパイル・DI の確認であり、実環境への接続検証ではない。
 - 文書リンク 710 件の参照切れ 0 件、変更した Codex / Claude DataSource reference の不一致 0 件、`git diff --check` 成功。接続端末は `adb devices` で 0 台、エミュレータもないため、`:feature:media:data:connectedDebugAndroidTest`、実機の保存操作・クラウドへのアップロードは未実施。次段階 05 の Worker interface・通知契約への影響はないが、段階 04 の端末検証は残す。
 
