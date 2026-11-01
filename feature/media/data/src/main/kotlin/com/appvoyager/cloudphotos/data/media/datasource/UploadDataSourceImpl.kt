@@ -15,24 +15,37 @@ import java.util.UUID
 import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.coroutines.resumeWithException
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 
-class UploadDataSourceImpl @Inject constructor(@param:ApplicationContext private val context: Context) :
-    UploadDataSource {
+class UploadDataSourceImpl internal constructor(
+    private val context: Context,
+    private val ioDispatcher: CoroutineDispatcher
+) : UploadDataSource {
 
-    override suspend fun uploadMedia(request: UploadMediaRequest): UploadResult<CloudStoragePath> = try {
+    @Inject
+    constructor(@ApplicationContext context: Context) : this(context, Dispatchers.IO)
+
+    override suspend fun uploadMedia(request: UploadMediaRequest): UploadResult<CloudStoragePath> =
+        withContext(ioDispatcher) {
+            upload(request)
+        }
+
+    private suspend fun upload(request: UploadMediaRequest): UploadResult<CloudStoragePath> = try {
         val contentUri = request.localUri.value.toUri()
         val extension = resolveExtension(request.contentType.value)
         val remotePath = StoragePath.fromIdentityId { identityId ->
             "private/$identityId/${UUID.randomUUID()}$extension"
         }
 
-        val inputStream = context.contentResolver.openInputStream(contentUri)
-            ?: throw FileNotFoundException("Cannot open input stream for: ${request.localUri.value}")
-
         val options = StorageUploadInputStreamOptions.builder()
             .contentType(request.contentType.value)
             .build()
+
+        val inputStream = context.contentResolver.openInputStream(contentUri)
+            ?: throw FileNotFoundException("Cannot open input stream for: ${request.localUri.value}")
 
         val result = inputStream.use { stream ->
             suspendCancellableCoroutine { coroutine ->
