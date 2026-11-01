@@ -1,5 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- 認証フォーム -->
+    <string name="auth_email_label">メールアドレス</string>
+    <string name="auth_password_label">パスワード</string>
+    <string name="auth_clear_description">クリア</string>
+
+    <!-- ログイン画面 -->
+    <string name="login_forgot_password">パスワードを忘れた場合</string>
+    <string name="login_create_account">アカウントを作成</string>
+    <string name="login_sign_in">ログイン</string>
+
+    <!-- パスワード再設定の開始画面 -->
+    <string name="forgot_password_description">登録済みのメールアドレスを入力してください。\nパスワードリセット用の確認コードを送信します。</string>
+    <string name="forgot_password_send_code">確認コードを送信</string>
+    <string name="forgot_password_back_to_login">ログイン画面に戻る</string>
 
     <!-- 確認コード入力ボックス -->
     <string name="code_input_box_description">確認コード %1$d 桁目</string>

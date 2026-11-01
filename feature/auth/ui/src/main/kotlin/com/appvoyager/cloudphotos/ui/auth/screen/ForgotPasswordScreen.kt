@@ -1,5 +1,6 @@
 package com.appvoyager.cloudphotos.ui.auth.screen
 
+import android.content.res.Configuration
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -166,7 +167,7 @@ private fun ForgotPasswordContent(
         Spacer(modifier = Modifier.height(80.dp))
 
         Text(
-            text = "パスワードのリセット",
+            text = stringResource(R.string.reset_password_title),
             style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.onSurface
         )
@@ -174,7 +175,7 @@ private fun ForgotPasswordContent(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "登録済みのメールアドレスを入力してください。\nパスワードリセット用の確認コードを送信します。",
+            text = stringResource(R.string.forgot_password_description),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -184,14 +185,17 @@ private fun ForgotPasswordContent(
         OutlinedTextField(
             value = email,
             onValueChange = onEmailChanged,
-            label = { Text("メールアドレス") },
+            label = { Text(stringResource(R.string.auth_email_label)) },
             singleLine = true,
             isError = emailError != null,
             supportingText = emailError?.let { error -> { Text(error) } },
             trailingIcon = {
                 if (email.isNotEmpty()) {
                     IconButton(onClick = onClearEmail) {
-                        Icon(Icons.Default.Clear, contentDescription = "クリア")
+                        Icon(
+                            Icons.Default.Clear,
+                            contentDescription = stringResource(R.string.auth_clear_description)
+                        )
                     }
                 }
             },
@@ -219,7 +223,7 @@ private fun ForgotPasswordContent(
             ),
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("確認コードを送信")
+            Text(stringResource(R.string.forgot_password_send_code))
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -229,14 +233,27 @@ private fun ForgotPasswordContent(
             enabled = !isLoading,
             modifier = Modifier.align(Alignment.CenterHorizontally)
         ) {
-            Text("ログイン画面に戻る")
+            Text(stringResource(R.string.forgot_password_back_to_login))
         }
 
         Spacer(modifier = Modifier.height(80.dp))
     }
 }
 
-@Preview(showBackground = true)
+@Preview(name = "English light", showBackground = true, locale = "en")
+@Preview(
+    name = "Japanese dark",
+    showBackground = true,
+    locale = "ja",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Preview(name = "Japanese light", showBackground = true, locale = "ja")
+@Preview(
+    name = "English dark",
+    showBackground = true,
+    locale = "en",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
 @Composable
 private fun ForgotPasswordContentPreview() {
     CloudPhotosTheme {
@@ -253,7 +270,13 @@ private fun ForgotPasswordContentPreview() {
     }
 }
 
-@Preview(showBackground = true)
+@Preview(name = "Japanese light", showBackground = true, locale = "ja")
+@Preview(
+    name = "English dark",
+    showBackground = true,
+    locale = "en",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
 @Composable
 private fun ForgotPasswordContentWithEmailPreview() {
     CloudPhotosTheme {

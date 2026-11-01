@@ -2,13 +2,13 @@ package com.appvoyager.cloudphotos.ui.util
 
 import com.appvoyager.cloudphotos.domain.auth.valueobject.Email
 
-object StringUtils {
+internal object StringUtils {
 
     private const val VISIBLE_LOCAL_CHARS = 2
     private const val MAX_MASK_ASTERISKS = 5
     private const val MASKED_EMAIL = "****@****"
 
-    internal fun maskEmail(email: Email): String {
+    fun maskEmail(email: Email): String {
         val parts = email.value.split("@")
         if (parts.size != 2) return MASKED_EMAIL
         val local = parts[0]

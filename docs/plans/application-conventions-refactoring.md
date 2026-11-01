@@ -1,6 +1,6 @@
 # アプリ本体の規約準拠リファクタリング設計
 
-状態: 段階 01（PR #138）・02（PR #139）・03（PR #140）はマージ済み。段階 04 は実装・JVM テスト・静的解析・ビルド検証済み（端末検証待ち）。段階 05 以降は未着手。
+状態: 段階 01（PR #138）・02（PR #139）・03（PR #140）・04（PR #141）はマージ済み。段階 05 は `feature/05-media-data-worker-cleanup` の `4cfc055` で実装・ローカル検証済み（未マージ）。段階 06 は実装・全 JVM テスト・ビルド・静的解析済み（Preview 実描画・端末確認待ち）。段階 07 以降は未着手。
 調査日: 2026-10-31。
 調査基準: develop `e261bc2` の本番コード・テスト・技術文書。
 
@@ -356,6 +356,17 @@ ViewModel は Screen の初回 composition 中に生成され、Main.immediate �
 - 検証: core:ui を変更するため `./gradlew.bat test`、resource を含む `assembleDevDebug`、auth の日英 Preview とフォーム操作。
 - 完了条件: 表示文字列と contentDescription が resource から解決され、有効条件・コード入力・再送 timer が既存どおり動く。Effect の配送方式と Lifecycle gating はこの段階では変更しない。
 - F の派生値の配置を行う場合は、06 のマージ後に別ブランチ `feature/06b-auth-ui-derived-values` で行い、検証は `./gradlew.bat :feature:auth:ui:test` と auth の Preview・フォーム操作とする。
+
+実装記録（2026-11-01）:
+
+- develop `a12ee83` から `feature/06-auth-ui-conventions` を分岐した。段階 05 の作業は別ブランチのローカル commit `4cfc055` に保全し、このブランチには含めていない。Auth 系と Media 系を並行できる計画に従い、03 がマージ済みの develop を起点とした。
+- Login / ForgotPassword のラベル・説明・ボタン・contentDescription を core:ui の resource 参照に変更し、日英 9 組を追加した。既存の reset_password_title と hide / show_password_description を再利用し、本番の日本語文言・改行を維持した。Login のエラー Preview も既存の resource を参照し、アカウントの存在を示す直書きサンプルは残していない。
+- StringUtils / ValidationUtils を internal object に限定した。利用箇所はすべて `:feature:auth:ui` 内に閉じており、変換・検証ロジックは変更していない。
+- 通常状態は日英 × light / dark、エラー・loading・メール入力済みは代表 2 組の計 14 Preview を定義した。変更は表示文言の解決と helper の可視性に限定し、フォームの有効条件・コード入力・再送 timer・Effect の配送・Lifecycle gating は維持した。任意項目の 06b・07 はこのブランチに含めない。
+- `bash gradlew test :app:assembleDevDebug :core:ui:ktlintCheck :core:ui:detekt :feature:auth:ui:ktlintCheck :feature:auth:ui:detekt :core:ui:lintDebug :feature:auth:ui:lintDebug -PDEV_API_BASE_URL=http://localhost:8080/dummy -PDEV_COGNITO_CLIENT_ID=dummy_client_id -PDEV_S3_BUCKET_NAME=dummy_bucket_name -PPROD_API_BASE_URL=http://localhost:8080/dummy -PPROD_COGNITO_CLIENT_ID=dummy_client_id -PPROD_S3_BUCKET_NAME=dummy_bucket_name -Pkotlin.compiler.execution.strategy=in-process --max-workers=4 --console=plain` は成功。全 JVM テストは延べ 429 件（app の dev / prod 各 16 件を別集計、Auth UI は 48 件）、失敗・エラー・スキップはいずれも 0 件。フォームの検証、コード貼り付け、再送 timer 等は既存の Auth UI テストで確認し、状態遷移を変えていないためテストの追加・書き換えは行っていない。
+- Android lint は両モジュールとも error 0 件。core:ui の既存 settings_grid_column_value に PluralsCandidate warning が 1 件あるが、今回追加した resource ではなく、既存値も変更していない。日英の string 名は各 81 件で一致し、重複・参照不足はない。既存 72 組と追加した日本語 9 組の文言・改行が移行前と一致することを確認した。
+- 文書リンク 710 件の参照切れ 0 件、`git diff --check` 成功。独立した静的レビューでは指摘なし。表示文字列以外の layout / callback / 有効条件、ViewModel / UiState / timer / Effect / Lifecycle を維持していることを確認した。
+- 開発環境値が未設定のため、ビルドと JVM テストには CI と同じダミー接続値を用いた。実環境への接続検証ではない。Android Studio と接続端末・エミュレータがないため、Preview の実描画・長文の収まり・端末上のフォーム操作は未実施。Preview 定義のコンパイルと resource build / lint までを検証範囲とする。
 
 ### 07. Auth UI の Effect 配送（任意）
 

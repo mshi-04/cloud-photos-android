@@ -1,5 +1,6 @@
 package com.appvoyager.cloudphotos.ui.auth.screen
 
+import android.content.res.Configuration
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -203,14 +204,17 @@ private fun LoginContent(
         OutlinedTextField(
             value = email,
             onValueChange = onEmailChanged,
-            label = { Text("メールアドレス") },
+            label = { Text(stringResource(R.string.auth_email_label)) },
             singleLine = true,
             isError = emailError != null,
             supportingText = emailError?.let { error -> { Text(error) } },
             trailingIcon = {
                 if (email.isNotEmpty()) {
                     IconButton(onClick = onClearEmail) {
-                        Icon(Icons.Default.Clear, contentDescription = "クリア")
+                        Icon(
+                            Icons.Default.Clear,
+                            contentDescription = stringResource(R.string.auth_clear_description)
+                        )
                     }
                 }
             },
@@ -229,7 +233,7 @@ private fun LoginContent(
         OutlinedTextField(
             value = password,
             onValueChange = onPasswordChanged,
-            label = { Text("パスワード") },
+            label = { Text(stringResource(R.string.auth_password_label)) },
             singleLine = true,
             isError = passwordError != null,
             supportingText = passwordError?.let { error -> { Text(error) } },
@@ -242,7 +246,10 @@ private fun LoginContent(
                 Row {
                     if (password.isNotEmpty()) {
                         IconButton(onClick = onClearPassword) {
-                            Icon(Icons.Default.Clear, contentDescription = "クリア")
+                            Icon(
+                                Icons.Default.Clear,
+                                contentDescription = stringResource(R.string.auth_clear_description)
+                            )
                         }
                     }
                     IconButton(onClick = onTogglePasswordVisibility) {
@@ -252,7 +259,13 @@ private fun LoginContent(
                             } else {
                                 Icons.Default.Visibility
                             },
-                            contentDescription = if (isPasswordVisible) "パスワードを隠す" else "パスワードを表示"
+                            contentDescription = stringResource(
+                                if (isPasswordVisible) {
+                                    R.string.hide_password_description
+                                } else {
+                                    R.string.show_password_description
+                                }
+                            )
                         )
                     }
                 }
@@ -276,7 +289,7 @@ private fun LoginContent(
             onClick = onForgotPassword
         ) {
             Text(
-                text = "パスワードを忘れた場合",
+                text = stringResource(R.string.login_forgot_password),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.primary
             )
@@ -293,7 +306,7 @@ private fun LoginContent(
                 onClick = onSignUp,
                 enabled = isFormValid && !isLoading
             ) {
-                Text("アカウントを作成")
+                Text(stringResource(R.string.login_create_account))
             }
 
             Button(
@@ -304,7 +317,7 @@ private fun LoginContent(
                     containerColor = MaterialTheme.colorScheme.primary
                 )
             ) {
-                Text("ログイン")
+                Text(stringResource(R.string.login_sign_in))
             }
         }
 
@@ -312,7 +325,20 @@ private fun LoginContent(
     }
 }
 
-@Preview(showBackground = true)
+@Preview(name = "English light", showBackground = true, locale = "en")
+@Preview(
+    name = "Japanese dark",
+    showBackground = true,
+    locale = "ja",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Preview(name = "Japanese light", showBackground = true, locale = "ja")
+@Preview(
+    name = "English dark",
+    showBackground = true,
+    locale = "en",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
 @Composable
 private fun LoginContentPreview() {
     CloudPhotosTheme {
@@ -336,7 +362,13 @@ private fun LoginContentPreview() {
     }
 }
 
-@Preview(showBackground = true)
+@Preview(name = "Japanese light", showBackground = true, locale = "ja")
+@Preview(
+    name = "English dark",
+    showBackground = true,
+    locale = "en",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
 @Composable
 private fun LoginContentWithErrorPreview() {
     CloudPhotosTheme {
@@ -344,8 +376,8 @@ private fun LoginContentWithErrorPreview() {
             email = "test@example.com",
             password = "pass",
             isPasswordVisible = false,
-            emailError = "このメールアドレスは既に登録されています",
-            passwordError = "パスワードは8文字以上で入力してください",
+            emailError = stringResource(R.string.error_email_already_registered),
+            passwordError = stringResource(R.string.error_password_too_short),
             isFormValid = false,
             isLoading = false,
             onEmailChanged = {},
@@ -360,7 +392,13 @@ private fun LoginContentWithErrorPreview() {
     }
 }
 
-@Preview(showBackground = true)
+@Preview(name = "Japanese light", showBackground = true, locale = "ja")
+@Preview(
+    name = "English dark",
+    showBackground = true,
+    locale = "en",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
 @Composable
 private fun LoadingOverlayPreview() {
     CloudPhotosTheme {
