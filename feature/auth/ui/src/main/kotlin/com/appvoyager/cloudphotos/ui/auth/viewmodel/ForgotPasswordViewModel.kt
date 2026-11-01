@@ -11,6 +11,7 @@ import com.appvoyager.cloudphotos.ui.auth.effect.AuthSnackbarMessage
 import com.appvoyager.cloudphotos.ui.auth.effect.ForgotPasswordEffect
 import com.appvoyager.cloudphotos.ui.auth.uistate.AuthFieldError
 import com.appvoyager.cloudphotos.ui.auth.uistate.ForgotPasswordUiState
+import com.appvoyager.cloudphotos.ui.util.ValidationUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -31,6 +32,11 @@ class ForgotPasswordViewModel @Inject constructor(private val resetPasswordUseCa
 
     private val _effect = MutableSharedFlow<ForgotPasswordEffect>(extraBufferCapacity = 1)
     val effect: SharedFlow<ForgotPasswordEffect> = _effect.asSharedFlow()
+
+    val isFormValid: Boolean
+        get() = with(_uiState.value) {
+            email.isNotBlank() && ValidationUtils.isValidEmailFormat(email)
+        }
 
     fun onEmailChanged(value: String) = _uiState.update { it.copy(email = value, emailError = null) }
 
@@ -59,7 +65,7 @@ class ForgotPasswordViewModel @Inject constructor(private val resetPasswordUseCa
     }
 
     private fun validateForm(): Boolean {
-        if (!_uiState.value.isFormValid) {
+        if (!isFormValid) {
             _uiState.update { it.copy(emailError = AuthFieldError.InvalidEmail) }
             return false
         }

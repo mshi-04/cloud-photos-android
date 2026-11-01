@@ -43,6 +43,17 @@ class ResetPasswordViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(ResetPasswordUiState())
     val uiState: StateFlow<ResetPasswordUiState> = _uiState.asStateFlow()
 
+    val isCodeComplete: Boolean
+        get() = isCodeComplete(_uiState.value.codes)
+
+    val isFormValid: Boolean
+        get() = with(_uiState.value) {
+            isCodeComplete(codes) && newPassword.trim().length >= MIN_PASSWORD_LENGTH
+        }
+
+    val isResendEnabled: Boolean
+        get() = with(_uiState.value) { resendTimerSeconds <= 0 && !isLoading }
+
     private var isTimerStarted = false
     private val resendTimer = ResendTimer(
         durationSeconds = ResetPasswordUiState.DEFAULT_RESEND_COOLDOWN_SECONDS,
@@ -112,7 +123,7 @@ class ResetPasswordViewModel @Inject constructor(
     }
 
     fun onResend() {
-        if (_uiState.value.isLoading || !_uiState.value.isResendEnabled) return
+        if (_uiState.value.isLoading || !isResendEnabled) return
         _uiState.update { it.copy(isLoading = true) }
 
         viewModelScope.launch {
@@ -133,9 +144,12 @@ class ResetPasswordViewModel @Inject constructor(
         }
     }
 
+    private fun isCodeComplete(codes: List<String>): Boolean =
+        codes.size == 6 && codes.all { it.length == 1 && it[0].isDigit() }
+
     private fun validateForm(): Boolean {
         var valid = true
-        if (!_uiState.value.isCodeComplete) {
+        if (!isCodeComplete) {
             _uiState.update { it.copy(codeError = AuthFieldError.EnterCode) }
             valid = false
         }
