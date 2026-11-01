@@ -1,6 +1,6 @@
 # アプリ本体の規約準拠リファクタリング設計
 
-状態: 段階 01（PR #138）・02（PR #139）・03（PR #140）・04（PR #141）はマージ済み。段階 05 は `feature/05-media-data-worker-cleanup` の `4cfc055` で実装・ローカル検証済み（未マージ）。段階 06 は実装・全 JVM テスト・ビルド・静的解析済み（Preview 実描画・端末確認待ち）。段階 07 以降は未着手。
+状態: 段階 01（PR #138）・02（PR #139）・03（PR #140）・04（PR #141）・05（PR #143）はマージ済み。段階 06 は実装・全 JVM テスト・ビルド・静的解析済み（Preview 実描画・端末確認待ち）。段階 07 以降は未着手。
 調査日: 2026-10-31。
 調査基準: develop `e261bc2` の本番コード・テスト・技術文書。
 
@@ -130,8 +130,8 @@ MediaStoreCapturedPhotoWriter は createContentValues / insert が try の外に
 
 進行中通知の cancel は現在ループ後にしかない。SDK / Room 処理がキャンセル・例外で抜けると到達しない。
 
-- 通知表示後のループを try / finally で囲み、finally で通知を消す。
-- 例外や CancellationException は元の契約どおり伝播させ、retry / success へ変換しない。
+- 通知表示要求とループを try / finally で囲み、finally で通知の終了を試みる。show 自体の失敗時も cancel を 1 回試みる。
+- 例外や CancellationException は元の契約どおり伝播させ、retry / success へ変換しない。先行例外がある場合は、通知終了側の例外を suppressed として追加して先行例外を保持する。先行例外がない場合の通知終了失敗は従来どおり伝播させる。
 - `completeUpload()` は通常のループ完了後、`!hasTemporaryFailure && successCount > 0` の場合だけ 1 回呼ぶ。finally には入れない。
 - pending が空なら通知を表示も cancel もしない。S3 再転送防止、1 件ごとの status 再取得、失敗分類、cleanup 後の PENDING_DELETE は維持する。
 - [Media Sync](../media-sync.md) の `UploadMediaWorker` の処理順とアップロード通知の節に、例外・キャンセルで抜けた場合も finally で進行中通知を消すことを追記する。
@@ -347,6 +347,16 @@ ViewModel は Screen の初回 composition 中に生成され、Main.immediate �
 - 検証: `./gradlew.bat :feature:media:domain:test :feature:media:data:test :feature:media:ui:test`。通知、例外伝播、completeUpload の呼び出し条件・回数を確認する。
 - 完了条件: 通知を表示したループの異常終了でも通知が消え、異常終了時には completeUpload を呼ばない。Scheduler の名前・policy・constraints・input Data と DB 保存形式は変わらない。
 
+実装記録（2026-11-01）:
+
+- develop `a12ee83`（PR #141 マージ後）から `feature/05-media-data-worker-cleanup` を分岐した。UploadMediaWorker は通知の寿命管理を doWork に残し、レコードのループを private な processPendingRecords へ分離した。ループを囲む `finally` で通知を終了し、通常完了・未捕捉例外・キャンセルのいずれでも `cancel()` を 1 回呼ぶ。`completeUpload()` は通知終了後の通常経路だけに残し、pending が空の場合の早期 return も維持した。既存ループのネストを増やさず、レコードごとの処理本体・順序・失敗分類は移行前と一致することを確認した。
+- PR #143 の指摘 1 件と Nitpick 1 件に対応し、通知表示も `try / finally` の対象へ含めた。通知終了の失敗が先行する DB 例外・アップロードキャンセルを置き換えないよう suppressed として保持する。先行例外がない場合の終了失敗は通常例外・キャンセルとも伝播し、`completeUpload()` は呼ばない。表示失敗、DB 例外・アップロードキャンセルと通知終了失敗の競合、通知終了単独の失敗を追加の 6 ケースで検証した。
+- UploadMediaWorkerTest は、複数件成功時の成功数・完了要求 1 回と通知終了との順序、先行成功と一時失敗の混在、成功 0 件・pending 空の場合を補強した。追加テストは先行成功後の未捕捉 DB 例外、待機中アップロードの実ジョブキャンセル、S3 cleanup 中のキャンセル、完了要求中のキャンセルを確認する。異常終了したループでは `completeUpload()` を呼ばない。
+- 変更モジュールは `:feature:media:data`。`docs/media-sync.md` と両クライアントの Worker reference に通知終了・完了要求の契約を反映した。公開 domain contract、同期の失敗分類、DB 保存形式、Scheduler の名前・policy・constraints・input Data は変更していない。
+- `bash gradlew :feature:media:domain:test :feature:media:data:test :feature:media:ui:test :feature:media:data:ktlintCheck :feature:media:data:detekt -Pkotlin.compiler.execution.strategy=in-process --max-workers=4 --console=plain` は成功。JVM テストは Domain 75 件・Data 100 件・UI 47 件の計 222 件（UploadMediaWorkerTest は 30 件）、失敗・エラー・スキップはすべて 0 件。
+- 文書リンク 710 件の参照切れ 0 件、変更した Codex / Claude Worker reference の不一致 0 件、`git diff --check` 成功。
+- アプリ全体のビルド・Instrumented Test・実機の通知表示とクラウド接続は未実施。変更は Worker の終了処理と JVM テスト・文書に限定し、DI / resource / DAO / schema / enqueue 契約は変更していないため。次段階 06 の Auth UI / 共有 resource への影響はない。
+
 ### 06. Auth UI と共有 resource
 
 ブランチ案: `feature/06-auth-ui-conventions`。変更設計 F の resource 化に対応する。
@@ -359,13 +369,14 @@ ViewModel は Screen の初回 composition 中に生成され、Main.immediate �
 
 実装記録（2026-11-01）:
 
-- develop `a12ee83` から `feature/06-auth-ui-conventions` を分岐した。段階 05 の作業は別ブランチのローカル commit `4cfc055` に保全し、このブランチには含めていない。Auth 系と Media 系を並行できる計画に従い、03 がマージ済みの develop を起点とした。
+- develop `a12ee83` から `feature/06-auth-ui-conventions` を分岐した。Auth 系と Media 系を並行できる計画に従い、03 がマージ済みの develop を起点とした。PR #143 マージ後の develop `e88dc87` を取り込み、段階 05 と 06 の実装記録を両方維持して進捗を統合した。
 - Login / ForgotPassword のラベル・説明・ボタン・contentDescription を core:ui の resource 参照に変更し、日英 9 組を追加した。既存の reset_password_title と hide / show_password_description を再利用し、本番の日本語文言・改行を維持した。Login のエラー Preview も既存の resource を参照し、アカウントの存在を示す直書きサンプルは残していない。
 - StringUtils / ValidationUtils を internal object に限定した。利用箇所はすべて `:feature:auth:ui` 内に閉じており、変換・検証ロジックは変更していない。
 - 通常状態は日英 × light / dark、エラー・loading・メール入力済みは代表 2 組の計 14 Preview を定義した。変更は表示文言の解決と helper の可視性に限定し、フォームの有効条件・コード入力・再送 timer・Effect の配送・Lifecycle gating は維持した。任意項目の 06b・07 はこのブランチに含めない。
 - `bash gradlew test :app:assembleDevDebug :core:ui:ktlintCheck :core:ui:detekt :feature:auth:ui:ktlintCheck :feature:auth:ui:detekt :core:ui:lintDebug :feature:auth:ui:lintDebug -PDEV_API_BASE_URL=http://localhost:8080/dummy -PDEV_COGNITO_CLIENT_ID=dummy_client_id -PDEV_S3_BUCKET_NAME=dummy_bucket_name -PPROD_API_BASE_URL=http://localhost:8080/dummy -PPROD_COGNITO_CLIENT_ID=dummy_client_id -PPROD_S3_BUCKET_NAME=dummy_bucket_name -Pkotlin.compiler.execution.strategy=in-process --max-workers=4 --console=plain` は成功。全 JVM テストは延べ 429 件（app の dev / prod 各 16 件を別集計、Auth UI は 48 件）、失敗・エラー・スキップはいずれも 0 件。フォームの検証、コード貼り付け、再送 timer 等は既存の Auth UI テストで確認し、状態遷移を変えていないためテストの追加・書き換えは行っていない。
 - Android lint は両モジュールとも error 0 件。core:ui の既存 settings_grid_column_value に PluralsCandidate warning が 1 件あるが、今回追加した resource ではなく、既存値も変更していない。日英の string 名は各 81 件で一致し、重複・参照不足はない。既存 72 組と追加した日本語 9 組の文言・改行が移行前と一致することを確認した。
 - 文書リンク 710 件の参照切れ 0 件、`git diff --check` 成功。独立した静的レビューでは指摘なし。表示文字列以外の layout / callback / 有効条件、ViewModel / UiState / timer / Effect / Lifecycle を維持していることを確認した。
+- develop `e88dc87` 統合後も `bash gradlew test :app:assembleDevDebug`（環境値と実行オプションは上記と同じ）は成功。全 JVM テストは延べ 439 件（app の dev / prod を別集計）、失敗・エラー・スキップは 0 件。競合箇所は計画書の進捗行のみで、Auth UI / core:ui は段階 06、Media Data と Worker reference は develop の内容をそのまま保持している。
 - 開発環境値が未設定のため、ビルドと JVM テストには CI と同じダミー接続値を用いた。実環境への接続検証ではない。Android Studio と接続端末・エミュレータがないため、Preview の実描画・長文の収まり・端末上のフォーム操作は未実施。Preview 定義のコンパイルと resource build / lint までを検証範囲とする。
 
 ### 07. Auth UI の Effect 配送（任意）
