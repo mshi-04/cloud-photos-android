@@ -106,7 +106,7 @@ fun ForgotPasswordScreen(
             ForgotPasswordContent(
                 email = uiState.email,
                 emailError = uiState.emailError?.toEmailMessage(),
-                isFormValid = viewModel.isFormValid,
+                isFormValid = viewModel.isFormValid(uiState),
                 isLoading = uiState.isLoading,
                 onEmailChanged = { viewModel.onEmailChanged(it) },
                 onClearEmail = { viewModel.onClearEmail() },

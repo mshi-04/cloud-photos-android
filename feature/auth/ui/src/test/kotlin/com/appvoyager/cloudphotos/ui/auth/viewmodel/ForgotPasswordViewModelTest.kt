@@ -358,6 +358,24 @@ class ForgotPasswordViewModelTest {
     }
 
     @Test
+    fun `isFormValid returns captured validity when current email is cleared`() {
+        // Arrange
+        viewModel.onEmailChanged("test@example.com")
+        val displayedState = viewModel.uiState.value
+
+        // Act
+        // State: the displayed email and its validity use the same snapshot after a newer input update
+        viewModel.onClearEmail()
+        val displayedValidity = viewModel.isFormValid(displayedState)
+
+        // Assert
+        assertTrue(displayedValidity)
+        assertFalse(viewModel.isFormValid)
+        assertEquals("test@example.com", displayedState.email)
+        assertEquals("", viewModel.uiState.value.email)
+    }
+
+    @Test
     fun `onSubmit ignores duplicate request when a valid form is loading`() = runTest(testDispatcher) {
         // Arrange
         val response = CompletableDeferred<AuthResult<Unit>>()

@@ -47,12 +47,10 @@ class ResetPasswordViewModel @Inject constructor(
         get() = isCodeComplete(_uiState.value.codes)
 
     val isFormValid: Boolean
-        get() = with(_uiState.value) {
-            isCodeComplete(codes) && newPassword.trim().length >= MIN_PASSWORD_LENGTH
-        }
+        get() = isFormValid(_uiState.value)
 
     val isResendEnabled: Boolean
-        get() = with(_uiState.value) { resendTimerSeconds <= 0 && !isLoading }
+        get() = isResendEnabled(_uiState.value)
 
     private var isTimerStarted = false
     private val resendTimer = ResendTimer(
@@ -62,6 +60,12 @@ class ResetPasswordViewModel @Inject constructor(
 
     private val _effect = MutableSharedFlow<ResetPasswordEffect>(extraBufferCapacity = 1)
     val effect: SharedFlow<ResetPasswordEffect> = _effect.asSharedFlow()
+
+    internal fun isFormValid(state: ResetPasswordUiState): Boolean =
+        isCodeComplete(state.codes) && state.newPassword.trim().length >= MIN_PASSWORD_LENGTH
+
+    internal fun isResendEnabled(state: ResetPasswordUiState): Boolean =
+        state.resendTimerSeconds <= 0 && !state.isLoading
 
     fun startTimerIfNeeded() {
         if (!isTimerStarted) {

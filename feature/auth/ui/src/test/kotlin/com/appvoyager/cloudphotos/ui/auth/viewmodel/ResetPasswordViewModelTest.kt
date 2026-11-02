@@ -222,6 +222,46 @@ class ResetPasswordViewModelTest {
     }
 
     @Test
+    fun `isFormValid returns captured validity when current code loses a digit`() {
+        // Arrange
+        fillValidForm()
+        val displayedState = viewModel.uiState.value
+
+        // Act
+        // State: the displayed code and confirm flag stay paired while a newer code is incomplete
+        viewModel.onCodeChanged(2, "")
+        val displayedValidity = viewModel.isFormValid(displayedState)
+
+        // Assert
+        assertTrue(displayedValidity)
+        assertFalse(viewModel.isFormValid)
+        assertEquals(listOf("1", "2", "3", "4", "5", "6"), displayedState.codes)
+        assertEquals("", viewModel.uiState.value.codes[2])
+    }
+
+    @Test
+    fun `isResendEnabled returns captured availability when current cooldown expires`() = runTest(testDispatcher) {
+        // Arrange
+        viewModel.startTimerIfNeeded()
+        runCurrent()
+        testScheduler.advanceTimeBy(59_000L)
+        runCurrent()
+        val displayedState = viewModel.uiState.value
+
+        // Act
+        // Coroutine/State: the displayed countdown keeps resend disabled until its own snapshot reaches zero
+        testScheduler.advanceTimeBy(1_000L)
+        runCurrent()
+        val displayedAvailability = viewModel.isResendEnabled(displayedState)
+
+        // Assert
+        assertFalse(displayedAvailability)
+        assertTrue(viewModel.isResendEnabled)
+        assertEquals(1, displayedState.resendTimerSeconds)
+        assertEquals(0, viewModel.uiState.value.resendTimerSeconds)
+    }
+
+    @Test
     fun `isResendEnabled returns true when cooldown reaches zero`() = runTest(testDispatcher) {
         // Arrange
         viewModel.startTimerIfNeeded()

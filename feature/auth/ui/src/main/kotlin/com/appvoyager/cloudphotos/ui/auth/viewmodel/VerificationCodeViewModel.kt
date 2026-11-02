@@ -41,12 +41,10 @@ class VerificationCodeViewModel @Inject constructor(
     val uiState: StateFlow<VerificationCodeUiState> = _uiState.asStateFlow()
 
     val isCodeComplete: Boolean
-        get() = with(_uiState.value) {
-            codes.size == 6 && codes.all { it.length == 1 && it[0].isDigit() }
-        }
+        get() = isCodeComplete(_uiState.value)
 
     val isResendEnabled: Boolean
-        get() = with(_uiState.value) { resendTimerSeconds <= 0 && !isLoading }
+        get() = isResendEnabled(_uiState.value)
 
     private val _effect = MutableSharedFlow<VerificationEffect>(extraBufferCapacity = 1)
     val effect: SharedFlow<VerificationEffect> = _effect.asSharedFlow()
@@ -64,6 +62,12 @@ class VerificationCodeViewModel @Inject constructor(
             }
         }
     }
+
+    internal fun isCodeComplete(state: VerificationCodeUiState): Boolean =
+        state.codes.size == 6 && state.codes.all { it.length == 1 && it[0].isDigit() }
+
+    internal fun isResendEnabled(state: VerificationCodeUiState): Boolean =
+        state.resendTimerSeconds <= 0 && !state.isLoading
 
     fun startTimer() {
         if (!isTimerStarted) {

@@ -34,9 +34,10 @@ class ForgotPasswordViewModel @Inject constructor(private val resetPasswordUseCa
     val effect: SharedFlow<ForgotPasswordEffect> = _effect.asSharedFlow()
 
     val isFormValid: Boolean
-        get() = with(_uiState.value) {
-            email.isNotBlank() && ValidationUtils.isValidEmailFormat(email)
-        }
+        get() = isFormValid(_uiState.value)
+
+    internal fun isFormValid(state: ForgotPasswordUiState): Boolean =
+        state.email.isNotBlank() && ValidationUtils.isValidEmailFormat(state.email)
 
     fun onEmailChanged(value: String) = _uiState.update { it.copy(email = value, emailError = null) }
 

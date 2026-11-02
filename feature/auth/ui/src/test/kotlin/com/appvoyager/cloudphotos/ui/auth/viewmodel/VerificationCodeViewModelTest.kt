@@ -249,6 +249,26 @@ class VerificationCodeViewModelTest {
     }
 
     @Test
+    fun `isCodeComplete returns captured validity when current code loses a digit`() = runTest(testDispatcher) {
+        // Arrange
+        coEvery { confirmSignUpUseCase(any()) } returns AuthResult.Error(AuthError.CodeMismatch())
+        fillCode("123456")
+        runCurrent()
+        val displayedState = viewModel.uiState.value
+
+        // Act
+        // State: the displayed verification code and enabled flag keep the same completed snapshot
+        viewModel.onCodeChanged(2, "")
+        val displayedValidity = viewModel.isCodeComplete(displayedState)
+
+        // Assert
+        Assertions.assertTrue(displayedValidity)
+        Assertions.assertFalse(viewModel.isCodeComplete)
+        Assertions.assertEquals(listOf("1", "2", "3", "4", "5", "6"), displayedState.codes)
+        Assertions.assertEquals("", viewModel.uiState.value.codes[2])
+    }
+
+    @Test
     fun `onCodeChanged calls confirmation once when pasted input exceeds six digits`() = runTest(testDispatcher) {
         // Arrange
         coEvery { confirmSignUpUseCase(any()) } returns AuthResult.Error(AuthError.CodeMismatch())
@@ -262,6 +282,35 @@ class VerificationCodeViewModelTest {
         Assertions.assertEquals(listOf("1", "2", "3", "4", "5", "6"), viewModel.uiState.value.codes)
         Assertions.assertTrue(viewModel.isCodeComplete)
         coVerify(exactly = 1) { confirmSignUpUseCase(match { it.code.value == "123456" }) }
+        coVerify(exactly = 1) { confirmSignUpUseCase(any()) }
+    }
+
+    @Test
+    fun `isResendEnabled returns captured availability when current resend starts loading`() = runTest(testDispatcher) {
+        // Arrange
+        val response = CompletableDeferred<AuthResult<Unit>>()
+        coEvery { resendSignUpCodeUseCase(any()) } coAnswers { response.await() }
+        runCurrent()
+        testScheduler.advanceTimeBy(60_000L)
+        runCurrent()
+        val displayedState = viewModel.uiState.value
+
+        // Act
+        // Coroutine/State: a newer request does not change the resend flag for the displayed idle snapshot
+        viewModel.onResend()
+        runCurrent()
+        val displayedAvailability = viewModel.isResendEnabled(displayedState)
+        val currentAvailability = viewModel.isResendEnabled
+        val currentLoading = viewModel.uiState.value.isLoading
+        response.complete(AuthResult.Error(AuthError.Network()))
+        runCurrent()
+
+        // Assert
+        Assertions.assertTrue(displayedAvailability)
+        Assertions.assertFalse(currentAvailability)
+        Assertions.assertFalse(displayedState.isLoading)
+        Assertions.assertTrue(currentLoading)
+        coVerify(exactly = 1) { resendSignUpCodeUseCase(any()) }
     }
 
     @Test
