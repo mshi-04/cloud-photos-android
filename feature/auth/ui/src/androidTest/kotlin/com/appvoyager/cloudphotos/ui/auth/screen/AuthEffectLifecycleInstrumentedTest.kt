@@ -7,6 +7,8 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.AccessibilityManager
+import androidx.compose.ui.platform.LocalAccessibilityManager
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -242,6 +244,39 @@ class AuthEffectLifecycleInstrumentedTest {
     }
 
     @Test
+    fun loginScreen_callsHome_whenSignInCompletesDuringInitialSnackbar() {
+        // Arrange
+        val handle = SavedStateHandle(mapOf("message" to AuthSnackbarMessage.PasswordReset.key))
+        val viewModel = createLoginViewModel(handle)
+        viewModel.onEmailChanged("test@example.com")
+        viewModel.onPasswordChanged("password123")
+        scheduler.runCurrent()
+        val callbacks = mutableListOf<Unit>()
+        val message = text(R.string.message_password_reset)
+        setScreen {
+            CompositionLocalProvider(LocalAccessibilityManager provides PersistentSnackbarAccessibilityManager) {
+                LoginScreen(
+                    viewModel,
+                    onNavigateToVerification = { error("Unexpected verification") },
+                    onNavigateToHome = { callbacks += Unit },
+                    onNavigateToForgotPassword = { error("Unexpected password reset") }
+                )
+            }
+        }
+        setLifecycle(Lifecycle.State.STARTED)
+        compose.onNodeWithText(message).assertExists()
+
+        // Act
+        // Flow: sign-in navigation must be handled while the initial Snackbar is still on screen
+        runViewModel { viewModel.onSignIn() }
+
+        // Assert
+        assertEquals(listOf(Unit), callbacks)
+        compose.onNodeWithText(message).assertExists()
+        assertFalse(viewModel.uiState.value.isLoading)
+    }
+
+    @Test
     fun resetPasswordScreen_setsRemainingCooldown_whenCollectionAndCompositionRestart() {
         // Arrange
         val viewModel = createResetViewModel()
@@ -358,5 +393,14 @@ class AuthEffectLifecycleInstrumentedTest {
     private class ScreenLifecycleOwner : LifecycleOwner {
         val registry = LifecycleRegistry(this)
         override val lifecycle: Lifecycle = registry
+    }
+
+    private object PersistentSnackbarAccessibilityManager : AccessibilityManager {
+        override fun calculateRecommendedTimeoutMillis(
+            originalTimeoutMillis: Long,
+            containsIcons: Boolean,
+            containsText: Boolean,
+            containsControls: Boolean
+        ): Long = Long.MAX_VALUE
     }
 }

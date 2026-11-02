@@ -63,6 +63,7 @@ import com.appvoyager.cloudphotos.ui.auth.effect.LoginEffect
 import com.appvoyager.cloudphotos.ui.auth.uistate.AuthFieldError
 import com.appvoyager.cloudphotos.ui.auth.viewmodel.LoginViewModel
 import com.appvoyager.cloudphotos.ui.theme.CloudPhotosTheme
+import kotlinx.coroutines.launch
 
 @Composable
 fun LoginScreen(
@@ -98,7 +99,9 @@ fun LoginScreen(
                     }
 
                     is LoginEffect.ShowSnackbar -> {
-                        snackbarHostState.showSnackbar(effect.message.toMessage(latestContext.value))
+                        launch {
+                            snackbarHostState.showSnackbar(effect.message.toMessage(latestContext.value))
+                        }
                     }
                 }
             }
