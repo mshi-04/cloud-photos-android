@@ -29,9 +29,9 @@
   - 画面からの操作は ViewModel の public 関数（`onEmailChanged`、`onScreenResumed` など）として受け取り、単一の `onEvent(event)` ディスパッチャは作らない。
 - **UI Effect（一回限りの動作）**:
   - 画面遷移、Snackbar 表示、ダイアログ起動トリガーなどの一回限りの動作は `<Screen>Effect` の `sealed class` で表す。`StateFlow` に入れると再収集時に二重実行されるため使わない。
-  - 新規の ViewModel は `Channel<XxxEffect>(Channel.BUFFERED)` を `receiveAsFlow()` で公開する。先行実装である `feature:auth:ui` の 4 つの ViewModel は `MutableSharedFlow(extraBufferCapacity = 1)` を使っており、既存ファイルを触る場合はそのファイルの形に合わせる。
+  - ViewModel は `Channel<XxxEffect>(Channel.BUFFERED)` を `receiveAsFlow()` で公開する。auth の 4 ViewModel も同じ方式を使い、各 ViewModel の Effect collector は 1 つとする。未受信の Effect は ViewModel 存続中にキューで待たせる。プロセス終了後の復元や exactly-once は保証せず、受信と Lifecycle 停止の競合による handler 実行前のキャンセル、受信済み Snackbar の中断も保証対象に含めない。
   - Snackbar の内容は ViewModel で文字列に解決せず、`MediaSnackbarMessage` / `CameraSnackbarMessage` / `AuthSnackbarMessage` などの型で送る。
-  - Screen 側は `LaunchedEffect(Unit)` 内の `repeatOnLifecycle(Lifecycle.State.STARTED)` で `effect.collect` し、`when` で全分岐を網羅する（`else` を書かない）。collect ブロック内から呼ぶ親 callback や `LocalContext.current` は `rememberUpdatedState` で包んで参照する。
+  - Screen 側は ViewModel と LifecycleOwner を key とする `LaunchedEffect` 内の `repeatOnLifecycle(Lifecycle.State.STARTED)` で `effect.collect` し、`when` で全分岐を網羅する（`else` を書かない）。collect ブロック内から呼ぶ親 callback や `LocalContext.current` は `rememberUpdatedState` で包んで参照する。認証コードの timer 開始は repeat ブロックの外に置き、収集再開を理由に cooldown をリセットしない。
 - **Job 管理と多重実行ガード**:
   - 張り直す Flow 購読は `Job` を保持して前の Job を `cancel()` する。Room や WorkManager を触る同期処理の再開（`MediaViewModel.onScreenResumed`）では、前の Job を `cancelAndJoin()` してから次の処理を始める。
   - サインアウトや送信などの非同期操作は、`isLoading` / `isSigningOut` 等のフラグで多重実行を防ぎ、`finally` で確実に解除する。

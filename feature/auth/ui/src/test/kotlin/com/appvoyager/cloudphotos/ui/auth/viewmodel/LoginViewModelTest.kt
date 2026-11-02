@@ -11,6 +11,7 @@ import com.appvoyager.cloudphotos.domain.auth.valueobject.Email
 import com.appvoyager.cloudphotos.ui.auth.effect.AuthSnackbarMessage
 import com.appvoyager.cloudphotos.ui.auth.effect.LoginEffect
 import com.appvoyager.cloudphotos.ui.auth.uistate.AuthFieldError
+import io.mockk.clearAllMocks
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -21,6 +22,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.jupiter.api.AfterEach
@@ -39,6 +41,7 @@ class LoginViewModelTest {
 
     @BeforeEach
     fun setUp() {
+        clearAllMocks()
         Dispatchers.setMain(testDispatcher)
         viewModel = LoginViewModel(SavedStateHandle(), signInUseCase, signUpUseCase)
     }
@@ -150,6 +153,8 @@ class LoginViewModelTest {
             advanceUntilIdle()
 
             Assertions.assertEquals(LoginEffect.NavigateToHome, awaitItem())
+            runCurrent()
+            expectNoEvents()
             cancelAndConsumeRemainingEvents()
         }
     }
@@ -364,6 +369,97 @@ class LoginViewModelTest {
             ),
             LoginFormSnapshot.from(state)
         )
+    }
+
+    @Test
+    fun `onSignIn emits queued navigation when collection starts after completion`() = runTest(testDispatcher) {
+        // Arrange
+        viewModel.onEmailChanged("test@example.com")
+        viewModel.onPasswordChanged("password1")
+        coEvery { signInUseCase(any()) } returns AuthResult.Success(SignInState.SignedIn)
+
+        // Act
+        // Flow: authentication completes before a Screen collector exists
+        viewModel.onSignIn()
+        runCurrent()
+
+        // Assert
+        viewModel.effect.test {
+            Assertions.assertEquals(LoginEffect.NavigateToHome, awaitItem())
+            runCurrent()
+            expectNoEvents()
+            cancelAndConsumeRemainingEvents()
+        }
+        Assertions.assertFalse(viewModel.uiState.value.isLoading)
+        coVerify(exactly = 1) { signInUseCase(any()) }
+    }
+
+    @Test
+    fun `onSignIn emits only queued effects when collection restarts`() = runTest(testDispatcher) {
+        // Arrange
+        viewModel.onEmailChanged("test@example.com")
+        viewModel.onPasswordChanged("password1")
+        coEvery { signInUseCase(any()) } returnsMany listOf(
+            AuthResult.Error(AuthError.Network()),
+            AuthResult.Error(AuthError.TooManyRequests())
+        )
+        viewModel.effect.test {
+            viewModel.onSignIn()
+            runCurrent()
+            Assertions.assertEquals(LoginEffect.ShowSnackbar(AuthSnackbarMessage.Network), awaitItem())
+            cancelAndConsumeRemainingEvents()
+        }
+
+        // Act
+        // Flow: a second result waits while the previous Screen collector has stopped
+        viewModel.onSignIn()
+        runCurrent()
+
+        // Assert
+        viewModel.effect.test {
+            Assertions.assertEquals(LoginEffect.ShowSnackbar(AuthSnackbarMessage.TooManyRequests), awaitItem())
+            runCurrent()
+            expectNoEvents()
+            cancelAndConsumeRemainingEvents()
+        }
+        viewModel.effect.test {
+            runCurrent()
+            expectNoEvents()
+            cancelAndConsumeRemainingEvents()
+        }
+        coVerify(exactly = 2) { signInUseCase(any()) }
+    }
+
+    @Test
+    fun `init emits message once when collection starts after initialization`() = runTest(testDispatcher) {
+        // Arrange
+        val savedStateHandle = SavedStateHandle(mapOf("message" to AuthSnackbarMessage.PasswordReset.key))
+        val initializedViewModel = LoginViewModel(savedStateHandle, signInUseCase, signUpUseCase)
+
+        // Act
+        // Flow: the initial Snackbar is queued before subscription and its navigation argument is consumed
+        runCurrent()
+
+        // Assert
+        Assertions.assertNull(savedStateHandle.get<String>("message"))
+        initializedViewModel.effect.test {
+            Assertions.assertEquals(LoginEffect.ShowSnackbar(AuthSnackbarMessage.PasswordReset), awaitItem())
+            runCurrent()
+            expectNoEvents()
+            cancelAndConsumeRemainingEvents()
+        }
+        initializedViewModel.effect.test {
+            runCurrent()
+            expectNoEvents()
+            cancelAndConsumeRemainingEvents()
+        }
+        val recreatedViewModel = LoginViewModel(savedStateHandle, signInUseCase, signUpUseCase)
+        runCurrent()
+        recreatedViewModel.effect.test {
+            runCurrent()
+            expectNoEvents()
+            cancelAndConsumeRemainingEvents()
+        }
     }
 
     private data class LoginFormSnapshot(

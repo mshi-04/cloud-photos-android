@@ -81,7 +81,7 @@ fun LoginScreen(
     val latestOnNavigateToForgotPassword = rememberUpdatedState(onNavigateToForgotPassword)
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(viewModel, lifecycleOwner) {
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
             viewModel.effect.collect { effect ->
                 when (effect) {

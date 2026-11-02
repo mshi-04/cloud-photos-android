@@ -1,6 +1,6 @@
 # アプリ本体の規約準拠リファクタリング設計
 
-状態: 段階 01（PR #138）・02（PR #139）・03（PR #140）・04（PR #141）・05（PR #143）・06（PR #142）はマージ済み。段階 06b は実装・JVM テスト・静的解析済み（Preview 実描画・端末確認待ち）。段階 07 以降は未着手。
+状態: 段階 01（PR #138）・02（PR #139）・03（PR #140）・04（PR #141）・05（PR #143）・06（PR #142）・06b（PR #144）はマージ済み。段階 07 は H の Channel 配送方針で実装・JVM テスト・静的解析済み（追加 UI テストの端末実行・物理回転確認待ち）。段階 08 以降は未着手。
 調査日: 2026-10-31。
 調査基準: develop `e261bc2` の本番コード・テスト・技術文書。
 
@@ -193,15 +193,15 @@ resource 化（必須）:
 
 この項目は単純な規約修正ではなく、既存の配送例外を見直す任意の設計提案とする。採否は段階 07 の着手条件で決め、本書で「H を採用する場合」はこの条件を満たした場合を指す。
 
-ForgotPassword / VerificationCode / ResetPassword の 3 Screen は Effect を直接 collect している。一方 Login は既に STARTED で収集している。
-4 ViewModel はいずれも `MutableSharedFlow(extraBufferCapacity = 1)` であり、collector 不在時に Effect を保持しない。3 Screen の収集側だけを止めると、バックグラウンド中の認証完了による画面遷移を落とし得る。
+段階 06b までの ForgotPassword / VerificationCode / ResetPassword の 3 Screen は Effect を直接 collect しており、Login だけが STARTED で収集していた。
+4 ViewModel はいずれも `MutableSharedFlow(extraBufferCapacity = 1)` で、collector 不在時に Effect を保持しなかった。3 Screen の収集側だけを止めると、バックグラウンド中の認証完了による画面遷移を落とし得る。
 
 collector 不在による欠落は、init 時の Effect で既に起きている。
 LoginViewModel は init で SavedStateHandle の `message` を、VerificationCodeViewModel は email 欠落時の NavigateBack を、`viewModelScope.launch` で emit している。
-ViewModel は Screen の初回 composition 中に生成され、Main.immediate 上で collector より先に emit するため、replay 0 の SharedFlow はこれらを常に破棄する。
-このため、パスワード再設定の完了後に `login?message=…` で戻った Login の Snackbar は、現行では表示されない。
+移行前の ViewModel は Screen の初回 composition 中に生成され、Main.immediate 上で collector より先に emit するため、replay 0 の SharedFlow はこれらを常に破棄していた。
+このため、パスワード再設定の完了後に `login?message=…` で戻った Login の Snackbar は、移行前には表示されなかった。
 
-採用案:
+採用方針（段階 07 で採用）:
 
 - 4 ViewModel の Effect を `Channel<XxxEffect>(Channel.BUFFERED)` / `receiveAsFlow()` に揃え、4 Screen を STARTED の repeatOnLifecycle で収集する。
 - Effect の型、Snackbar message 型、画面遷移先は変えない。各 ViewModel の collector は 1 つとする。
@@ -212,9 +212,9 @@ ViewModel は Screen の初回 composition 中に生成され、Main.immediate �
 - Channel をプロセス終了後も残る配送や exactly-once の保証とは扱わない。受信時と Lifecycle 停止が競合すると、キューから取り出した Effect が handler 実行前にキャンセルされる可能性も残る。未受信のキュー保持と、すべての停止復帰での画面遷移保証を区別する。
 - 受信済みの Snackbar 中断、受信と handler の引き渡し時の取りこぼし、プロセス再生成後の結果復元を新たに保証する変更は、この段階には含めない。これらを含めて重要結果の配送を保証する要件にする場合は、H を state + 消費確認の設計へ改める。
 
-現行規約との関係:
+移行前の規約との関係:
 
-- [Implementation Guidelines](../implementation-guidelines.md) は auth 4 ViewModel について「既存ファイルを触る場合はそのファイルの形に合わせる」とし、両クライアントの UI event reference は「既存 auth ViewModel の小規模修正ではそのファイルの方式に合わせ、無関係な全面書き換えを混ぜない」としている。本提案は 4 ViewModel をまとめて書き換えるため、実装する際はこれらの記述を更新する文書変更と一体にする。
+- 移行前の [Implementation Guidelines](../implementation-guidelines.md) は auth 4 ViewModel について「既存ファイルを触る場合はそのファイルの形に合わせる」とし、両クライアントの UI event reference は「既存 auth ViewModel の小規模修正ではそのファイルの方式に合わせ、無関係な全面書き換えを混ぜない」としていた。段階 07 は 4 ViewModel をまとめて書き換え、これらの記述も配送方針と一体で更新する。
 - 両方の [Codex UI event reference](../../.agents/skills/ui-implementation/references/uievent.md) / [Claude UI event reference](../../.claude/skills/ui-implementation/references/uievent.md) と ViewModel reference の対応箇所を確認し、差が生じる箇所を手動反映する。
 - Lite Memo の重要結果を state に保持して消費確認する方式は、より強い再生成対応が要件になった時の別設計とする。今回の全 Effect をその方式に置き換えない。
 - 3 Screen の Lifecycle gating だけを Channel 化より先に入れない。collector 停止中の Effect が SharedFlow で破棄されるためである。
@@ -395,15 +395,27 @@ ViewModel は Screen の初回 composition 中に生成され、Main.immediate �
 - 追加検証の `bash gradlew test ktlintCheck detekt :feature:auth:ui:assembleDebugAndroidTest :feature:auth:ui:lintDebug -Pkotlin.compiler.execution.strategy=in-process --max-workers=4 --console=plain` は、DEV / PROD の API URL・Cognito client ID・S3 bucket にダミーの Gradle project property を指定して成功した。全モジュールの JVM テストは 462 実行（auth UI は 71 件）、失敗・エラー・スキップ 0 件。追加した端末テストのコンパイル・APK 生成、ktlint・detekt、Android lint（error / warning 0 件）が成功した。文書リンク 727 件の参照切れ 0 件、`git diff --check` 成功、独立レビューで追加指摘なし。接続端末・エミュレータがないため、Compose UI テスト 5 件の実行は未確認で CI での確認が必要。
 - 検証範囲は変更モジュールの JVM テスト・Kotlin / Preview 定義のコンパイル・静的解析とし、アプリ全体のビルドと Instrumented Test は未実施。公開 navigation 引数・resource・DI 配線・他モジュールは変更していない。Android Studio と接続端末・エミュレータがないため、Preview の実描画と実機のフォーム操作は未確認。段階 07 の Effect 配送はこの変更には含めない。
 
+- 最終的に PR #144 の CI #476 は lint・unit-test・instrumented-test とも成功し、認証 UI テスト 5 件も端末上で成功した。英語の見出しとボタンが同じ `Reset Password` となるケースは、ボタンの click action を selector に加えて解消済み。PR #144 は develop `71ae50e` にマージされた。
+
 ### 07. Auth UI の Effect 配送（任意）
 
-ブランチ案: `feature/07-auth-ui-effect-delivery`。変更設計 H に対応する。
+ブランチ: `feature/07-auth-ui-effect-delivery`。変更設計 H に対応する。
 
 - 着手条件: 06（派生値の配置を行う場合は 06b も）の完了と、H の配送方式・保証範囲を移行方針として確定していること。06 とは同じ auth UI ファイルを編集するが、03 とはコード上の依存がない。未採用ならこの段階だけを保留し、08・09 は進められる。
 - 対象: `:feature:auth:ui` の 4 ViewModel / 4 Screen / 対応テストと、共通規約・両クライアントの UI reference。
 - 作業: producer の Channel 化、consumer の STARTED 収集、callback の最新化、規約の例外更新を同じ PR に含める。consumer だけの移行は行わない。
 - 検証: auth UI Unit Test、停止復帰・回転・message 初期配送・timer 継続の UI 確認、文書リンクと両クライアントの対応箇所。
 - 完了条件: 未受信 Effect の保持と停止復帰時の挙動を確認し、init 時 Effect の配送開始を挙動変更として PR に記載している。Channel の受信時キャンセル競合・プロセス終了への保証がないことを文書化している。より強い保証を求める場合は H の再設計を先に行う。
+
+採用・実装記録（2026-11-02）:
+
+- PR #144 のマージ後の develop `71ae50e` から `feature/07-auth-ui-effect-delivery` を分岐した。H の `Channel.BUFFERED` / `receiveAsFlow()` と STARTED 収集を同時に採用した。未受信 Effect の ViewModel 存続中の保持を対象とし、受信と停止の競合・受信済み Snackbar の中断・プロセス再生成後の復元・exactly-once は保証しない。
+- 利用者に見える変更は、初回収集前の Login の message Snackbar と、email が欠落した VerificationCode の NavigateBack が初回 STARTED 時に届くこと。Effect 型・Snackbar message 型・navigation 引数・派生値の条件は維持する。
+- 4 ViewModel は Channel の `send` で Effect を送り、collector は各 ViewModel に 1 つとする。4 Screen は `LaunchedEffect(viewModel, lifecycleOwner)` で収集元の交換に追従し、STARTED の repeat ブロック内で最新の callback / Context を参照する。timer の開始は ViewModel を key とする別の LaunchedEffect に置き、再収集で cooldown をリセットしない。
+- `bash gradlew :feature:auth:ui:test -Pkotlin.compiler.execution.strategy=in-process --max-workers=4 --console=plain` は成功。JVM テストは 81 件（追加 10 ケース）、失敗・エラー・スキップ 0 件。4 ViewModel の収集前完了の保持、収集停止中の新規 Effect の保持、消費済み非 replay、継続収集中の二重配送なし、Login の message key 消費、Verification の初期 NavigateBack を確認した。
+- Compose UI テストを 8 件追加した（既存 5 件と合わせて 13 件）。4 Screen の停止復帰と最新 callback、初期 Effect、owner 交換、同一 ViewModel の Composition 再生成、timer 継続を確認する構成。`bash gradlew :feature:auth:ui:ktlintCheck :feature:auth:ui:detekt :feature:auth:ui:lintDebug :feature:auth:ui:assembleDebugAndroidTest -Pkotlin.compiler.execution.strategy=in-process --max-workers=4 --console=plain` は成功し、Android lint は error / warning 0 件。端末テストの Kotlin コンパイル・APK 生成まで確認した。
+- 文書リンク 730 件の参照切れ 0 件、両クライアントの UI event / ViewModel reference 一致、`git diff --check` 成功。独立レビューで追加指摘なし。
+- 接続端末・エミュレータがないため、新しい UI テストの実行、端末の停止復帰・物理回転・フォーム操作は未確認。owner / Composition 再生成のテストを、実端末の物理回転を確認した結果とは扱わない。変更は auth UI と文書に限定し、公開 navigation 引数・resource・DI 配線・依存関係は変えていないため、アプリ全体のビルドは未実施。
 
 ### 08. Media UI
 

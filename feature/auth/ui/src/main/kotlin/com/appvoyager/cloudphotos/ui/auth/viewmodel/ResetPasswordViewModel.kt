@@ -19,12 +19,12 @@ import com.appvoyager.cloudphotos.ui.auth.uistate.ResetPasswordUiState
 import com.appvoyager.cloudphotos.ui.util.ResendTimer
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
-import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -58,8 +58,8 @@ class ResetPasswordViewModel @Inject constructor(
         scope = viewModelScope
     ) { seconds -> _uiState.update { it.copy(resendTimerSeconds = seconds) } }
 
-    private val _effect = MutableSharedFlow<ResetPasswordEffect>(extraBufferCapacity = 1)
-    val effect: SharedFlow<ResetPasswordEffect> = _effect.asSharedFlow()
+    private val _effect = Channel<ResetPasswordEffect>(Channel.BUFFERED)
+    val effect: Flow<ResetPasswordEffect> = _effect.receiveAsFlow()
 
     internal fun isFormValid(state: ResetPasswordUiState): Boolean =
         isCodeComplete(state.codes) && state.newPassword.trim().length >= MIN_PASSWORD_LENGTH
@@ -113,7 +113,7 @@ class ResetPasswordViewModel @Inject constructor(
 
                 when (result) {
                     is AuthResult.Success -> {
-                        _effect.emit(ResetPasswordEffect.NavigateBackToLogin(AuthSnackbarMessage.PasswordReset))
+                        _effect.send(ResetPasswordEffect.NavigateBackToLogin(AuthSnackbarMessage.PasswordReset))
                     }
 
                     is AuthResult.Error -> handleConfirmError(result.error)
@@ -134,14 +134,14 @@ class ResetPasswordViewModel @Inject constructor(
             try {
                 when (val result = resetPasswordUseCase(ResetPasswordRequest(email))) {
                     is AuthResult.Success -> {
-                        _effect.emit(ResetPasswordEffect.ShowSnackbar(AuthSnackbarMessage.CodeResent))
+                        _effect.send(ResetPasswordEffect.ShowSnackbar(AuthSnackbarMessage.CodeResent))
                         resendTimer.start()
                     }
 
                     is AuthResult.Error -> handleResendError(result.error)
                 }
             } catch (_: IllegalArgumentException) {
-                _effect.emit(ResetPasswordEffect.ShowSnackbar(AuthSnackbarMessage.Unknown))
+                _effect.send(ResetPasswordEffect.ShowSnackbar(AuthSnackbarMessage.Unknown))
             } finally {
                 _uiState.update { it.copy(isLoading = false) }
             }
@@ -174,11 +174,11 @@ class ResetPasswordViewModel @Inject constructor(
         }
 
         is AuthError.Network -> {
-            _effect.emit(ResetPasswordEffect.ShowSnackbar(AuthSnackbarMessage.Network))
+            _effect.send(ResetPasswordEffect.ShowSnackbar(AuthSnackbarMessage.Network))
         }
 
         is AuthError.TooManyRequests -> {
-            _effect.emit(ResetPasswordEffect.ShowSnackbar(AuthSnackbarMessage.TooManyRequests))
+            _effect.send(ResetPasswordEffect.ShowSnackbar(AuthSnackbarMessage.TooManyRequests))
         }
 
         is AuthError.InvalidPassword -> {
@@ -189,17 +189,17 @@ class ResetPasswordViewModel @Inject constructor(
         is AuthError.Unknown,
         is AuthError.UserNotConfirmed,
         is AuthError.UsernameAlreadyExists -> {
-            _effect.emit(ResetPasswordEffect.ShowSnackbar(AuthSnackbarMessage.Unknown))
+            _effect.send(ResetPasswordEffect.ShowSnackbar(AuthSnackbarMessage.Unknown))
         }
     }
 
     private suspend fun handleResendError(error: AuthError) = when (error) {
         is AuthError.Network -> {
-            _effect.emit(ResetPasswordEffect.ShowSnackbar(AuthSnackbarMessage.Network))
+            _effect.send(ResetPasswordEffect.ShowSnackbar(AuthSnackbarMessage.Network))
         }
 
         is AuthError.TooManyRequests -> {
-            _effect.emit(ResetPasswordEffect.ShowSnackbar(AuthSnackbarMessage.TooManyRequests))
+            _effect.send(ResetPasswordEffect.ShowSnackbar(AuthSnackbarMessage.TooManyRequests))
         }
 
         is AuthError.CodeExpired,
@@ -209,7 +209,7 @@ class ResetPasswordViewModel @Inject constructor(
         is AuthError.Unknown,
         is AuthError.UserNotConfirmed,
         is AuthError.UsernameAlreadyExists -> {
-            _effect.emit(ResetPasswordEffect.ShowSnackbar(AuthSnackbarMessage.ResendFailed))
+            _effect.send(ResetPasswordEffect.ShowSnackbar(AuthSnackbarMessage.ResendFailed))
         }
     }
 

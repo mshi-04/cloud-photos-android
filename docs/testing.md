@@ -108,6 +108,7 @@ D8 / DEX の制約でスペースを含む backtick 名が使えないため、�
   - 複数フィールドを持つ UiState では、無関係なフィールド追加で既存テストが壊れないよう、テストクラス内に比較対象フィールドだけを持つ `private data class XxxSnapshot`（デフォルト値と `companion object.from(state)` 付き）を定義して `assertEquals` する。1 フィールドや sealed class 分岐のみを見る場合は直接 assert してよい。
 - **Effect の assert**:
   - `viewModel.effect.test { ... }` 内でイベント関数を呼び、`advanceUntilIdle()` → `awaitItem()` → `cancelAndConsumeRemainingEvents()` で検証する。UseCase 呼び出しの確認だけで終わらせず、画面契約として見える state / effect を必ず検証する。
+  - Channel 配送では collector 不在でイベントを発火し、`runCurrent()` で送信完了後に収集を始めるケースも検証する。初回配送、収集停止中の新規 Effect の保持、消費済み Effect の非 replay を分け、init 時の Effect も購読前に発火させる。実際の Lifecycle の停止復帰は JVM の購読切り替えだけで検証済みとせず、[`AuthEffectLifecycleInstrumentedTest`](../feature/auth/ui/src/androidTest/kotlin/com/appvoyager/cloudphotos/ui/auth/screen/AuthEffectLifecycleInstrumentedTest.kt) のような UI テストで別に確認する。
 - **二重実行ガード**:
   - `isLoading` や `isSigningOut` 中の二重実行防止は、UseCase stub を `delay` または `CompletableDeferred` で待機させ、1 回目の起動（必要なら `testScheduler.advanceTimeBy(1)`）後に 2 回目を呼んで `coVerify(exactly = 1)` で確認する。
 
