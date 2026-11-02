@@ -134,6 +134,8 @@ class VerificationCodeViewModelTest {
             advanceUntilIdle()
 
             Assertions.assertEquals(VerificationEffect.NavigateToHome, awaitItem())
+            runCurrent()
+            expectNoEvents()
             cancelAndConsumeRemainingEvents()
         }
     }
@@ -359,6 +361,91 @@ class VerificationCodeViewModelTest {
         Assertions.assertFalse(viewModel.uiState.value.isLoading)
         Assertions.assertEquals(60, viewModel.uiState.value.resendTimerSeconds)
         Assertions.assertFalse(viewModel.isResendEnabled)
+    }
+
+    @Test
+    fun `onVerify emits queued navigation when collection starts after completion`() = runTest(testDispatcher) {
+        // Arrange
+        coEvery { confirmSignUpUseCase(any()) } returns AuthResult.Success(Unit)
+
+        // Act
+        // Flow: automatic confirmation completes before a Screen collector subscribes
+        fillCode("123456")
+        runCurrent()
+
+        // Assert
+        viewModel.effect.test {
+            Assertions.assertEquals(VerificationEffect.NavigateToHome, awaitItem())
+            runCurrent()
+            expectNoEvents()
+            cancelAndConsumeRemainingEvents()
+        }
+        Assertions.assertFalse(viewModel.uiState.value.isLoading)
+        coVerify(exactly = 1) { confirmSignUpUseCase(any()) }
+    }
+
+    @Test
+    fun `onVerify emits only queued effects when collection restarts`() = runTest(testDispatcher) {
+        // Arrange
+        coEvery { confirmSignUpUseCase(any()) } returnsMany listOf(
+            AuthResult.Error(AuthError.Network()),
+            AuthResult.Error(AuthError.TooManyRequests())
+        )
+        viewModel.effect.test {
+            fillCode("123456")
+            runCurrent()
+            Assertions.assertEquals(VerificationEffect.ShowSnackbar(AuthSnackbarMessage.Network), awaitItem())
+            cancelAndConsumeRemainingEvents()
+        }
+
+        // Act
+        // Flow: the new confirmation result waits during collector absence without replaying the previous result
+        viewModel.onVerify()
+        runCurrent()
+
+        // Assert
+        viewModel.effect.test {
+            Assertions.assertEquals(VerificationEffect.ShowSnackbar(AuthSnackbarMessage.TooManyRequests), awaitItem())
+            runCurrent()
+            expectNoEvents()
+            cancelAndConsumeRemainingEvents()
+        }
+        viewModel.effect.test {
+            runCurrent()
+            expectNoEvents()
+            cancelAndConsumeRemainingEvents()
+        }
+        coVerify(exactly = 2) { confirmSignUpUseCase(any()) }
+    }
+
+    @Test
+    fun `init emits NavigateBack once when email is missing before collection starts`() = runTest(testDispatcher) {
+        // Arrange
+        val initializedViewModel = VerificationCodeViewModel(
+            SavedStateHandle(),
+            confirmSignUpUseCase,
+            resendSignUpCodeUseCase
+        )
+
+        // Act
+        // Flow: invalid navigation arguments queue the initial return before the first collector is ready
+        runCurrent()
+
+        // Assert
+        Assertions.assertNull(initializedViewModel.email)
+        initializedViewModel.effect.test {
+            Assertions.assertEquals(VerificationEffect.NavigateBack, awaitItem())
+            runCurrent()
+            expectNoEvents()
+            cancelAndConsumeRemainingEvents()
+        }
+        initializedViewModel.effect.test {
+            runCurrent()
+            expectNoEvents()
+            cancelAndConsumeRemainingEvents()
+        }
+        coVerify(exactly = 0) { confirmSignUpUseCase(any()) }
+        coVerify(exactly = 0) { resendSignUpCodeUseCase(any()) }
     }
 
     private fun fillCode(code: String) {

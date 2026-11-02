@@ -129,6 +129,8 @@ class ForgotPasswordViewModelTest {
                 ForgotPasswordEffect.NavigateToResetPassword(Email.of("test@example.com")),
                 awaitItem()
             )
+            runCurrent()
+            expectNoEvents()
             cancelAndConsumeRemainingEvents()
         }
     }
@@ -394,6 +396,63 @@ class ForgotPasswordViewModelTest {
         coVerify(exactly = 1) { resetPasswordUseCase(any()) }
         response.complete(AuthResult.Error(AuthError.Network()))
         runCurrent()
+    }
+
+    @Test
+    fun `onSubmit emits queued navigation when collection starts after completion`() = runTest(testDispatcher) {
+        // Arrange
+        viewModel.onEmailChanged("test@example.com")
+        coEvery { resetPasswordUseCase(any()) } returns AuthResult.Success(Unit)
+
+        // Act
+        // Flow: the reset-password destination is retained until a Screen subscribes
+        viewModel.onSubmit()
+        runCurrent()
+
+        // Assert
+        viewModel.effect.test {
+            assertEquals(ForgotPasswordEffect.NavigateToResetPassword(Email.of("test@example.com")), awaitItem())
+            runCurrent()
+            expectNoEvents()
+            cancelAndConsumeRemainingEvents()
+        }
+        assertFalse(viewModel.uiState.value.isLoading)
+        coVerify(exactly = 1) { resetPasswordUseCase(any()) }
+    }
+
+    @Test
+    fun `onSubmit emits only queued effects when collection restarts`() = runTest(testDispatcher) {
+        // Arrange
+        viewModel.onEmailChanged("test@example.com")
+        coEvery { resetPasswordUseCase(any()) } returnsMany listOf(
+            AuthResult.Error(AuthError.Network()),
+            AuthResult.Error(AuthError.TooManyRequests())
+        )
+        viewModel.effect.test {
+            viewModel.onSubmit()
+            runCurrent()
+            assertEquals(ForgotPasswordEffect.ShowSnackbar(AuthSnackbarMessage.Network), awaitItem())
+            cancelAndConsumeRemainingEvents()
+        }
+
+        // Act
+        // Flow: a new failure is queued during collector absence while consumed effects stay consumed
+        viewModel.onSubmit()
+        runCurrent()
+
+        // Assert
+        viewModel.effect.test {
+            assertEquals(ForgotPasswordEffect.ShowSnackbar(AuthSnackbarMessage.TooManyRequests), awaitItem())
+            runCurrent()
+            expectNoEvents()
+            cancelAndConsumeRemainingEvents()
+        }
+        viewModel.effect.test {
+            runCurrent()
+            expectNoEvents()
+            cancelAndConsumeRemainingEvents()
+        }
+        coVerify(exactly = 2) { resetPasswordUseCase(any()) }
     }
 
     private data class ForgotPasswordFormSnapshot(

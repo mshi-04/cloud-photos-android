@@ -98,6 +98,8 @@ class ResetPasswordViewModelTest {
                 ResetPasswordEffect.NavigateBackToLogin(AuthSnackbarMessage.PasswordReset),
                 awaitItem()
             )
+            runCurrent()
+            expectNoEvents()
             cancelAndConsumeRemainingEvents()
         }
     }
@@ -306,6 +308,63 @@ class ResetPasswordViewModelTest {
         assertFalse(viewModel.uiState.value.isLoading)
         assertEquals(60, viewModel.uiState.value.resendTimerSeconds)
         assertFalse(viewModel.isResendEnabled)
+    }
+
+    @Test
+    fun `onConfirm emits queued navigation when collection starts after completion`() = runTest(testDispatcher) {
+        // Arrange
+        fillValidForm()
+        coEvery { confirmResetPasswordUseCase(any()) } returns AuthResult.Success(Unit)
+
+        // Act
+        // Flow: password-reset completion survives until a Screen collector subscribes
+        viewModel.onConfirm()
+        runCurrent()
+
+        // Assert
+        viewModel.effect.test {
+            assertEquals(ResetPasswordEffect.NavigateBackToLogin(AuthSnackbarMessage.PasswordReset), awaitItem())
+            runCurrent()
+            expectNoEvents()
+            cancelAndConsumeRemainingEvents()
+        }
+        assertFalse(viewModel.uiState.value.isLoading)
+        coVerify(exactly = 1) { confirmResetPasswordUseCase(any()) }
+    }
+
+    @Test
+    fun `onConfirm emits only queued effects when collection restarts`() = runTest(testDispatcher) {
+        // Arrange
+        fillValidForm()
+        coEvery { confirmResetPasswordUseCase(any()) } returnsMany listOf(
+            AuthResult.Error(AuthError.Network()),
+            AuthResult.Error(AuthError.TooManyRequests())
+        )
+        viewModel.effect.test {
+            viewModel.onConfirm()
+            runCurrent()
+            assertEquals(ResetPasswordEffect.ShowSnackbar(AuthSnackbarMessage.Network), awaitItem())
+            cancelAndConsumeRemainingEvents()
+        }
+
+        // Act
+        // Flow: restarting collection receives only the result produced while no collector was present
+        viewModel.onConfirm()
+        runCurrent()
+
+        // Assert
+        viewModel.effect.test {
+            assertEquals(ResetPasswordEffect.ShowSnackbar(AuthSnackbarMessage.TooManyRequests), awaitItem())
+            runCurrent()
+            expectNoEvents()
+            cancelAndConsumeRemainingEvents()
+        }
+        viewModel.effect.test {
+            runCurrent()
+            expectNoEvents()
+            cancelAndConsumeRemainingEvents()
+        }
+        coVerify(exactly = 2) { confirmResetPasswordUseCase(any()) }
     }
 
     private fun createViewModel(email: String = "test@example.com"): ResetPasswordViewModel = ResetPasswordViewModel(

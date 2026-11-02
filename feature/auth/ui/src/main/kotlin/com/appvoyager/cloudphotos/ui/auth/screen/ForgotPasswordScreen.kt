@@ -45,7 +45,10 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import com.appvoyager.cloudphotos.core.ui.R
 import com.appvoyager.cloudphotos.domain.auth.valueobject.Email
 import com.appvoyager.cloudphotos.ui.auth.component.LoadingOverlay
@@ -70,24 +73,27 @@ fun ForgotPasswordScreen(
     val latestOnNavigateToResetPassword = rememberUpdatedState(onNavigateToResetPassword)
     val latestOnNavigateToVerification = rememberUpdatedState(onNavigateToVerification)
     val latestOnNavigateBack = rememberUpdatedState(onNavigateBack)
+    val lifecycleOwner = LocalLifecycleOwner.current
 
-    LaunchedEffect(Unit) {
-        viewModel.effect.collect { effect ->
-            when (effect) {
-                is ForgotPasswordEffect.NavigateToResetPassword -> {
-                    latestOnNavigateToResetPassword.value(effect.email)
-                }
+    LaunchedEffect(viewModel, lifecycleOwner) {
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            viewModel.effect.collect { effect ->
+                when (effect) {
+                    is ForgotPasswordEffect.NavigateToResetPassword -> {
+                        latestOnNavigateToResetPassword.value(effect.email)
+                    }
 
-                is ForgotPasswordEffect.NavigateToVerification -> {
-                    latestOnNavigateToVerification.value(effect.email)
-                }
+                    is ForgotPasswordEffect.NavigateToVerification -> {
+                        latestOnNavigateToVerification.value(effect.email)
+                    }
 
-                is ForgotPasswordEffect.NavigateBackToLogin -> {
-                    latestOnNavigateBack.value()
-                }
+                    is ForgotPasswordEffect.NavigateBackToLogin -> {
+                        latestOnNavigateBack.value()
+                    }
 
-                is ForgotPasswordEffect.ShowSnackbar -> {
-                    snackbarHostState.showSnackbar(effect.message.toMessage(latestContext.value))
+                    is ForgotPasswordEffect.ShowSnackbar -> {
+                        snackbarHostState.showSnackbar(effect.message.toMessage(latestContext.value))
+                    }
                 }
             }
         }
