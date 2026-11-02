@@ -1,6 +1,6 @@
 # アプリ本体の規約準拠リファクタリング設計
 
-状態: 段階 01（PR #138）・02（PR #139）・03（PR #140）・04（PR #141）・05（PR #143）・06（PR #142）・06b（PR #144）・07（PR #145）はマージ済み。段階 08 は実装・JVM テスト・静的解析済み（Preview 実描画・実機操作待ち）。段階 09 は未着手。
+状態: 段階 01（PR #138）・02（PR #139）・03（PR #140）・04（PR #141）・05（PR #143）・06（PR #142）・06b（PR #144）・07（PR #145）・08（PR #146）はマージ済み。段階 09 は実装・全 JVM テスト・静的解析・dev APK ビルド済み（実機での最終動作確認待ち）。
 調査日: 2026-10-31。
 調査基準: develop `e261bc2` の本番コード・テスト・技術文書。
 
@@ -142,7 +142,7 @@ MediaStoreCapturedPhotoWriter は createContentValues / insert が try の外に
 
 対象: [MainViewModel](../../app/src/main/kotlin/com/appvoyager/cloudphotos/ui/MainViewModel.kt)、[MainActivity](../../app/src/main/kotlin/com/appvoyager/cloudphotos/ui/MainActivity.kt)、MainViewModelTest。
 
-feature の ViewModel は StateFlow を使っているが、MainViewModel の `uiState`、`isCheckingSession`、`isRetrying` は Compose の mutableStateOf を公開している。
+段階 09 の着手前は feature の ViewModel が StateFlow を使う一方、MainViewModel の `uiState`、`isCheckingSession`、`isRetrying` は Compose の mutableStateOf を公開していた。
 
 - 3 つの状態を private MutableStateFlow / public read-only StateFlow に置き換える。sealed な MainUiState と既存のフラグの意味を維持し、無関係な状態の統合を必須にしない。
 - 更新は update を使い、MainActivity の Compose 内では collectAsStateWithLifecycle() で購読する。
@@ -441,12 +441,23 @@ LoginViewModel は init で SavedStateHandle の `message` を、VerificationCod
 
 ### 09. App の状態管理と最終統合
 
-ブランチ案: `feature/09-app-stateflow`。変更設計 E と全体の接続確認に対応する。
+ブランチ: `feature/09-app-stateflow`。変更設計 E と全体の接続確認に対応する。
 
 - 対象: `:app` の MainViewModel / MainActivity / 対応テスト。
 - 作業: 起動状態を StateFlow へ移し、ここまでの feature と既存 Navigation / DI / FCM の接続を確認する。feature 固有の状態を app へ移さない。
 - 検証: `./gradlew.bat test`、`./gradlew.bat ktlintCheck detekt assembleDevDebug`。端末ではスプラッシュ・再試行・認証前後の Back・一覧・撮影・通知を確認する。端末が必要な検証は JVM 結果と分けて報告する。
 - 完了条件: 起動状態・フラグ・認証開始先・FCM 登録契機が維持され、各段階の検証結果が揃っている。07 を保留した場合は、配送変更を未採用とし、H に挙げた既知の残存課題を明記する。
+
+実装記録（2026-11-02）:
+
+- PR #146 のマージ後の develop `80f257a` から `feature/09-app-stateflow` を分岐した。MainViewModel の uiState / isCheckingSession / isRetrying を独立した private MutableStateFlow / read-only StateFlow へ移し、MainUiState の sealed 構造と None / true / false の初期値を維持した。
+- MainActivity は onCreate のセッション確認開始を維持し、スプラッシュ保持条件で最新の isCheckingSession.value を読む。Compose 内では uiState / isRetrying を collectAsStateWithLifecycle で購読し、収集済み uiState に応じた表示と FCM 登録を行う。起動先は Authenticated → HOME、Unauthenticated → login() のまま維持する。
+- NavGraph の認証完了・再設定完了・サインアウト時の popUpTo、camera / detail からの戻り操作を静的に確認した。Application 起動時・MainActivity の Authenticated 表示時・onNewToken の FCM 登録契機、登録 Worker の unique REPLACE、Manifest / Hilt WorkerFactory / Auth の Repository・DataSource / CapturedPhotoWriter の DI 配線を確認した。これらの実装と feature の公開 navigation 引数は変更していない。
+- 段階 07 は採用・マージ済みであり、auth の未受信 Effect を ViewModel 存続中に保持する方針を引き継ぐ。受信と Lifecycle 停止の競合・受信済み Snackbar の中断・プロセス終了後の配送を保証しないという限界は維持する。
+- MainViewModelTest は 11 件から 17 件へ整理・拡充した。3 項目の private Snapshot と実際の StateFlow 購読で、初期値、signed-in / guest / error / 例外、初回・再試行の待機と重複抑止、成功・失敗・キャンセル後の finally 解除、完了後の再確認、FCM の明示的な委譲を検証した。非 suspend の checkSession が起動した Job を依存内から捕捉し、キャンセル時に Job が cancelled となり Error へ置換されないことも確認した。再確認・再試行で初回スプラッシュを再保持しない意味は維持している。
+- `bash gradlew test ktlintCheck detekt assembleDevDebug -Pkotlin.compiler.execution.strategy=in-process --max-workers=4 --console=plain` は、DEV / PROD の API_BASE_URL・COGNITO_CLIENT_ID・S3_BUCKET_NAME をそれぞれ `http://localhost:8080/dummy`・`dummy_client_id`・`dummy_bucket_name` の Gradle project property に指定して成功した。全 JVM テストは 484 実行、失敗・エラー・スキップ 0 件（app は dev / prod 各 22 件、うち MainViewModel は各 17 件）。dev debug APK の生成を確認した。ダミーの接続値によるコンパイル・ビルド確認であり、実サービスへの接続成功としては扱わない。
+- 全体の Kotlin / resource / Hilt・DI 配線のコンパイル、ktlint・detekt が成功した。文書リンク 730 件の参照切れ 0 件、Codex / Claude の ViewModel・Navigation reference 一致、`git diff --check` 成功。独立した静的レビューで追加指摘なし。
+- 接続端末・エミュレータがないため、Instrumented Test、実環境のスプラッシュ・起動再試行・Activity 再生成、認証前後の Back、一覧・撮影・権限復帰・通知の実動作は未確認。各段階に記録した Preview 実描画・カメラ・停止復帰などの端末依存項目も未確認のまま区別する。全実装段階のコード変更と JVM / ビルドの統合確認は揃ったが、09 のマージと実機の最終確認は残る。
 
 ### 段階間の依存とレビュー運用
 
