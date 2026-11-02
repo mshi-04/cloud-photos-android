@@ -1,27 +1,34 @@
 package com.appvoyager.cloudphotos.ui
 
+import app.cash.turbine.test
 import com.appvoyager.cloudphotos.domain.auth.model.AuthError
 import com.appvoyager.cloudphotos.domain.auth.model.AuthResult
 import com.appvoyager.cloudphotos.domain.auth.model.AuthSession
 import com.appvoyager.cloudphotos.domain.auth.model.AuthState
 import com.appvoyager.cloudphotos.domain.auth.usecase.GetSessionUseCase
 import com.appvoyager.cloudphotos.fcm.FcmTokenRegistrar
+import io.mockk.clearAllMocks
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.verify
+import kotlin.coroutines.cancellation.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.job
 import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -36,6 +43,7 @@ class MainViewModelTest {
 
     @BeforeEach
     fun setUp() {
+        clearAllMocks()
         Dispatchers.setMain(testDispatcher)
         every { fcmTokenRegistrar.register() } just runs
         viewModel = MainViewModel(getSessionUseCase, fcmTokenRegistrar)
@@ -47,136 +55,334 @@ class MainViewModelTest {
     }
 
     @Test
-    fun `uiState returns None when viewModel is created`() {
-        assertEquals(MainUiState.None, viewModel.uiState)
+    fun `uiState returns initial snapshot when viewModel is created`() {
+        // Arrange & Act
+        // State: initial state holds the splash before an explicit session lookup
+        val snapshot = MainSnapshot.from(viewModel)
+
+        // Assert
+        assertEquals(MainSnapshot(), snapshot)
+        coVerify(exactly = 0) { getSessionUseCase() }
+        verify(exactly = 0) { fcmTokenRegistrar.register() }
     }
 
     @Test
-    fun `isCheckingSession returns true when viewModel is created`() {
-        assertTrue(viewModel.isCheckingSession)
-    }
+    fun `checkSession sets checking snapshot when initial lookup is pending`() = runTest(testDispatcher) {
+        // Arrange
+        val response = CompletableDeferred<AuthResult<AuthSession>>()
+        coEvery { getSessionUseCase() } coAnswers { response.await() }
 
-    @Test
-    fun `checkSession sets Authenticated when signed in`() = runTest {
-        coEvery { getSessionUseCase() } returns AuthResult.Success(
-            AuthSession(state = AuthState.SignedIn)
-        )
-
+        // Act
+        // Coroutine/State: an unfinished initial lookup keeps the splash without entering retry mode
         viewModel.checkSession()
-        advanceUntilIdle()
+        runCurrent()
+        val pending = MainSnapshot.from(viewModel)
+        response.complete(AuthResult.Success(AuthSession(state = AuthState.Guest)))
+        runCurrent()
 
-        assertEquals(MainUiState.Authenticated, viewModel.uiState)
+        // Assert
+        assertEquals(MainSnapshot(), pending)
+        assertEquals(MainSnapshot(MainUiState.Unauthenticated, false), MainSnapshot.from(viewModel))
+        coVerify(exactly = 1) { getSessionUseCase() }
     }
 
     @Test
-    fun `checkSession sets Unauthenticated when guest`() = runTest {
-        coEvery { getSessionUseCase() } returns AuthResult.Success(
-            AuthSession(state = AuthState.Guest)
-        )
+    fun `checkSession emits Authenticated when signed in`() = runTest(testDispatcher) {
+        // Arrange
+        coEvery { getSessionUseCase() } returns AuthResult.Success(AuthSession(state = AuthState.SignedIn))
 
+        // Act & Assert
+        // Flow/State: the public stream emits the destination and releases startup flags
+        viewModel.uiState.test {
+            assertEquals(MainUiState.None, awaitItem())
+            viewModel.checkSession()
+            runCurrent()
+            assertEquals(MainUiState.Authenticated, awaitItem())
+            expectNoEvents()
+            cancelAndConsumeRemainingEvents()
+        }
+        assertEquals(MainSnapshot(MainUiState.Authenticated, false), MainSnapshot.from(viewModel))
+        coVerify(exactly = 1) { getSessionUseCase() }
+    }
+
+    @Test
+    fun `checkSession sets Unauthenticated when guest`() = runTest(testDispatcher) {
+        // Arrange
+        coEvery { getSessionUseCase() } returns AuthResult.Success(AuthSession(state = AuthState.Guest))
+
+        // Act
+        // State: guest selects login and releases the splash
         viewModel.checkSession()
-        advanceUntilIdle()
+        runCurrent()
 
-        assertEquals(MainUiState.Unauthenticated, viewModel.uiState)
+        // Assert
+        assertEquals(MainSnapshot(MainUiState.Unauthenticated, false), MainSnapshot.from(viewModel))
+        coVerify(exactly = 1) { getSessionUseCase() }
     }
 
     @Test
-    fun `checkSession sets SessionCheckError when getSessionUseCase returns Error`() = runTest {
+    fun `checkSession sets SessionCheckError when lookup returns Error`() = runTest(testDispatcher) {
+        // Arrange
         coEvery { getSessionUseCase() } returns AuthResult.Error(AuthError.Unknown())
 
+        // Act
+        // Error/State: a domain failure selects retry with the splash released
         viewModel.checkSession()
-        advanceUntilIdle()
+        runCurrent()
 
-        assertEquals(MainUiState.SessionCheckError, viewModel.uiState)
+        // Assert
+        assertEquals(MainSnapshot(MainUiState.SessionCheckError, false), MainSnapshot.from(viewModel))
+        coVerify(exactly = 1) { getSessionUseCase() }
     }
 
     @Test
-    fun `checkSession sets SessionCheckError when getSessionUseCase throws`() = runTest {
+    fun `checkSession sets SessionCheckError when lookup throws`() = runTest(testDispatcher) {
+        // Arrange
         coEvery { getSessionUseCase() } throws RuntimeException("network error")
 
-        viewModel.checkSession()
-        advanceUntilIdle()
-
-        assertEquals(MainUiState.SessionCheckError, viewModel.uiState)
-    }
-
-    @Test
-    fun `checkSession sets isCheckingSession to false when completed`() = runTest {
-        coEvery { getSessionUseCase() } returns AuthResult.Success(
-            AuthSession(state = AuthState.SignedIn)
-        )
-
-        viewModel.checkSession()
-        advanceUntilIdle()
-
-        assertFalse(viewModel.isCheckingSession)
-    }
-
-    @Test
-    fun `checkSession ignores concurrent call when already running`() = runTest {
-        coEvery { getSessionUseCase() } returns AuthResult.Success(
-            AuthSession(state = AuthState.SignedIn)
-        )
-
-        viewModel.checkSession()
-        viewModel.checkSession()
-        advanceUntilIdle()
-
-        // Only one call should have been made
-        io.mockk.coVerify(exactly = 1) { getSessionUseCase() }
-    }
-
-    @Test
-    fun `checkSession sets isRetrying to true when retrying after error`() = runTest {
-        // Arrange
-        coEvery { getSessionUseCase() } returns AuthResult.Error(AuthError.Unknown())
-
-        viewModel.checkSession()
-        advanceUntilIdle()
-
-        assertEquals(MainUiState.SessionCheckError, viewModel.uiState)
-
-        val deferred = kotlinx.coroutines.CompletableDeferred<AuthResult<AuthSession>>()
-        coEvery { getSessionUseCase() } coAnswers { deferred.await() }
-
         // Act
+        // Error/State: an unexpected exception selects the same error state and releases flags
         viewModel.checkSession()
-        testScheduler.advanceTimeBy(1)
+        runCurrent()
 
         // Assert
-        assertTrue(viewModel.isRetrying)
-
-        deferred.complete(AuthResult.Success(AuthSession(state = AuthState.SignedIn)))
-        advanceUntilIdle()
+        assertEquals(MainSnapshot(MainUiState.SessionCheckError, false), MainSnapshot.from(viewModel))
+        coVerify(exactly = 1) { getSessionUseCase() }
     }
 
     @Test
-    fun `checkSession sets isRetrying to false when retry completes`() = runTest {
+    fun `checkSession sets retry snapshot when retry lookup is pending`() = runTest(testDispatcher) {
         // Arrange
-        coEvery { getSessionUseCase() } returns AuthResult.Error(AuthError.Unknown())
-
-        viewModel.checkSession()
-        advanceUntilIdle()
-
-        assertEquals(MainUiState.SessionCheckError, viewModel.uiState)
-
-        val deferred = kotlinx.coroutines.CompletableDeferred<AuthResult<AuthSession>>()
-        coEvery { getSessionUseCase() } coAnswers { deferred.await() }
+        failInitialCheck()
+        val response = CompletableDeferred<AuthResult<AuthSession>>()
+        coEvery { getSessionUseCase() } coAnswers { response.await() }
 
         // Act
+        // Coroutine/State: retry keeps the error screen while progress is shown without restoring the splash
         viewModel.checkSession()
-        testScheduler.advanceTimeBy(1)
-        deferred.complete(AuthResult.Success(AuthSession(state = AuthState.SignedIn)))
-        advanceUntilIdle()
+        runCurrent()
+        val pending = MainSnapshot.from(viewModel)
+        response.complete(AuthResult.Success(AuthSession(state = AuthState.SignedIn)))
+        runCurrent()
 
         // Assert
-        assertFalse(viewModel.isRetrying)
+        assertEquals(MainSnapshot(MainUiState.SessionCheckError, false, true), pending)
+        assertEquals(MainSnapshot(MainUiState.Authenticated, false), MainSnapshot.from(viewModel))
+        coVerify(exactly = 2) { getSessionUseCase() }
     }
 
     @Test
-    fun `registerFcmToken calls FcmTokenRegistrar register when called`() {
+    fun `checkSession sets Unauthenticated when retry returns guest`() = runTest(testDispatcher) {
+        // Arrange
+        failInitialCheck()
+        coEvery { getSessionUseCase() } returns AuthResult.Success(AuthSession(state = AuthState.Guest))
+
+        // Act
+        // State: a guest retry clears progress and selects the unauthenticated destination
+        viewModel.checkSession()
+        runCurrent()
+
+        // Assert
+        assertEquals(MainSnapshot(MainUiState.Unauthenticated, false), MainSnapshot.from(viewModel))
+        coVerify(exactly = 2) { getSessionUseCase() }
+    }
+
+    @Test
+    fun `checkSession sets retry flag to false when retry returns Error`() = runTest(testDispatcher) {
+        // Arrange
+        failInitialCheck()
+        val response = CompletableDeferred<AuthResult<AuthSession>>()
+        coEvery { getSessionUseCase() } coAnswers { response.await() }
+        viewModel.checkSession()
+        runCurrent()
+
+        // Act
+        // Error/State: another domain failure finishes retry and keeps the error destination
+        response.complete(AuthResult.Error(AuthError.Unknown()))
+        runCurrent()
+
+        // Assert
+        assertEquals(MainSnapshot(MainUiState.SessionCheckError, false), MainSnapshot.from(viewModel))
+        coVerify(exactly = 2) { getSessionUseCase() }
+    }
+
+    @Test
+    fun `checkSession sets retry flag to false when retry throws`() = runTest(testDispatcher) {
+        // Arrange
+        failInitialCheck()
+        val response = CompletableDeferred<AuthResult<AuthSession>>()
+        coEvery { getSessionUseCase() } coAnswers { response.await() }
+        viewModel.checkSession()
+        runCurrent()
+
+        // Act
+        // Error/State: an unexpected retry exception releases progress in finally
+        response.completeExceptionally(RuntimeException("network error"))
+        runCurrent()
+
+        // Assert
+        assertEquals(MainSnapshot(MainUiState.SessionCheckError, false), MainSnapshot.from(viewModel))
+        coVerify(exactly = 2) { getSessionUseCase() }
+    }
+
+    @Test
+    fun `checkSession ignores concurrent calls when initial lookup is pending`() = runTest(testDispatcher) {
+        // Arrange
+        val response = CompletableDeferred<AuthResult<AuthSession>>()
+        coEvery { getSessionUseCase() } coAnswers { response.await() }
+
+        // Act
+        // Coroutine/Interaction: scheduled and already-running calls share one active lookup job
+        viewModel.checkSession()
+        viewModel.checkSession()
+        runCurrent()
+        viewModel.checkSession()
+        val pending = MainSnapshot.from(viewModel)
+        response.complete(AuthResult.Success(AuthSession(state = AuthState.SignedIn)))
+        runCurrent()
+
+        // Assert
+        assertEquals(MainSnapshot(), pending)
+        assertEquals(MainSnapshot(MainUiState.Authenticated, false), MainSnapshot.from(viewModel))
+        coVerify(exactly = 1) { getSessionUseCase() }
+    }
+
+    @Test
+    fun `checkSession ignores concurrent calls when retry is pending`() = runTest(testDispatcher) {
+        // Arrange
+        failInitialCheck()
+        val response = CompletableDeferred<AuthResult<AuthSession>>()
+        coEvery { getSessionUseCase() } coAnswers { response.await() }
+
+        // Act
+        // Coroutine/Interaction: repeated retry taps retain one request and its progress state
+        viewModel.checkSession()
+        runCurrent()
+        viewModel.checkSession()
+        val pending = MainSnapshot.from(viewModel)
+        response.complete(AuthResult.Success(AuthSession(state = AuthState.Guest)))
+        runCurrent()
+
+        // Assert
+        assertEquals(MainSnapshot(MainUiState.SessionCheckError, false, true), pending)
+        assertEquals(MainSnapshot(MainUiState.Unauthenticated, false), MainSnapshot.from(viewModel))
+        coVerify(exactly = 2) { getSessionUseCase() }
+    }
+
+    @Test
+    fun `checkSession rethrows cancellation when initial lookup is cancelled`() = runTest(testDispatcher) {
+        // Arrange
+        val response = CompletableDeferred<AuthResult<AuthSession>>()
+        lateinit var requestJob: Job
+        coEvery { getSessionUseCase() } coAnswers {
+            requestJob = currentCoroutineContext().job
+            response.await()
+        }
+        viewModel.checkSession()
+        runCurrent()
+
+        // Act
+        // Coroutine/State: dependency cancellation cancels the lookup and releases flags without an error state
+        response.cancel(CancellationException("session lookup cancelled"))
+        runCurrent()
+
+        // Assert
+        assertTrue(requestJob.isCancelled)
+        assertEquals(MainSnapshot(isCheckingSession = false), MainSnapshot.from(viewModel))
+        coVerify(exactly = 1) { getSessionUseCase() }
+    }
+
+    @Test
+    fun `checkSession rethrows cancellation when retry is cancelled`() = runTest(testDispatcher) {
+        // Arrange
+        failInitialCheck()
+        val response = CompletableDeferred<AuthResult<AuthSession>>()
+        lateinit var requestJob: Job
+        coEvery { getSessionUseCase() } coAnswers {
+            requestJob = currentCoroutineContext().job
+            response.await()
+        }
+        viewModel.checkSession()
+        runCurrent()
+        val pending = MainSnapshot.from(viewModel)
+
+        // Act
+        // Coroutine/State: a cancelled retry keeps the error screen and clears retry progress
+        response.cancel(CancellationException("session retry cancelled"))
+        runCurrent()
+
+        // Assert
+        assertEquals(MainSnapshot(MainUiState.SessionCheckError, false, true), pending)
+        assertTrue(requestJob.isCancelled)
+        assertEquals(MainSnapshot(MainUiState.SessionCheckError, false), MainSnapshot.from(viewModel))
+        coVerify(exactly = 2) { getSessionUseCase() }
+    }
+
+    @Test
+    fun `checkSession calls lookup again when previous lookup has completed`() = runTest(testDispatcher) {
+        // Arrange
+        coEvery { getSessionUseCase() } returns AuthResult.Success(AuthSession(state = AuthState.SignedIn))
+        viewModel.checkSession()
+        runCurrent()
+        coEvery { getSessionUseCase() } returns AuthResult.Success(AuthSession(state = AuthState.Guest))
+
+        // Act
+        // Coroutine/State: the job guard permits a later check while the splash stays released
+        viewModel.checkSession()
+        runCurrent()
+
+        // Assert
+        assertEquals(MainSnapshot(MainUiState.Unauthenticated, false), MainSnapshot.from(viewModel))
+        coVerify(exactly = 2) { getSessionUseCase() }
+    }
+
+    @Test
+    fun `registerFcmToken calls registrar when explicitly requested`() {
+        // Arrange
+        val initial = MainSnapshot.from(viewModel)
+
+        // Act
+        // Interaction: registration delegates without changing startup state or requesting a session
         viewModel.registerFcmToken()
 
+        // Assert
         verify(exactly = 1) { fcmTokenRegistrar.register() }
+        coVerify(exactly = 0) { getSessionUseCase() }
+        assertEquals(initial, MainSnapshot.from(viewModel))
+    }
+
+    @Test
+    fun `checkSession ignores FCM registration when authentication completes`() = runTest(testDispatcher) {
+        // Arrange
+        coEvery { getSessionUseCase() } returns AuthResult.Success(AuthSession(state = AuthState.SignedIn))
+
+        // Act
+        // Interaction: authentication exposes state while the Activity owns the registration trigger
+        viewModel.checkSession()
+        runCurrent()
+
+        // Assert
+        assertEquals(MainSnapshot(MainUiState.Authenticated, false), MainSnapshot.from(viewModel))
+        verify(exactly = 0) { fcmTokenRegistrar.register() }
+    }
+
+    private fun failInitialCheck() {
+        coEvery { getSessionUseCase() } returns AuthResult.Error(AuthError.Unknown())
+        viewModel.checkSession()
+        testDispatcher.scheduler.runCurrent()
+    }
+
+    private data class MainSnapshot(
+        val uiState: MainUiState = MainUiState.None,
+        val isCheckingSession: Boolean = true,
+        val isRetrying: Boolean = false
+    ) {
+        companion object {
+            fun from(viewModel: MainViewModel): MainSnapshot = MainSnapshot(
+                uiState = viewModel.uiState.value,
+                isCheckingSession = viewModel.isCheckingSession.value,
+                isRetrying = viewModel.isRetrying.value
+            )
+        }
     }
 }

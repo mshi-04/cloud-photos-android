@@ -1,8 +1,5 @@
 package com.appvoyager.cloudphotos.ui
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.appvoyager.cloudphotos.domain.auth.model.AuthResult
@@ -12,6 +9,10 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 @HiltViewModel
@@ -20,25 +21,25 @@ class MainViewModel @Inject constructor(
     private val fcmTokenRegistrar: FcmTokenRegistrar
 ) : ViewModel() {
 
-    var uiState by mutableStateOf<MainUiState>(MainUiState.None)
-        private set
+    private val _uiState = MutableStateFlow<MainUiState>(MainUiState.None)
+    val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
 
-    var isCheckingSession by mutableStateOf(true)
-        private set
+    private val _isCheckingSession = MutableStateFlow(true)
+    val isCheckingSession: StateFlow<Boolean> = _isCheckingSession.asStateFlow()
 
-    var isRetrying by mutableStateOf(false)
-        private set
+    private val _isRetrying = MutableStateFlow(false)
+    val isRetrying: StateFlow<Boolean> = _isRetrying.asStateFlow()
 
     private var checkSessionJob: Job? = null
 
     fun checkSession() {
         if (checkSessionJob?.isActive == true) return
-        val retrying = uiState is MainUiState.SessionCheckError
+        val retrying = _uiState.value is MainUiState.SessionCheckError
         checkSessionJob = viewModelScope.launch {
-            if (retrying) isRetrying = true
+            if (retrying) _isRetrying.update { true }
             try {
                 val result = getSessionUseCase()
-                uiState = when (result) {
+                val state = when (result) {
                     is AuthResult.Success -> {
                         if (result.value.isSignedIn) {
                             MainUiState.Authenticated
@@ -49,12 +50,13 @@ class MainViewModel @Inject constructor(
 
                     is AuthResult.Error -> MainUiState.SessionCheckError
                 }
+                _uiState.update { state }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                uiState = MainUiState.SessionCheckError
+                _uiState.update { MainUiState.SessionCheckError }
             } finally {
-                isCheckingSession = false
-                isRetrying = false
+                _isCheckingSession.update { false }
+                _isRetrying.update { false }
             }
         }
     }
