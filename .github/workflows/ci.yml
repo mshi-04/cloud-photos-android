@@ -309,4 +309,4 @@ jobs:
           api-level: 36
           arch: x86_64
           target: google_apis
-          script: ./gradlew :feature:media:data:connectedDebugAndroidTest
+          script: ./gradlew :feature:media:data:connectedDebugAndroidTest :feature:auth:ui:connectedDebugAndroidTest
