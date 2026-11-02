@@ -33,7 +33,7 @@
 
 ### 3. `instrumented-test`
 
-- Fastlane を経由せず、ダミー対応済みの `ORG_GRADLE_PROJECT_DEV_*` を設定したうえで、KVM 権限を有効化し `reactivecircus/android-emulator-runner`（API 36、`x86_64`、`google_apis`）上で `./gradlew :feature:media:data:connectedDebugAndroidTest :feature:auth:ui:connectedDebugAndroidTest :app:connectedDevDebugAndroidTest` を実行する。auth UI では認証フォームの Screen から Content への配線を、app では実 MainActivity の初回セッション確認後のログイン表示と再試行中のボタン状態を Compose UI テストで確認する。
+- Fastlane を経由せず、ダミー対応済みの `ORG_GRADLE_PROJECT_DEV_*` を設定したうえで、KVM 権限を有効化し `reactivecircus/android-emulator-runner`（API 36、`x86_64`、`google_apis`）上で `./gradlew :feature:media:data:connectedDebugAndroidTest :feature:auth:ui:connectedDebugAndroidTest` を実行する。auth UI では認証フォームの Screen から Content への配線を Compose UI テストで確認する。
 
 ## `CD` と `CodeQL` の特徴
 
