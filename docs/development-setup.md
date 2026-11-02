@@ -70,6 +70,7 @@ Kotlin ソース、resource、文書のみの変更では通常不要とする�
 | メディア Worker / Scheduler / `SyncStatus` | `./gradlew :feature:media:data:test` と関連する `:domain:test` / `:ui:test` |
 | Room DAO / Entity、DataStore、WorkManager enqueue 契約 | 上記に加えて `./gradlew :feature:media:data:connectedDebugAndroidTest` |
 | 認証 Screen の表示・操作の配線 | `./gradlew :feature:auth:ui:connectedDebugAndroidTest` |
+| MainActivity の起動状態・再試行表示 | `./gradlew :app:connectedDevDebugAndroidTest`（DEV 環境値が必要） |
 | Gradle 設定、依存追加、`build-logic` | `./gradlew test`、`./gradlew ktlintCheck detekt`、必要に応じて `./gradlew assembleDevDebug` と Kover XML 生成 |
 
 迷った場合は `./gradlew test` を選ぶ。
@@ -103,6 +104,7 @@ bundle exec fastlane test
 # InstrumentedTest（エミュレータまたは実機が必要）
 ./gradlew :feature:media:data:connectedDebugAndroidTest
 ./gradlew :feature:auth:ui:connectedDebugAndroidTest
+./gradlew :app:connectedDevDebugAndroidTest # DEV 環境値が必要
 
 # PR カバレッジ用の Kover XML 生成（カバレッジ設定や Gradle 構成変更時）
 ./gradlew :app:koverXmlReportDevDebug \
