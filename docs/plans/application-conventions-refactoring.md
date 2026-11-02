@@ -1,6 +1,6 @@
 # アプリ本体の規約準拠リファクタリング設計
 
-状態: 段階 01（PR #138）・02（PR #139）・03（PR #140）・04（PR #141）・05（PR #143）・06（PR #142）・06b（PR #144）はマージ済み。段階 07 は H の Channel 配送方針で実装・JVM テスト・静的解析済み（追加 UI テストの端末実行・物理回転確認待ち）。段階 08 以降は未着手。
+状態: 段階 01（PR #138）・02（PR #139）・03（PR #140）・04（PR #141）・05（PR #143）・06（PR #142）・06b（PR #144）・07（PR #145）はマージ済み。段階 08 は実装・JVM テスト・静的解析済み（Preview 実描画・実機操作待ち）。段階 09 は未着手。
 調査日: 2026-10-31。
 調査基準: develop `e261bc2` の本番コード・テスト・技術文書。
 
@@ -175,7 +175,7 @@ resource 化（必須）:
 
 対象: [CameraScreen](../../feature/media/ui/src/main/kotlin/com/appvoyager/cloudphotos/ui/media/screen/CameraScreen.kt)。
 
-現在は 1 つの Screen に ViewModel 接続、権限、camera manager、Lifecycle、描画が同居し、CameraContent と画面全体の Preview がない。
+段階 08 の着手前は、1 つの Screen に ViewModel 接続、権限、camera manager、Lifecycle、描画が同居し、CameraContent と画面全体の Preview がなかった。
 
 - Screen は state / Effect の収集、権限 launcher、Lifecycle、CameraPreviewManager、撮影 bridge を所有する。
 - private CameraContent は CameraUiState、画面限定の表示値、callback、カメラ表示 slot を受け取る。slot を使い、Preview ではハードウェアや PreviewView を生成しない。
@@ -420,12 +420,24 @@ LoginViewModel は init で SavedStateHandle の `message` を、VerificationCod
 
 ### 08. Media UI
 
-ブランチ案: `feature/08-media-ui-camera-content`。変更設計 G に対応する。
+ブランチ: `feature/08-media-ui-camera-content`。変更設計 G に対応する。
 
 - 対象: `:feature:media:ui` の CameraScreen / private CameraContent / Preview と関連テスト。
 - 作業: 接続処理と描画を分離する。04 の保存契約を利用し、UI 側に I/O や新たな UseCase を増やさない。
 - 検証: `./gradlew.bat :feature:media:ui:test`、状態別 Preview、実機の権限・切替・撮影・pause / resume・保存失敗表示。
 - 完了条件: Hilt・カメラ実機に依存しない Content Preview が描画でき、権限前に bind しないことを含めて Screen の Lifecycle と操作結果が既存どおり動く。
+
+実装記録（2026-11-02）:
+
+- PR #145 のマージ後の develop `790da26` から `feature/08-media-ui-camera-content` を分岐した。CameraScreen の接続処理と private CameraContent の描画を分け、状態・画面限定の表示値・callback・カメラ表示 slot で接続する。
+- Screen は権限 launcher、PreviewView / CameraPreviewManager、LifecycleResumeEffect、state / Effect の購読、撮影 bridge を所有する。lens・flash・thumbnail・dialog の寿命も Screen のまま維持する。CameraContent へ manager を渡さず、isCameraBound は Boolean として渡す。
+- Ready / Capturing のときだけ slot を呼び出し、slot 内の LaunchedEffect(lensFacing, resumeKey) で起動・再接続する。設定画面を開く操作も callback に移し、描画側から Context / Intent 操作を分離する。シャッターとレンズ切替の有効条件、保存失敗時の表示と retry の順序を維持する。
+- 変更対象は media UI の CameraScreen と文書に限定する。ViewModel・UiState・Effect・CapturedPhotoWriter の保存契約・CameraPreviewManager・navigation 引数・resource・依存関係は変更しない。ViewModel の状態遷移と Effect の条件は変えないため、抽出を写す JVM テストは追加せず、既存テストと静的レビューで確認する。
+- Preview は CheckingPermission / PermissionRequired / Ready（接続済み・接続前・サムネイルあり）/ Capturing / Error 3 種 / 容量不足ダイアログの 10 状態を用意した。各状態の日 light・英 dark と、Ready の日 dark・英 light を合わせて 22 構成。CloudPhotosTheme と代替 Box slot で構成し、Hilt・PreviewView・CameraPreviewManager・実画像の読み込みを必要としない。
+- PR #146 の Nitpick に対応し、CameraContentPreview が lastThumbnailUri を受け取って CameraContent に渡すようにした。非 null の URI を渡す Preview では、Coil の Preview handler が固定の色付き画像を返す。MediaStore・ファイル・ネットワークへアクセスせず、サムネイルを表示する分岐を確認できる構成とした。本番のサムネイル処理は変更していない。
+- `bash gradlew :feature:media:ui:test :feature:media:ui:ktlintCheck :feature:media:ui:detekt :feature:media:ui:lintDebug -Pkotlin.compiler.execution.strategy=in-process --max-workers=4 --console=plain` は成功。JVM テスト 47 件（CameraViewModel 19 件、MediaViewModel 28 件）、失敗・エラー・スキップ 0 件。Kotlin / Preview 定義のコンパイルと ktlint・detekt も成功。Android lint は error 0 件、変更前からある `Uri.parse` への UseKtx warning 1 件。
+- 文書リンク 730 件の参照切れ 0 件、両クライアントの Screen reference 一致、`git diff --check` 成功。独立した静的レビューでも追加指摘なし。
+- Android Studio と接続端末・エミュレータがないため、Preview の実描画、権限拒否・許可・設定復帰、レンズ切替・撮影・tap / pinch・pause / resume、容量不足表示の実機操作は未確認。単一 UI モジュール内の描画抽出で公開 API・DI・resource・依存関係を変えていないため、アプリ全体のビルドと Instrumented Test は未実施。次の段階 09 はこの変更のマージ後に最新 develop から分岐する。
 
 ### 09. App の状態管理と最終統合
 
