@@ -40,6 +40,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -52,6 +53,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -65,13 +67,18 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
+import coil3.ColorImage
+import coil3.annotation.ExperimentalCoilApi
 import coil3.compose.AsyncImage
+import coil3.compose.AsyncImagePreviewHandler
+import coil3.compose.LocalAsyncImagePreviewHandler
 import com.appvoyager.cloudphotos.core.ui.R
 import com.appvoyager.cloudphotos.ui.media.camera.CameraPreviewManager
 import com.appvoyager.cloudphotos.ui.media.effect.CameraEffect
@@ -451,6 +458,21 @@ private fun CameraReadyPreview() {
     CameraContentPreview(uiState = CameraUiState.Ready)
 }
 
+@OptIn(ExperimentalCoilApi::class)
+@CameraStatePreviews
+@Composable
+private fun CameraReadyWithThumbnailPreview() {
+    val previewHandler = AsyncImagePreviewHandler {
+        ColorImage(color = Color.Cyan.toArgb(), width = 48, height = 48)
+    }
+    CompositionLocalProvider(LocalAsyncImagePreviewHandler provides previewHandler) {
+        CameraContentPreview(
+            uiState = CameraUiState.Ready,
+            lastThumbnailUri = "preview://last-photo".toUri()
+        )
+    }
+}
+
 @CameraStatePreviews
 @Composable
 private fun CameraReadyUnboundPreview() {
@@ -495,6 +517,7 @@ private fun CameraContentPreview(
     uiState: CameraUiState,
     isCameraBound: Boolean = true,
     flashAlpha: Float = 0f,
+    lastThumbnailUri: Uri? = null,
     showStorageDialog: Boolean = false
 ) {
     CloudPhotosTheme(dynamicColor = false) {
@@ -503,7 +526,7 @@ private fun CameraContentPreview(
                 uiState = uiState,
                 isCameraBound = isCameraBound,
                 flashAlpha = flashAlpha,
-                lastThumbnailUri = null,
+                lastThumbnailUri = lastThumbnailUri,
                 showStorageDialog = showStorageDialog,
                 onNavigateBack = {},
                 onTakePhoto = {},
