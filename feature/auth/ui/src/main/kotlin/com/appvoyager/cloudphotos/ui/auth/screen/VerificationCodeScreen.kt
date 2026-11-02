@@ -94,10 +94,10 @@ fun VerificationCodeScreen(
                 email = viewModel.email?.value.orEmpty(),
                 codes = uiState.codes,
                 codeError = uiState.codeError?.toCodeMessage(),
-                isCodeComplete = uiState.isCodeComplete,
+                isCodeComplete = viewModel.isCodeComplete(uiState),
                 isLoading = uiState.isLoading,
                 resendTimerSeconds = uiState.resendTimerSeconds,
-                isResendEnabled = uiState.isResendEnabled,
+                isResendEnabled = viewModel.isResendEnabled(uiState),
                 onCodeChanged = { index, value -> viewModel.onCodeChanged(index, value) },
                 onVerify = { viewModel.onVerify() },
                 onResend = { viewModel.onResend() }

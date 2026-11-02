@@ -40,6 +40,12 @@ class VerificationCodeViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(VerificationCodeUiState(isLoading = false))
     val uiState: StateFlow<VerificationCodeUiState> = _uiState.asStateFlow()
 
+    val isCodeComplete: Boolean
+        get() = isCodeComplete(_uiState.value)
+
+    val isResendEnabled: Boolean
+        get() = isResendEnabled(_uiState.value)
+
     private val _effect = MutableSharedFlow<VerificationEffect>(extraBufferCapacity = 1)
     val effect: SharedFlow<VerificationEffect> = _effect.asSharedFlow()
 
@@ -56,6 +62,12 @@ class VerificationCodeViewModel @Inject constructor(
             }
         }
     }
+
+    internal fun isCodeComplete(state: VerificationCodeUiState): Boolean =
+        state.codes.size == 6 && state.codes.all { it.length == 1 && it[0].isDigit() }
+
+    internal fun isResendEnabled(state: VerificationCodeUiState): Boolean =
+        state.resendTimerSeconds <= 0 && !state.isLoading
 
     fun startTimer() {
         if (!isTimerStarted) {
@@ -76,7 +88,7 @@ class VerificationCodeViewModel @Inject constructor(
                 currentCodes[index + i] = ch.toString()
             }
             _uiState.update { it.copy(codes = currentCodes) }
-            if (_uiState.value.isCodeComplete) {
+            if (isCodeComplete) {
                 onVerify()
             }
             return
@@ -86,14 +98,14 @@ class VerificationCodeViewModel @Inject constructor(
         currentCodes[index] = digits.take(1)
         _uiState.update { it.copy(codes = currentCodes) }
 
-        if (_uiState.value.isCodeComplete) {
+        if (isCodeComplete) {
             onVerify()
         }
     }
 
     fun onVerify() {
         val emailValue = email ?: return
-        if (!_uiState.value.isCodeComplete || _uiState.value.isLoading) return
+        if (!isCodeComplete || _uiState.value.isLoading) return
         _uiState.update { it.copy(isLoading = true) }
         val fullCode = _uiState.value.codes.joinToString("")
 
@@ -117,7 +129,7 @@ class VerificationCodeViewModel @Inject constructor(
 
     fun onResend() {
         val emailValue = email ?: return
-        if (!_uiState.value.isResendEnabled || _uiState.value.isLoading) return
+        if (!isResendEnabled || _uiState.value.isLoading) return
         _uiState.update { it.copy(isLoading = true) }
 
         viewModelScope.launch {

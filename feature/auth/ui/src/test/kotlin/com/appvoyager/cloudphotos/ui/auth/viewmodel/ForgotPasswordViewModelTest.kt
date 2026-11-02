@@ -8,19 +8,27 @@ import com.appvoyager.cloudphotos.domain.auth.valueobject.Email
 import com.appvoyager.cloudphotos.ui.auth.effect.AuthSnackbarMessage
 import com.appvoyager.cloudphotos.ui.auth.effect.ForgotPasswordEffect
 import com.appvoyager.cloudphotos.ui.auth.uistate.AuthFieldError
+import io.mockk.clearAllMocks
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.mockk
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ForgotPasswordViewModelTest {
@@ -32,6 +40,7 @@ class ForgotPasswordViewModelTest {
 
     @BeforeEach
     fun setUp() {
+        clearAllMocks()
         Dispatchers.setMain(testDispatcher)
         viewModel = ForgotPasswordViewModel(resetPasswordUseCase)
     }
@@ -51,6 +60,7 @@ class ForgotPasswordViewModelTest {
 
         // Assert
         assertEquals(ForgotPasswordFormSnapshot(), ForgotPasswordFormSnapshot.from(state))
+        assertFalse(viewModel.isFormValid)
     }
 
     @Test
@@ -80,6 +90,7 @@ class ForgotPasswordViewModelTest {
 
         // Assert
         assertEquals("", viewModel.uiState.value.email)
+        assertFalse(viewModel.isFormValid)
     }
 
     @Test
@@ -94,6 +105,8 @@ class ForgotPasswordViewModelTest {
 
         // Assert
         val state = viewModel.uiState.value
+        assertFalse(viewModel.isFormValid)
+        coVerify(exactly = 0) { resetPasswordUseCase(any()) }
         assertEquals(
             ForgotPasswordFormSnapshot(email = "invalid-email", emailError = AuthFieldError.InvalidEmail),
             ForgotPasswordFormSnapshot.from(state)
@@ -322,6 +335,66 @@ class ForgotPasswordViewModelTest {
                 cancelAndConsumeRemainingEvents()
             }
         }
+
+    @ParameterizedTest
+    @CsvSource(
+        "'', false",
+        "'   ', false",
+        "invalid-email, false",
+        "test@example.com, true",
+        "' test@example.com ', true"
+    )
+    fun `isFormValid returns expected result when email changes`(email: String, expected: Boolean) {
+        // Arrange
+
+        // Act
+        // Boundary: email validity follows the latest raw input, including surrounding whitespace
+        viewModel.onEmailChanged(email)
+        val actual = viewModel.isFormValid
+
+        // Assert
+        assertEquals(expected, actual)
+        assertEquals(email, viewModel.uiState.value.email)
+    }
+
+    @Test
+    fun `isFormValid returns captured validity when current email is cleared`() {
+        // Arrange
+        viewModel.onEmailChanged("test@example.com")
+        val displayedState = viewModel.uiState.value
+
+        // Act
+        // State: the displayed email and its validity use the same snapshot after a newer input update
+        viewModel.onClearEmail()
+        val displayedValidity = viewModel.isFormValid(displayedState)
+
+        // Assert
+        assertTrue(displayedValidity)
+        assertFalse(viewModel.isFormValid)
+        assertEquals("test@example.com", displayedState.email)
+        assertEquals("", viewModel.uiState.value.email)
+    }
+
+    @Test
+    fun `onSubmit ignores duplicate request when a valid form is loading`() = runTest(testDispatcher) {
+        // Arrange
+        val response = CompletableDeferred<AuthResult<Unit>>()
+        viewModel.onEmailChanged("test@example.com")
+        coEvery { resetPasswordUseCase(any()) } coAnswers { response.await() }
+
+        // Act
+        // Interaction: the form remains valid while the loading guard prevents a second request
+        viewModel.onSubmit()
+        viewModel.onSubmit()
+        runCurrent()
+
+        // Assert
+        assertTrue(viewModel.isFormValid)
+        assertTrue(viewModel.uiState.value.isLoading)
+        coVerify(exactly = 1) { resetPasswordUseCase(any()) }
+        response.complete(AuthResult.Error(AuthError.Network()))
+        runCurrent()
+    }
 
     private data class ForgotPasswordFormSnapshot(
         val email: String = "",

@@ -9,13 +9,17 @@ import com.appvoyager.cloudphotos.domain.auth.usecase.ResendSignUpCodeUseCase
 import com.appvoyager.cloudphotos.ui.auth.effect.AuthSnackbarMessage
 import com.appvoyager.cloudphotos.ui.auth.effect.VerificationEffect
 import com.appvoyager.cloudphotos.ui.auth.uistate.AuthFieldError
+import io.mockk.clearAllMocks
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.mockk
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.jupiter.api.AfterEach
@@ -45,6 +49,7 @@ class VerificationCodeViewModelTest {
 
     @BeforeEach
     fun setUp() {
+        clearAllMocks()
         Dispatchers.setMain(testDispatcher)
         viewModel = createViewModel()
         viewModel.startTimer()
@@ -65,6 +70,8 @@ class VerificationCodeViewModelTest {
 
         // Assert
         Assertions.assertEquals(VerificationCodeSnapshot(), VerificationCodeSnapshot.from(state))
+        Assertions.assertFalse(viewModel.isCodeComplete)
+        Assertions.assertFalse(viewModel.isResendEnabled)
     }
 
     @Test
@@ -107,7 +114,7 @@ class VerificationCodeViewModelTest {
 
         // Act
         // Boundary: exactly six filled digits complete the code
-        val isCodeComplete = viewModel.uiState.value.isCodeComplete
+        val isCodeComplete = viewModel.isCodeComplete
 
         // Assert
         Assertions.assertTrue(isCodeComplete)
@@ -222,6 +229,138 @@ class VerificationCodeViewModelTest {
         }
     }
 
+    @Test
+    fun `isCodeComplete returns false when a verified code loses a digit`() = runTest(testDispatcher) {
+        // Arrange
+        coEvery { confirmSignUpUseCase(any()) } returns AuthResult.Error(AuthError.CodeMismatch())
+        fillCode("123456")
+        runCurrent()
+        Assertions.assertTrue(viewModel.isCodeComplete)
+
+        // Act
+        // State: clearing a digit updates validity and prevents another confirmation request
+        viewModel.onCodeChanged(2, "")
+        viewModel.onVerify()
+        runCurrent()
+
+        // Assert
+        Assertions.assertFalse(viewModel.isCodeComplete)
+        coVerify(exactly = 1) { confirmSignUpUseCase(any()) }
+    }
+
+    @Test
+    fun `isCodeComplete returns captured validity when current code loses a digit`() = runTest(testDispatcher) {
+        // Arrange
+        coEvery { confirmSignUpUseCase(any()) } returns AuthResult.Error(AuthError.CodeMismatch())
+        fillCode("123456")
+        runCurrent()
+        val displayedState = viewModel.uiState.value
+
+        // Act
+        // State: the displayed verification code and enabled flag keep the same completed snapshot
+        viewModel.onCodeChanged(2, "")
+        val displayedValidity = viewModel.isCodeComplete(displayedState)
+
+        // Assert
+        Assertions.assertTrue(displayedValidity)
+        Assertions.assertFalse(viewModel.isCodeComplete)
+        Assertions.assertEquals(listOf("1", "2", "3", "4", "5", "6"), displayedState.codes)
+        Assertions.assertEquals("", viewModel.uiState.value.codes[2])
+    }
+
+    @Test
+    fun `onCodeChanged calls confirmation once when pasted input exceeds six digits`() = runTest(testDispatcher) {
+        // Arrange
+        coEvery { confirmSignUpUseCase(any()) } returns AuthResult.Error(AuthError.CodeMismatch())
+
+        // Act
+        // Boundary/Interaction: filtered paste completes six slots and triggers automatic confirmation once
+        viewModel.onCodeChanged(0, "1a2b3c4d5e6f7")
+        runCurrent()
+
+        // Assert
+        Assertions.assertEquals(listOf("1", "2", "3", "4", "5", "6"), viewModel.uiState.value.codes)
+        Assertions.assertTrue(viewModel.isCodeComplete)
+        coVerify(exactly = 1) { confirmSignUpUseCase(match { it.code.value == "123456" }) }
+        coVerify(exactly = 1) { confirmSignUpUseCase(any()) }
+    }
+
+    @Test
+    fun `isResendEnabled returns captured availability when current resend starts loading`() = runTest(testDispatcher) {
+        // Arrange
+        val response = CompletableDeferred<AuthResult<Unit>>()
+        coEvery { resendSignUpCodeUseCase(any()) } coAnswers { response.await() }
+        runCurrent()
+        testScheduler.advanceTimeBy(60_000L)
+        runCurrent()
+        val displayedState = viewModel.uiState.value
+
+        // Act
+        // Coroutine/State: a newer request does not change the resend flag for the displayed idle snapshot
+        viewModel.onResend()
+        runCurrent()
+        val displayedAvailability = viewModel.isResendEnabled(displayedState)
+        val currentAvailability = viewModel.isResendEnabled
+        val currentLoading = viewModel.uiState.value.isLoading
+        response.complete(AuthResult.Error(AuthError.Network()))
+        runCurrent()
+
+        // Assert
+        Assertions.assertTrue(displayedAvailability)
+        Assertions.assertFalse(currentAvailability)
+        Assertions.assertFalse(displayedState.isLoading)
+        Assertions.assertTrue(currentLoading)
+        coVerify(exactly = 1) { resendSignUpCodeUseCase(any()) }
+    }
+
+    @Test
+    fun `isResendEnabled returns true when cooldown reaches zero`() = runTest(testDispatcher) {
+        // Arrange
+        runCurrent()
+        testScheduler.advanceTimeBy(59_000L)
+        runCurrent()
+        Assertions.assertEquals(1, viewModel.uiState.value.resendTimerSeconds)
+        Assertions.assertFalse(viewModel.isResendEnabled)
+
+        // Act
+        // Coroutine/Boundary: the derived resend flag follows the last timer tick
+        testScheduler.advanceTimeBy(1_000L)
+        runCurrent()
+
+        // Assert
+        Assertions.assertEquals(0, viewModel.uiState.value.resendTimerSeconds)
+        Assertions.assertTrue(viewModel.isResendEnabled)
+    }
+
+    @Test
+    fun `onResend ignores duplicate request when resend is loading`() = runTest(testDispatcher) {
+        // Arrange
+        val response = CompletableDeferred<AuthResult<Unit>>()
+        coEvery { resendSignUpCodeUseCase(any()) } coAnswers { response.await() }
+        runCurrent()
+        testScheduler.advanceTimeBy(60_000L)
+        runCurrent()
+        Assertions.assertTrue(viewModel.isResendEnabled)
+
+        // Act
+        // Coroutine/Interaction: a pending resend disables the flag until success starts a new cooldown
+        viewModel.onResend()
+        viewModel.onResend()
+        runCurrent()
+        val enabledWhileLoading = viewModel.isResendEnabled
+        val loadingDuringRequest = viewModel.uiState.value.isLoading
+        response.complete(AuthResult.Success(Unit))
+        runCurrent()
+
+        // Assert
+        Assertions.assertFalse(enabledWhileLoading)
+        Assertions.assertTrue(loadingDuringRequest)
+        coVerify(exactly = 1) { resendSignUpCodeUseCase(any()) }
+        Assertions.assertFalse(viewModel.uiState.value.isLoading)
+        Assertions.assertEquals(60, viewModel.uiState.value.resendTimerSeconds)
+        Assertions.assertFalse(viewModel.isResendEnabled)
+    }
+
     private fun fillCode(code: String) {
         code.take(6).forEachIndexed { i, ch ->
             viewModel.onCodeChanged(i, ch.toString())
@@ -232,8 +371,7 @@ class VerificationCodeViewModelTest {
         val codes: List<String> = List(6) { "" },
         val isLoading: Boolean = false,
         val codeError: AuthFieldError? = null,
-        val resendTimerSeconds: Int = 60,
-        val isResendEnabled: Boolean = false
+        val resendTimerSeconds: Int = 60
     ) {
         companion object {
             fun from(state: com.appvoyager.cloudphotos.ui.auth.uistate.VerificationCodeUiState) =
@@ -241,8 +379,7 @@ class VerificationCodeViewModelTest {
                     codes = state.codes,
                     isLoading = state.isLoading,
                     codeError = state.codeError,
-                    resendTimerSeconds = state.resendTimerSeconds,
-                    isResendEnabled = state.isResendEnabled
+                    resendTimerSeconds = state.resendTimerSeconds
                 )
         }
     }

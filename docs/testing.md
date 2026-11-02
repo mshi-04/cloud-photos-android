@@ -8,7 +8,7 @@
 | 区分 | 配置先 | スタック | 対象 |
 | --- | --- | --- | --- |
 | UnitTest | `src/test` | JUnit 5（Jupiter）、MockK、Turbine、`kotlinx-coroutines-test` | Value Object、UseCase、Repository 実装、DataSource、Mapper、ViewModel、Worker、SQL を実行しない契約ガード |
-| InstrumentedTest | `src/androidTest` | JUnit 4（`org.junit.*`）、`androidx.test`、`room-testing`、`work-testing`、`kotlinx-coroutines-test` | Android SQLite 上の Room DAO、WorkManager Scheduler の enqueue 契約、DataStore の実ファイル読み書き |
+| InstrumentedTest | `src/androidTest` | JUnit 4（`org.junit.*`）、`androidx.test`、Compose UI Test、`room-testing`、`work-testing`、`kotlinx-coroutines-test` | Screen の表示・操作の配線、Android SQLite 上の Room DAO、WorkManager Scheduler の enqueue 契約、DataStore の実ファイル読み書き |
 
 - JVM で再現できるロジックはすべて `src/test` に置く。
 - `src/androidTest` は `AndroidJUnitRunner` 上で動作するため JUnit 5 の annotation（`@BeforeEach` や `org.junit.jupiter.api.Test`）は実行されない。必ず JUnit 4 の `@Test`、`@Before`、`@After`、`org.junit.Assert.*` を使う。
@@ -119,6 +119,7 @@ D8 / DEX の制約でスペースを含む backtick 名が使えないため、�
 ### InstrumentedTest（[`UploadRecordDaoInstrumentedTest`](../feature/media/data/src/androidTest/kotlin/com/appvoyager/cloudphotos/data/media/db/dao/UploadRecordDaoInstrumentedTest.kt)、[`MediaSchedulerInstrumentedTest`](../feature/media/data/src/androidTest/kotlin/com/appvoyager/cloudphotos/data/media/worker/MediaSchedulerInstrumentedTest.kt)、[`SettingsDataSourceImplInstrumentedTest`](../feature/media/data/src/androidTest/kotlin/com/appvoyager/cloudphotos/data/media/datasource/SettingsDataSourceImplInstrumentedTest.kt)）
 
 - MockK は使わず、すべて実体で組み立て、`@After` で確実に後始末する。
+  - **Compose Screen**: `createComposeRule()` 上で public な Screen を実 ViewModel と fake Repository で描画し、semantics から表示値・ボタンの有効条件を確認する。購読済み UiState を渡す契約は、test 用 LifecycleOwner の収集を止めた間に ViewModel の入力・仮想 timer を更新し、callback 引数の更新で Screen を再描画して検証する。収集再開後に最新状態へ追従することも確認する（[`AuthScreenInstrumentedTest`](../feature/auth/ui/src/androidTest/kotlin/com/appvoyager/cloudphotos/ui/auth/screen/AuthScreenInstrumentedTest.kt)）。
   - **Room DAO**: `Room.inMemoryDatabaseBuilder(...).allowMainThreadQueries().build()` を `@Before` で作り、`@After` で `database.close()` する。空 ID リスト、不在 ID、削除の冪等性、upsert 置換、全 `SyncStatus` を投入した絞り込みを確認する。
     - 順序を保証しない query の結果は、期待値と実測値の両方を `sortedBy { it.mediaId }` で揃えて比較する。重複件数を検証する必要がない場合は `toSet()` で比較してもよい。
   - **WorkManager Scheduler**: `WorkManagerTestInitHelper.initializeTestWorkManager` で初期化し、`@After` で `workManager.cancelAllWork().result.get()` を呼び、キャンセル操作の完了を待ってから後始末を終える。`WorkInfo` と `WorkSpec` から unique work 件数、`ENQUEUED` 状態、Worker クラス名、`NetworkType.CONNECTED`、空の input Data、および 2 回呼び出し時に `KEEP` で初回 work ID が保たれることを確認する。

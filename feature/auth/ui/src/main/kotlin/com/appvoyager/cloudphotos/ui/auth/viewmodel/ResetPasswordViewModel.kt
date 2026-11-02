@@ -43,6 +43,15 @@ class ResetPasswordViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(ResetPasswordUiState())
     val uiState: StateFlow<ResetPasswordUiState> = _uiState.asStateFlow()
 
+    val isCodeComplete: Boolean
+        get() = isCodeComplete(_uiState.value.codes)
+
+    val isFormValid: Boolean
+        get() = isFormValid(_uiState.value)
+
+    val isResendEnabled: Boolean
+        get() = isResendEnabled(_uiState.value)
+
     private var isTimerStarted = false
     private val resendTimer = ResendTimer(
         durationSeconds = ResetPasswordUiState.DEFAULT_RESEND_COOLDOWN_SECONDS,
@@ -51,6 +60,12 @@ class ResetPasswordViewModel @Inject constructor(
 
     private val _effect = MutableSharedFlow<ResetPasswordEffect>(extraBufferCapacity = 1)
     val effect: SharedFlow<ResetPasswordEffect> = _effect.asSharedFlow()
+
+    internal fun isFormValid(state: ResetPasswordUiState): Boolean =
+        isCodeComplete(state.codes) && state.newPassword.trim().length >= MIN_PASSWORD_LENGTH
+
+    internal fun isResendEnabled(state: ResetPasswordUiState): Boolean =
+        state.resendTimerSeconds <= 0 && !state.isLoading
 
     fun startTimerIfNeeded() {
         if (!isTimerStarted) {
@@ -112,7 +127,7 @@ class ResetPasswordViewModel @Inject constructor(
     }
 
     fun onResend() {
-        if (_uiState.value.isLoading || !_uiState.value.isResendEnabled) return
+        if (_uiState.value.isLoading || !isResendEnabled) return
         _uiState.update { it.copy(isLoading = true) }
 
         viewModelScope.launch {
@@ -133,9 +148,12 @@ class ResetPasswordViewModel @Inject constructor(
         }
     }
 
+    private fun isCodeComplete(codes: List<String>): Boolean =
+        codes.size == 6 && codes.all { it.length == 1 && it[0].isDigit() }
+
     private fun validateForm(): Boolean {
         var valid = true
-        if (!_uiState.value.isCodeComplete) {
+        if (!isCodeComplete) {
             _uiState.update { it.copy(codeError = AuthFieldError.EnterCode) }
             valid = false
         }

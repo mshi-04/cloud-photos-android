@@ -17,6 +17,7 @@
   - UI 操作の受け口は `onScreenResumed()`、`onEmailChanged(value)` のような個別 public 関数とし、単一の `onEvent(event)` ディスパッチャは導入しない。
   - `CancellationException` は catch 節や `runCatching` で握り潰さず再スローする。
 - **プロジェクト固有の契約**:
+  - **認証フォームの派生値**: ForgotPassword の `isFormValid`、ResetPassword の `isCodeComplete` / `isFormValid` / `isResendEnabled`、VerificationCode の `isCodeComplete` / `isResendEnabled` は、所有 ViewModel の computed property として最新の `_uiState.value` から計算する。UiState に Boolean を保存したり、別の StateFlow で二重管理したりしない。Screen に渡す派生値には、UiState を明示的に受け取る ViewModel の判定関数を用意し、getter も同じ判定関数へ委譲する。Screen は購読済みの `uiState` を判定関数に渡し、入力値・timer・loading と派生値を同じ snapshot から Content へ渡す。
   - **購読の張り直しと同期 Job の直列化**: `MediaViewModel.loadMediaList()` のように購読を張り直す場合は前の `Job` を `cancel()` してから `launch` する。一方、`MediaViewModel.onScreenResumed()` は Room と WorkManager を触るため、新しい `launch` 内で前の `syncJob?.cancelAndJoin()` を待ってから同期処理を順に実行する。
   - **画面復帰の間引きとテスト差し替え口**: `LifecycleResumeEffect` は権限ダイアログの開閉でも発火するため、`MediaViewModel.onScreenResumed()` は `MIN_RESUME_INTERVAL_MS` 未満の連続呼び出しを無視する。時刻取得は Hilt へ漏らさず JVM テストで差し替えられるよう `internal var elapsedRealtimeProvider: () -> Long` と `internal const val MIN_RESUME_INTERVAL_MS` を使う。
   - **多重実行防止フラグ**: サインアウト・退会・認証送信などの非同期処理は `isSigningOut` / `isDeletingUser` / `isLoading` で二重起動を防ぎ、解除は必ず `finally` に置く。

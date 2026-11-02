@@ -1,6 +1,6 @@
 # アプリ本体の規約準拠リファクタリング設計
 
-状態: 段階 01（PR #138）・02（PR #139）・03（PR #140）・04（PR #141）・05（PR #143）はマージ済み。段階 06 は実装・全 JVM テスト・ビルド・静的解析済み（Preview 実描画・端末確認待ち）。段階 07 以降は未着手。
+状態: 段階 01（PR #138）・02（PR #139）・03（PR #140）・04（PR #141）・05（PR #143）・06（PR #142）はマージ済み。段階 06b は実装・JVM テスト・静的解析済み（Preview 実描画・端末確認待ち）。段階 07 以降は未着手。
 調査日: 2026-10-31。
 調査基準: develop `e261bc2` の本番コード・テスト・技術文書。
 
@@ -167,7 +167,7 @@ resource 化（必須）:
 - ForgotPasswordUiState / ResetPasswordUiState / VerificationCodeUiState の `isFormValid`、`isCodeComplete`、`isResendEnabled` を、[Implementation Guidelines](../implementation-guidelines.md) の派生値の規定に合わせて所有 ViewModel の computed property へ移す。形は既存の `LoginViewModel.isFormValid` に揃える。
 - 現在も computed getter であり、不具合の修正ではない。Screen、Content の引数、Preview、テストまで変更が及ぶため、規約準拠の任意項目として resource 化の PR と分ける。
 - 入力値や timer の保存場所は変えない。保存済み Boolean を増やしたり、独立した StateFlow に二重管理したりしない。
-- Screen は購読した uiState の更新で再描画し、computed property を Content の表示引数へ渡す。ViewModel 内の入力検証と UI の有効条件を合わせ、テストも更新する。
+- Screen は購読済みの uiState を ViewModel の判定関数へ渡し、入力値と同じ snapshot から計算した派生値を Content の表示引数へ渡す。最新 state を使う computed property も同じ判定関数へ委譲する。ViewModel 内の入力検証と UI の有効条件を合わせ、テストも更新する。
 
 検証: auth UI Unit Test、フォームの有効条件、コード貼り付け・自動送信・再送 timer、日英 Preview、長い文字列、resource build / lint を確認する。
 
@@ -378,6 +378,22 @@ ViewModel は Screen の初回 composition 中に生成され、Main.immediate �
 - 文書リンク 710 件の参照切れ 0 件、`git diff --check` 成功。独立した静的レビューでは指摘なし。表示文字列以外の layout / callback / 有効条件、ViewModel / UiState / timer / Effect / Lifecycle を維持していることを確認した。
 - develop `e88dc87` 統合後も `bash gradlew test :app:assembleDevDebug`（環境値と実行オプションは上記と同じ）は成功。全 JVM テストは延べ 439 件（app の dev / prod を別集計）、失敗・エラー・スキップは 0 件。競合箇所は計画書の進捗行のみで、Auth UI / core:ui は段階 06、Media Data と Worker reference は develop の内容をそのまま保持している。
 - 開発環境値が未設定のため、ビルドと JVM テストには CI と同じダミー接続値を用いた。実環境への接続検証ではない。Android Studio と接続端末・エミュレータがないため、Preview の実描画・長文の収まり・端末上のフォーム操作は未実施。Preview 定義のコンパイルと resource build / lint までを検証範囲とする。
+
+### 06b. Auth UI の派生値
+
+ブランチ: `feature/06b-auth-ui-derived-values`。変更設計 F の任意項目に対応する。
+
+実装・レビュー対応記録（2026-11-01〜02）:
+
+- 段階 06 の PR #142 マージ後の develop `0a0183f` から分岐した。ForgotPasswordUiState の isFormValid、ResetPasswordUiState の isCodeComplete / isFormValid / isResendEnabled、VerificationCodeUiState の isCodeComplete / isResendEnabled を、所有 ViewModel の computed property へ移した。
+- getter は既存の LoginViewModel に合わせて最新の `_uiState.value` から計算する。画面に渡す派生値には UiState を引数に取る判定関数を用意し、getter も同じ関数へ委譲する。ResetPassword のフォーム判定は単一の state snapshot を使い、コード完成判定の private predicate と既存の MIN_PASSWORD_LENGTH を利用して画面表示と送信時の条件を揃えた。入力値・エラー・isLoading・resendTimerSeconds と timer の所有者は維持し、保存済み Boolean や StateFlow を追加していない。
+- 3 Screen は collectAsStateWithLifecycle による購読を維持し、購読済みの uiState を ViewModel の判定関数に渡す。既存 Content の入力値・timer・loading と派生値は同じ snapshot を参照する。既存 Preview は固定値の引数で構成されており、ViewModel を生成せずに引き続き利用できる。Effect 配送・Lifecycle gating・入力 callback・公開 navigation 引数は変更していない。
+- 変更モジュールは `:feature:auth:ui`。既存の ViewModel テストで新しい getter を検証し、入力変更・コード完成・再送 timer に対する派生値の追従と操作条件を確認する。両クライアントの ViewModel reference に所有者を反映した。Domain / Data の契約・依存・Gradle 設定・resource は変更していない。
+- `bash gradlew :feature:auth:ui:test :feature:auth:ui:ktlintCheck :feature:auth:ui:detekt :feature:auth:ui:lintDebug -Pkotlin.compiler.execution.strategy=in-process --max-workers=4 --console=plain` は成功。Auth UI の JVM テストは 71 件（追加 23 ケース）、失敗・エラー・スキップはいずれも 0 件。メールの空・不正・trim、パスワード長の 7 / 8 文字境界と trim、コード消去への追従、貼り付けからの自動確認、60 秒の再送境界、loading 中の送信抑止と cooldown 再開を確認した。レビュー対応で、捕捉済み UiState と現在状態が異なる 5 ケースと、貼り付け時の確認処理の総呼び出し回数 1 回の検証を追加した。Android lint は error / warning ともに 0 件。
+- 文書リンク 726 件の参照切れ 0 件、変更した Codex / Claude ViewModel reference の不一致 0 件、`git diff --check` 成功。独立レビューでの文書の旧記述も修正した。
+- PR #144 の追加レビューに対応し、3 Screen の配線を確認する Compose UI テストを `src/androidTest` に 5 件追加した。実 ViewModel と fake Repository を使い、LifecycleOwner の収集停止中に入力・仮想 timer を更新して Screen を再描画する。入力値とボタンの有効条件が購読済み snapshot を使い、収集再開後は最新状態に追従することを検証する。Compose UI Test の依存は auth UI のテスト用に追加し、既存の Compose BOM に合わせた。CI の instrumented-test に `:feature:auth:ui:connectedDebugAndroidTest` を追加した。本番コードの変更はない。
+- 追加検証の `bash gradlew test ktlintCheck detekt :feature:auth:ui:assembleDebugAndroidTest :feature:auth:ui:lintDebug -Pkotlin.compiler.execution.strategy=in-process --max-workers=4 --console=plain` は、DEV / PROD の API URL・Cognito client ID・S3 bucket にダミーの Gradle project property を指定して成功した。全モジュールの JVM テストは 462 実行（auth UI は 71 件）、失敗・エラー・スキップ 0 件。追加した端末テストのコンパイル・APK 生成、ktlint・detekt、Android lint（error / warning 0 件）が成功した。文書リンク 727 件の参照切れ 0 件、`git diff --check` 成功、独立レビューで追加指摘なし。接続端末・エミュレータがないため、Compose UI テスト 5 件の実行は未確認で CI での確認が必要。
+- 検証範囲は変更モジュールの JVM テスト・Kotlin / Preview 定義のコンパイル・静的解析とし、アプリ全体のビルドと Instrumented Test は未実施。公開 navigation 引数・resource・DI 配線・他モジュールは変更していない。Android Studio と接続端末・エミュレータがないため、Preview の実描画と実機のフォーム操作は未確認。段階 07 の Effect 配送はこの変更には含めない。
 
 ### 07. Auth UI の Effect 配送（任意）
 
