@@ -3,6 +3,7 @@ package com.appvoyager.cloudphotos.ui.media.screen
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.net.Uri
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -60,6 +61,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
@@ -76,6 +78,7 @@ import com.appvoyager.cloudphotos.ui.media.effect.CameraEffect
 import com.appvoyager.cloudphotos.ui.media.effect.CameraSnackbarMessage
 import com.appvoyager.cloudphotos.ui.media.uistate.CameraUiState
 import com.appvoyager.cloudphotos.ui.media.viewmodel.CameraViewModel
+import com.appvoyager.cloudphotos.ui.theme.CloudPhotosTheme
 import kotlinx.coroutines.launch
 
 @Composable
@@ -154,155 +157,191 @@ fun CameraScreen(viewModel: CameraViewModel = hiltViewModel(), onNavigateBack: (
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .background(Color.Black)
-        ) {
-            when (val state = uiState) {
-                is CameraUiState.CheckingPermission -> {
+        CameraContent(
+            uiState = uiState,
+            isCameraBound = cameraPreviewManager.isCameraBound,
+            flashAlpha = flashAlpha.value,
+            lastThumbnailUri = lastThumbnailUri,
+            showStorageDialog = showStorageDialog,
+            onNavigateBack = onNavigateBack,
+            onTakePhoto = {
+                viewModel.takePhoto(
+                    captureJpeg = { cameraPreviewManager.captureToJpeg() },
+                    onCaptureAnimTrigger = {
+                        coroutineScope.launch {
+                            flashAlpha.animateTo(0.6f, tween(50))
+                            flashAlpha.animateTo(0f, tween(150))
+                        }
+                    }
+                )
+            },
+            onSwitchLens = {
+                lensFacing = if (lensFacing == CameraSelector.LENS_FACING_BACK) {
+                    CameraSelector.LENS_FACING_FRONT
+                } else {
+                    CameraSelector.LENS_FACING_BACK
+                }
+            },
+            onRetry = { viewModel.retryCamera() },
+            onOpenSettings = {
+                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                    data = Uri.fromParts("package", context.packageName, null)
+                }
+                context.startActivity(intent)
+            },
+            onDismissStorageDialog = {
+                showStorageDialog = false
+                viewModel.retryCamera()
+            },
+            modifier = Modifier.padding(innerPadding),
+            cameraPreview = {
+                LaunchedEffect(lensFacing, resumeKey) {
+                    cameraPreviewManager.startCamera(lensFacing)
                 }
 
-                is CameraUiState.PermissionRequired -> {
-                    PermissionRequiredContent()
+                AndroidView(
+                    factory = { previewView },
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .pointerInput(Unit) {
+                            detectTransformGestures { _, _, zoom, _ ->
+                                cameraPreviewManager.handlePinchToZoom(zoom)
+                            }
+                        }
+                        .pointerInput(Unit) {
+                            detectTapGestures(
+                                onTap = { offset ->
+                                    cameraPreviewManager.handleTapToFocus(offset)
+                                }
+                            )
+                        }
+                )
+            }
+        )
+    }
+}
+
+@Composable
+private fun CameraContent(
+    uiState: CameraUiState,
+    isCameraBound: Boolean,
+    flashAlpha: Float,
+    lastThumbnailUri: Uri?,
+    showStorageDialog: Boolean,
+    onNavigateBack: () -> Unit,
+    onTakePhoto: () -> Unit,
+    onSwitchLens: () -> Unit,
+    onRetry: () -> Unit,
+    onOpenSettings: () -> Unit,
+    onDismissStorageDialog: () -> Unit,
+    modifier: Modifier = Modifier,
+    cameraPreview: @Composable () -> Unit
+) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Color.Black)
+    ) {
+        when (val state = uiState) {
+            is CameraUiState.CheckingPermission -> {
+            }
+
+            is CameraUiState.PermissionRequired -> {
+                PermissionRequiredContent(onOpenSettings = onOpenSettings)
+            }
+
+            is CameraUiState.Ready, is CameraUiState.Capturing -> {
+                cameraPreview()
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.White.copy(alpha = flashAlpha))
+                )
+
+                IconButton(
+                    onClick = onNavigateBack,
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(16.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = stringResource(R.string.camera_cd_close),
+                        tint = Color.White
+                    )
                 }
 
-                is CameraUiState.Ready, is CameraUiState.Capturing -> {
-                    LaunchedEffect(lensFacing, resumeKey) {
-                        cameraPreviewManager.startCamera(lensFacing)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 32.dp, start = 32.dp, end = 32.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (lastThumbnailUri != null) {
+                        AsyncImage(
+                            model = lastThumbnailUri,
+                            contentDescription = stringResource(R.string.camera_cd_last_photo),
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .border(2.dp, Color.White, CircleShape)
+                        )
+                    } else {
+                        Box(modifier = Modifier.size(48.dp))
                     }
 
-                    AndroidView(
-                        factory = { previewView },
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .pointerInput(Unit) {
-                                detectTransformGestures { _, _, zoom, _ ->
-                                    cameraPreviewManager.handlePinchToZoom(zoom)
-                                }
-                            }
-                            .pointerInput(Unit) {
-                                detectTapGestures(
-                                    onTap = { offset ->
-                                        cameraPreviewManager.handleTapToFocus(offset)
-                                    }
-                                )
-                            }
-                    )
-
+                    val isCapturing = state is CameraUiState.Capturing
+                    val isCameraReady = isCameraBound && !isCapturing
+                    val takePhotoLabel = stringResource(R.string.camera_cd_take_photo)
                     Box(
                         modifier = Modifier
-                            .fillMaxSize()
-                            .background(Color.White.copy(alpha = flashAlpha.value))
+                            .size(72.dp)
+                            .clip(CircleShape)
+                            .background(if (isCameraReady) Color.White else Color.LightGray)
+                            .border(4.dp, Color.LightGray, CircleShape)
+                            .semantics {
+                                role = Role.Button
+                                contentDescription = takePhotoLabel
+                            }
+                            .clickable(enabled = isCameraReady, onClick = onTakePhoto)
                     )
 
                     IconButton(
-                        onClick = onNavigateBack,
+                        onClick = onSwitchLens,
+                        enabled = !isCapturing,
                         modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .padding(16.dp)
+                            .size(48.dp)
+                            .background(Color.Black.copy(alpha = 0.3f), CircleShape)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = stringResource(R.string.camera_cd_close),
+                            imageVector = Icons.Default.Cameraswitch,
+                            contentDescription = stringResource(R.string.camera_cd_switch_camera),
                             tint = Color.White
                         )
                     }
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .align(Alignment.BottomCenter)
-                            .padding(bottom = 32.dp, start = 32.dp, end = 32.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        if (lastThumbnailUri != null) {
-                            AsyncImage(
-                                model = lastThumbnailUri,
-                                contentDescription = stringResource(R.string.camera_cd_last_photo),
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier
-                                    .size(48.dp)
-                                    .clip(CircleShape)
-                                    .border(2.dp, Color.White, CircleShape)
-                            )
-                        } else {
-                            Box(modifier = Modifier.size(48.dp))
-                        }
-
-                        val isCapturing = state is CameraUiState.Capturing
-                        val isCameraReady = cameraPreviewManager.isCameraBound && !isCapturing
-                        val takePhotoLabel = stringResource(R.string.camera_cd_take_photo)
-                        Box(
-                            modifier = Modifier
-                                .size(72.dp)
-                                .clip(CircleShape)
-                                .background(if (isCameraReady) Color.White else Color.LightGray)
-                                .border(4.dp, Color.LightGray, CircleShape)
-                                .semantics {
-                                    role = Role.Button
-                                    contentDescription = takePhotoLabel
-                                }
-                                .clickable(enabled = isCameraReady) {
-                                    viewModel.takePhoto(
-                                        captureJpeg = { cameraPreviewManager.captureToJpeg() },
-                                        onCaptureAnimTrigger = {
-                                            coroutineScope.launch {
-                                                flashAlpha.animateTo(0.6f, tween(50))
-                                                flashAlpha.animateTo(0f, tween(150))
-                                            }
-                                        }
-                                    )
-                                }
-                        )
-
-                        IconButton(
-                            onClick = {
-                                lensFacing = if (lensFacing == CameraSelector.LENS_FACING_BACK) {
-                                    CameraSelector.LENS_FACING_FRONT
-                                } else {
-                                    CameraSelector.LENS_FACING_BACK
-                                }
-                            },
-                            enabled = !isCapturing,
-                            modifier = Modifier
-                                .size(48.dp)
-                                .background(Color.Black.copy(alpha = 0.3f), CircleShape)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Cameraswitch,
-                                contentDescription = stringResource(R.string.camera_cd_switch_camera),
-                                tint = Color.White
-                            )
-                        }
-                    }
                 }
+            }
 
-                is CameraUiState.Error -> {
-                    ErrorContent(
-                        errorType = state.type,
-                        onRetry = { viewModel.retryCamera() }
-                    )
-                }
+            is CameraUiState.Error -> {
+                ErrorContent(
+                    errorType = state.type,
+                    onRetry = onRetry
+                )
             }
         }
     }
 
     if (showStorageDialog) {
         AlertDialog(
-            onDismissRequest = {
-                showStorageDialog = false
-                viewModel.retryCamera()
-            },
+            onDismissRequest = onDismissStorageDialog,
             title = { Text(stringResource(R.string.camera_error_storage_full_title)) },
             text = { Text(stringResource(R.string.camera_error_storage_full_message)) },
             confirmButton = {
-                TextButton(onClick = {
-                    showStorageDialog = false
-                    viewModel.retryCamera()
-                }) {
+                TextButton(onClick = onDismissStorageDialog) {
                     Text(stringResource(R.string.settings_confirm))
                 }
             }
@@ -311,8 +350,7 @@ fun CameraScreen(viewModel: CameraViewModel = hiltViewModel(), onNavigateBack: (
 }
 
 @Composable
-private fun PermissionRequiredContent(modifier: Modifier = Modifier) {
-    val context = LocalContext.current
+private fun PermissionRequiredContent(onOpenSettings: () -> Unit, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Center,
@@ -324,12 +362,7 @@ private fun PermissionRequiredContent(modifier: Modifier = Modifier) {
             color = Color.White
         )
         Button(
-            onClick = {
-                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                    data = Uri.fromParts("package", context.packageName, null)
-                }
-                context.startActivity(intent)
-            },
+            onClick = onOpenSettings,
             modifier = Modifier.padding(top = 16.dp)
         ) {
             Text(stringResource(R.string.permission_open_settings))
@@ -367,4 +400,126 @@ private fun ErrorContent(errorType: CameraUiState.ErrorType, onRetry: () -> Unit
 private fun CameraSnackbarMessage.toMessage(context: android.content.Context): String = when (this) {
     CameraSnackbarMessage.CameraUnavailable -> context.getString(R.string.camera_error_camera_unavailable)
     CameraSnackbarMessage.CaptureFailed -> context.getString(R.string.camera_error_capture_failed)
+}
+
+@Preview(
+    name = "Japanese Light",
+    locale = "ja",
+    uiMode = Configuration.UI_MODE_NIGHT_NO,
+    widthDp = 360,
+    heightDp = 780
+)
+@Preview(
+    name = "English Dark",
+    locale = "en",
+    uiMode = Configuration.UI_MODE_NIGHT_YES,
+    widthDp = 360,
+    heightDp = 780
+)
+@Target(AnnotationTarget.FUNCTION)
+private annotation class CameraStatePreviews
+
+@CameraStatePreviews
+@Composable
+private fun CameraCheckingPermissionPreview() {
+    CameraContentPreview(uiState = CameraUiState.CheckingPermission, isCameraBound = false)
+}
+
+@CameraStatePreviews
+@Composable
+private fun CameraPermissionRequiredPreview() {
+    CameraContentPreview(uiState = CameraUiState.PermissionRequired, isCameraBound = false)
+}
+
+@CameraStatePreviews
+@Preview(
+    name = "Japanese Dark",
+    locale = "ja",
+    uiMode = Configuration.UI_MODE_NIGHT_YES,
+    widthDp = 360,
+    heightDp = 780
+)
+@Preview(
+    name = "English Light",
+    locale = "en",
+    uiMode = Configuration.UI_MODE_NIGHT_NO,
+    widthDp = 360,
+    heightDp = 780
+)
+@Composable
+private fun CameraReadyPreview() {
+    CameraContentPreview(uiState = CameraUiState.Ready)
+}
+
+@CameraStatePreviews
+@Composable
+private fun CameraReadyUnboundPreview() {
+    CameraContentPreview(uiState = CameraUiState.Ready, isCameraBound = false)
+}
+
+@CameraStatePreviews
+@Composable
+private fun CameraCapturingPreview() {
+    CameraContentPreview(uiState = CameraUiState.Capturing, flashAlpha = 0.6f)
+}
+
+@CameraStatePreviews
+@Composable
+private fun CameraUnavailablePreview() {
+    CameraContentPreview(uiState = CameraUiState.Error(CameraUiState.ErrorType.CAMERA_UNAVAILABLE))
+}
+
+@CameraStatePreviews
+@Composable
+private fun CameraCaptureFailedPreview() {
+    CameraContentPreview(uiState = CameraUiState.Error(CameraUiState.ErrorType.CAPTURE_FAILED))
+}
+
+@CameraStatePreviews
+@Composable
+private fun CameraStorageFullPreview() {
+    CameraContentPreview(uiState = CameraUiState.Error(CameraUiState.ErrorType.STORAGE_FULL))
+}
+
+@CameraStatePreviews
+@Composable
+private fun CameraStorageDialogPreview() {
+    CameraContentPreview(
+        uiState = CameraUiState.Error(CameraUiState.ErrorType.STORAGE_FULL),
+        showStorageDialog = true
+    )
+}
+
+@Composable
+private fun CameraContentPreview(
+    uiState: CameraUiState,
+    isCameraBound: Boolean = true,
+    flashAlpha: Float = 0f,
+    showStorageDialog: Boolean = false
+) {
+    CloudPhotosTheme(dynamicColor = false) {
+        Scaffold { innerPadding ->
+            CameraContent(
+                uiState = uiState,
+                isCameraBound = isCameraBound,
+                flashAlpha = flashAlpha,
+                lastThumbnailUri = null,
+                showStorageDialog = showStorageDialog,
+                onNavigateBack = {},
+                onTakePhoto = {},
+                onSwitchLens = {},
+                onRetry = {},
+                onOpenSettings = {},
+                onDismissStorageDialog = {},
+                modifier = Modifier.padding(innerPadding),
+                cameraPreview = {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.DarkGray)
+                    )
+                }
+            )
+        }
+    }
 }
