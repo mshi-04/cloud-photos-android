@@ -13,12 +13,12 @@ WorkManager のバックグラウンド処理を実行する `CoroutineWorker`�
 
 - **必須制約**:
   - `@HiltWorker` と `@AssistedInject constructor(@Assisted context: Context, @Assisted workerParams: WorkerParameters, ...)` を使う。`CloudPhotosApp` の `HiltWorkerFactory` 設定と `AndroidManifest.xml` の `WorkManagerInitializer` 無効化（`tools:node="remove"`）を崩さない。
-  - `doWork()` 内のすべての `runCatching` / `try-catch`（本処理だけでなく `completeUpload()` や S3 クリーンアップ等の副次処理を含む）で、`CancellationException` を最初に再スローする。握り潰すとキャンセルが `Result.retry()` や `Result.failure()` に化ける。
+  - `doWork()` 内で通常失敗を扱う `runCatching` / `try-catch`（`completeUpload()` や S3 クリーンアップ等の副次処理を含む）では、`CancellationException` を最初に再スローし、`Result.retry()` や `Result.failure()` へ変換しない。通知表示・本処理と通知終了がともに例外を投げた場合は、先行例外（キャンセルを含む）を保持して再スローし、通知終了側の例外を suppressed に追加する。先行例外がないときは、通知終了側の例外をそのまま伝播する。
 - **プロジェクト固有の契約**:
   - **`UploadMediaWorker` / `DeleteMediaWorker`**:
     - `doWork()` の処理順、1 件ごとの再取得と status 確認、`cloudStoragePath` 既存時の S3 スキップ、永続失敗（`SyncStatus.ERROR`）と一時失敗（状態維持 + `Result.retry()`）の分類、`completeUpload()` を Worker 実行単位の末尾で 1 回だけ呼ぶ契約、S3 孤立オブジェクトの扱いは [`docs/media-sync.md`](../../../../docs/media-sync.md) を厳守する。
     - リモート API の `isPermanentFailure` 判定（404・429 を除く 4xx）は `UploadMediaWorker` と `DeleteMediaWorker` の両方に存在するため、変更時は両 Worker の整合を確認する。
-    - `UploadNotificationHelper` の進行中通知は pending が 1 件以上ある場合のみ表示し、ループ終了時に必ず `cancelNotification()` する。
+    - `UploadNotificationHelper` の進行中通知は pending が 1 件以上ある場合のみ表示し、表示要求とループを囲む `finally` で、通常完了・例外・キャンセル・表示失敗のいずれでも `cancel()` を 1 回試みる。pending が空なら表示も cancel もしない。`completeUpload()` は `finally` に入れず、ループが通常完了し、一時失敗がなく成功件数が 1 件以上の場合だけ呼ぶ。
   - **`RegisterDeviceTokenWorker`（`app` モジュール）**:
     - Scheduler interface を介さず `companion object` の `enqueue(context, token)` から直接 WorkManager へ登録する。
     - メディア系 Worker（`KEEP`・input Data なし）とは異なり、最新トークンを優先するため `ExistingWorkPolicy.REPLACE`・`KEY_TOKEN` input Data・指数バックオフを使用する。

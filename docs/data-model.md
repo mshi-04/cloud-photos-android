@@ -49,7 +49,7 @@ Entity の列に value object を直接使わないのは、DB 読み出し時�
 - **空・不在・削除の扱い**:
   - `getByIds(mediaIds)` に空リストや存在しない ID を渡した場合は例外にならず空リストが返る。1 件取得も 1 要素リストを渡して行う。
   - `deleteById(mediaId)` は対象行が存在しなくてもエラーにしない（冪等）。
-  - `IN (:mediaIds)` に大量の ID を渡す呼び出し側（[`GetPendingMediaUseCase`](../feature/media/domain/src/main/kotlin/com/appvoyager/cloudphotos/domain/media/usecase/GetPendingMediaUseCase.kt)）では、SQLite のバインド変数上限を超えないよう 900 件ずつ `chunked` して呼び出す。
+  - `IN (:mediaIds)` に大量の ID を渡す呼び出し側（[`PrepareUploadQueueUseCase`](../feature/media/domain/src/main/kotlin/com/appvoyager/cloudphotos/domain/media/usecase/PrepareUploadQueueUseCase.kt)）では、SQLite のバインド変数上限を超えないよう 900 件ずつ `chunked` して呼び出す。
 
 ## Schema 変更と Migration の判断
 

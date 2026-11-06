@@ -16,6 +16,8 @@ ViewModel と接続する public な `XxxScreen` と、ViewModel を参照しな
   - private な `XxxContent` は ViewModel を参照せず、表示に必要な状態と `onXxx: () -> Unit` 形式の callback のみを受け取る。
   - 画面復帰時の処理は `LifecycleResumeEffect(Unit)` に置き、末尾を `onPauseOrDispose` で閉じる（例: `MediaScreen` の `onScreenResumed()` と通知権限確認、`CameraScreen` の `cameraPreviewManager.stopCamera()`）。
 - **既存実装のパターン**:
+  - `CameraScreen` は権限 launcher、Lifecycle、`PreviewView` / `CameraPreviewManager`、撮影 bridge と flash・lens・thumbnail・dialog の画面限定状態を所有する。private な `CameraContent` には状態・表示値・callback・カメラ表示 slot を渡し、manager は渡さない。`isCameraBound` は Screen で読み取って Boolean として渡す。
+  - カメラ表示 slot は Ready / Capturing の分岐でだけ呼び出す。`startCamera` の `LaunchedEffect(lensFacing, resumeKey)` と `AndroidView` / gestures は Screen が渡す slot に置き、権限確認中・要求中・Error では接続しない。CameraContent の Preview はハードウェアを生成しない代替 slot を使う。
   - 権限要求（`rememberLauncherForActivityResult`）や復帰時の再確認トリガーには `mutableIntStateOf(0)` の key（`permissionCheckKey` / `resumeKey`）をインクリメントして `LaunchedEffect(key)` を再実行させている。
   - 画面固有の sub-component は同一ファイル内の private Composable に置き、複数画面・複数 feature で共有する部品のみ `component/` や `core:ui` に切り出す。
   - Preview は Hilt なしで描画できるよう private な `XxxContent` を `CloudPhotosTheme` で包み、主要な状態（`Success` / `Error` / `PermissionRequired` など）ごとに用意する。

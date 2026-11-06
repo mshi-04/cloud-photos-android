@@ -8,8 +8,10 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.appvoyager.cloudphotos.ui.theme.CloudPhotosTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -22,11 +24,14 @@ class MainActivity : ComponentActivity() {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
         mainViewModel.checkSession()
-        splashScreen.setKeepOnScreenCondition { mainViewModel.isCheckingSession }
+        splashScreen.setKeepOnScreenCondition { mainViewModel.isCheckingSession.value }
         enableEdgeToEdge()
         setContent {
-            LaunchedEffect(mainViewModel.uiState) {
-                if (mainViewModel.uiState is MainUiState.Authenticated) {
+            val uiState by mainViewModel.uiState.collectAsStateWithLifecycle()
+            val isRetrying by mainViewModel.isRetrying.collectAsStateWithLifecycle()
+
+            LaunchedEffect(uiState) {
+                if (uiState is MainUiState.Authenticated) {
                     mainViewModel.registerFcmToken()
                 }
             }
@@ -34,7 +39,7 @@ class MainActivity : ComponentActivity() {
                 dynamicColor = true
             ) {
                 Box(modifier = Modifier.fillMaxSize()) {
-                    when (mainViewModel.uiState) {
+                    when (uiState) {
                         is MainUiState.None -> {}
 
                         is MainUiState.Authenticated -> {
@@ -47,7 +52,7 @@ class MainActivity : ComponentActivity() {
 
                         is MainUiState.SessionCheckError -> {
                             SessionCheckErrorScreen(
-                                isRetrying = mainViewModel.isRetrying,
+                                isRetrying = isRetrying,
                                 onRetry = { mainViewModel.checkSession() }
                             )
                         }

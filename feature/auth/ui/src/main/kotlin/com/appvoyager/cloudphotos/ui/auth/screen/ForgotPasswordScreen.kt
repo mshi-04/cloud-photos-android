@@ -1,5 +1,6 @@
 package com.appvoyager.cloudphotos.ui.auth.screen
 
+import android.content.res.Configuration
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -44,7 +45,10 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import com.appvoyager.cloudphotos.core.ui.R
 import com.appvoyager.cloudphotos.domain.auth.valueobject.Email
 import com.appvoyager.cloudphotos.ui.auth.component.LoadingOverlay
@@ -69,24 +73,27 @@ fun ForgotPasswordScreen(
     val latestOnNavigateToResetPassword = rememberUpdatedState(onNavigateToResetPassword)
     val latestOnNavigateToVerification = rememberUpdatedState(onNavigateToVerification)
     val latestOnNavigateBack = rememberUpdatedState(onNavigateBack)
+    val lifecycleOwner = LocalLifecycleOwner.current
 
-    LaunchedEffect(Unit) {
-        viewModel.effect.collect { effect ->
-            when (effect) {
-                is ForgotPasswordEffect.NavigateToResetPassword -> {
-                    latestOnNavigateToResetPassword.value(effect.email)
-                }
+    LaunchedEffect(viewModel, lifecycleOwner) {
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            viewModel.effect.collect { effect ->
+                when (effect) {
+                    is ForgotPasswordEffect.NavigateToResetPassword -> {
+                        latestOnNavigateToResetPassword.value(effect.email)
+                    }
 
-                is ForgotPasswordEffect.NavigateToVerification -> {
-                    latestOnNavigateToVerification.value(effect.email)
-                }
+                    is ForgotPasswordEffect.NavigateToVerification -> {
+                        latestOnNavigateToVerification.value(effect.email)
+                    }
 
-                is ForgotPasswordEffect.NavigateBackToLogin -> {
-                    latestOnNavigateBack.value()
-                }
+                    is ForgotPasswordEffect.NavigateBackToLogin -> {
+                        latestOnNavigateBack.value()
+                    }
 
-                is ForgotPasswordEffect.ShowSnackbar -> {
-                    snackbarHostState.showSnackbar(effect.message.toMessage(latestContext.value))
+                    is ForgotPasswordEffect.ShowSnackbar -> {
+                        snackbarHostState.showSnackbar(effect.message.toMessage(latestContext.value))
+                    }
                 }
             }
         }
@@ -105,7 +112,7 @@ fun ForgotPasswordScreen(
             ForgotPasswordContent(
                 email = uiState.email,
                 emailError = uiState.emailError?.toEmailMessage(),
-                isFormValid = uiState.isFormValid,
+                isFormValid = viewModel.isFormValid(uiState),
                 isLoading = uiState.isLoading,
                 onEmailChanged = { viewModel.onEmailChanged(it) },
                 onClearEmail = { viewModel.onClearEmail() },
@@ -166,7 +173,7 @@ private fun ForgotPasswordContent(
         Spacer(modifier = Modifier.height(80.dp))
 
         Text(
-            text = "パスワードのリセット",
+            text = stringResource(R.string.reset_password_title),
             style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.onSurface
         )
@@ -174,7 +181,7 @@ private fun ForgotPasswordContent(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "登録済みのメールアドレスを入力してください。\nパスワードリセット用の確認コードを送信します。",
+            text = stringResource(R.string.forgot_password_description),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -184,14 +191,17 @@ private fun ForgotPasswordContent(
         OutlinedTextField(
             value = email,
             onValueChange = onEmailChanged,
-            label = { Text("メールアドレス") },
+            label = { Text(stringResource(R.string.auth_email_label)) },
             singleLine = true,
             isError = emailError != null,
             supportingText = emailError?.let { error -> { Text(error) } },
             trailingIcon = {
                 if (email.isNotEmpty()) {
                     IconButton(onClick = onClearEmail) {
-                        Icon(Icons.Default.Clear, contentDescription = "クリア")
+                        Icon(
+                            Icons.Default.Clear,
+                            contentDescription = stringResource(R.string.auth_clear_description)
+                        )
                     }
                 }
             },
@@ -219,7 +229,7 @@ private fun ForgotPasswordContent(
             ),
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("確認コードを送信")
+            Text(stringResource(R.string.forgot_password_send_code))
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -229,14 +239,27 @@ private fun ForgotPasswordContent(
             enabled = !isLoading,
             modifier = Modifier.align(Alignment.CenterHorizontally)
         ) {
-            Text("ログイン画面に戻る")
+            Text(stringResource(R.string.forgot_password_back_to_login))
         }
 
         Spacer(modifier = Modifier.height(80.dp))
     }
 }
 
-@Preview(showBackground = true)
+@Preview(name = "English light", showBackground = true, locale = "en")
+@Preview(
+    name = "Japanese dark",
+    showBackground = true,
+    locale = "ja",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Preview(name = "Japanese light", showBackground = true, locale = "ja")
+@Preview(
+    name = "English dark",
+    showBackground = true,
+    locale = "en",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
 @Composable
 private fun ForgotPasswordContentPreview() {
     CloudPhotosTheme {
@@ -253,7 +276,13 @@ private fun ForgotPasswordContentPreview() {
     }
 }
 
-@Preview(showBackground = true)
+@Preview(name = "Japanese light", showBackground = true, locale = "ja")
+@Preview(
+    name = "English dark",
+    showBackground = true,
+    locale = "en",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
 @Composable
 private fun ForgotPasswordContentWithEmailPreview() {
     CloudPhotosTheme {

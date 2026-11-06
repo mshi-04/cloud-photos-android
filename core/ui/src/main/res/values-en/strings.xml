@@ -1,5 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Authentication Form -->
+    <string name="auth_email_label">Email address</string>
+    <string name="auth_password_label">Password</string>
+    <string name="auth_clear_description">Clear</string>
+
+    <!-- Login Screen -->
+    <string name="login_forgot_password">Forgot password?</string>
+    <string name="login_create_account">Create account</string>
+    <string name="login_sign_in">Log in</string>
+
+    <!-- Password Reset Request Screen -->
+    <string name="forgot_password_description">Enter your registered email address.\nWe will send you a verification code to reset your password.</string>
+    <string name="forgot_password_send_code">Send verification code</string>
+    <string name="forgot_password_back_to_login">Back to login</string>
+
     <!-- Verification Code Input Box -->
     <string name="code_input_box_description">Verification code digit %1$d</string>
 

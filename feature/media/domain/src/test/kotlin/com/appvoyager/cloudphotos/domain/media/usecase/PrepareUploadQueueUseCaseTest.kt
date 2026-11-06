@@ -14,18 +14,26 @@ import com.appvoyager.cloudphotos.domain.media.valueobject.MediaCreatedAt
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaId
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaUploadedAt
 import com.appvoyager.cloudphotos.domain.media.valueobject.MediaUrl
+import io.mockk.clearAllMocks
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.slot
 import io.mockk.verify
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertSame
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 
 class PrepareUploadQueueUseCaseTest {
 
@@ -38,6 +46,7 @@ class PrepareUploadQueueUseCaseTest {
 
     @BeforeEach
     fun setUp() {
+        clearAllMocks()
         useCase = PrepareUploadQueueUseCase(
             localMediaRepository = localMediaRepository,
             localUploadRecordsRepository = localUploadRecordsRepository,
@@ -47,7 +56,7 @@ class PrepareUploadQueueUseCaseTest {
     }
 
     @Test
-    fun `invoke saves pending upload records when local media has no upload records`() = runTest {
+    fun `invoke sets pending upload records when local media has no upload records`() = runTest {
         // Arrange
         val media = createMedia("media-1")
         val slot = slot<List<UploadRecord>>()
@@ -146,6 +155,130 @@ class PrepareUploadQueueUseCaseTest {
         useCase()
 
         // Assert
+        verify(exactly = 0) { uploadScheduler.scheduleUpload() }
+    }
+
+    @ParameterizedTest(name = "{displayName} [{0}, {1}]")
+    @CsvSource("900, 1", "901, 2")
+    fun `invoke calls bounded lookups when media count reaches chunk boundary`(mediaCount: Int, expectedLookups: Int) =
+        runTest {
+            // Arrange
+            val mediaList = (1..mediaCount).map { createMedia("media-$it") }
+            val lookupIds = mutableListOf<List<MediaId>>()
+            coEvery { localMediaRepository.getMediaList() } returns mediaList
+            coEvery { localUploadRecordsRepository.getUploadRecords(capture(lookupIds)) } returns emptyList()
+            every { clock.getCurrentTime() } returns 1700000000000L
+            coEvery { localUploadRecordsRepository.saveUploadRecords(any()) } just runs
+            every { uploadScheduler.scheduleUpload() } just runs
+
+            // Act
+            // Boundary: Keep every lookup within 900 IDs without losing IDs at the split.
+            useCase()
+
+            // Assert
+            assertEquals(expectedLookups, lookupIds.size)
+            assertTrue(lookupIds.all { it.size in 1..900 })
+            assertEquals(mediaList.map { it.id }, lookupIds.flatten())
+        }
+
+    @Test
+    fun `invoke sets only new records when existing records span three chunks`() = runTest {
+        // Arrange
+        val mediaList = (1..1801).map { createMedia("media-$it") }
+        val firstIds = mediaList.take(900).map { it.id }
+        val secondIds = mediaList.drop(900).take(900).map { it.id }
+        val lastIds = listOf(mediaList.last().id)
+        val existingIds = listOf(1, 900, 901, 1800, 1801).map { MediaId.of("media-$it") }.toSet()
+        val savedRecords = slot<List<UploadRecord>>()
+        coEvery { localMediaRepository.getMediaList() } returns mediaList
+        coEvery { localUploadRecordsRepository.getUploadRecords(any()) } coAnswers {
+            firstArg<List<MediaId>>().filter { it in existingIds }.map(::createUploadRecord)
+        }
+        every { clock.getCurrentTime() } returns 1700000000000L
+        coEvery { localUploadRecordsRepository.saveUploadRecords(capture(savedRecords)) } just runs
+        every { uploadScheduler.scheduleUpload() } just runs
+
+        // Act
+        // Interaction: Finish every lookup before saving new records once and scheduling once.
+        useCase()
+
+        // Assert
+        assertEquals(
+            mediaList.filter { it.id !in existingIds }.map { it.id },
+            savedRecords.captured.map { it.mediaId }
+        )
+        coVerifyOrder {
+            localUploadRecordsRepository.getUploadRecords(firstIds)
+            localUploadRecordsRepository.getUploadRecords(secondIds)
+            localUploadRecordsRepository.getUploadRecords(lastIds)
+            localUploadRecordsRepository.saveUploadRecords(any())
+            uploadScheduler.scheduleUpload()
+        }
+        coVerify(exactly = 3) { localUploadRecordsRepository.getUploadRecords(any()) }
+        coVerify(exactly = 1) { localUploadRecordsRepository.saveUploadRecords(any()) }
+        verify(exactly = 1) { uploadScheduler.scheduleUpload() }
+    }
+
+    @Test
+    fun `invoke ignores writes when all media across chunks already have records`() = runTest {
+        // Arrange
+        val mediaList = (1..901).map { createMedia("media-$it") }
+        coEvery { localMediaRepository.getMediaList() } returns mediaList
+        coEvery { localUploadRecordsRepository.getUploadRecords(any()) } coAnswers {
+            firstArg<List<MediaId>>().map(::createUploadRecord)
+        }
+
+        // Act
+        // Boundary: Existing records in later chunks must not be queued again.
+        useCase()
+
+        // Assert
+        coVerify(exactly = 2) { localUploadRecordsRepository.getUploadRecords(any()) }
+        coVerify(exactly = 0) { localUploadRecordsRepository.saveUploadRecords(any()) }
+        verify(exactly = 0) { uploadScheduler.scheduleUpload() }
+    }
+
+    @Test
+    fun `invoke rethrows lookup failure when a later chunk fails`() = runTest {
+        // Arrange
+        val mediaList = (1..901).map { createMedia("media-$it") }
+        val firstIds = mediaList.take(900).map { it.id }
+        val lastIds = listOf(mediaList.last().id)
+        val failure = IllegalStateException("Lookup failed")
+        coEvery { localMediaRepository.getMediaList() } returns mediaList
+        coEvery { localUploadRecordsRepository.getUploadRecords(firstIds) } returns emptyList()
+        coEvery { localUploadRecordsRepository.getUploadRecords(lastIds) } throws failure
+
+        // Act
+        // Error: A later lookup failure must not leave a partially prepared queue.
+        val actual = assertThrows<IllegalStateException> { useCase() }
+
+        // Assert
+        assertSame(failure, actual)
+        coVerify(exactly = 1) { localUploadRecordsRepository.getUploadRecords(lastIds) }
+        coVerify(exactly = 0) { localUploadRecordsRepository.saveUploadRecords(any()) }
+        verify(exactly = 0) { uploadScheduler.scheduleUpload() }
+    }
+
+    @Test
+    fun `invoke rethrows CancellationException when a later chunk is cancelled`() = runTest {
+        // Arrange
+        val mediaList = (1..901).map { createMedia("media-$it") }
+        val firstIds = mediaList.take(900).map { it.id }
+        val lastIds = listOf(mediaList.last().id)
+        val cancellation = CancellationException("Lookup cancelled")
+        coEvery { localMediaRepository.getMediaList() } returns mediaList
+        coEvery { localUploadRecordsRepository.getUploadRecords(firstIds) } returns emptyList()
+        coEvery { localUploadRecordsRepository.getUploadRecords(lastIds) } throws cancellation
+
+        // Act
+        // Coroutine: Preserve cancellation without saving or scheduling partial results.
+        val actual = assertThrows<CancellationException> { useCase() }
+
+        // Assert
+        assertSame(cancellation, actual)
+        coVerify(exactly = 1) { localUploadRecordsRepository.getUploadRecords(lastIds) }
+        coVerify(exactly = 0) { localUploadRecordsRepository.saveUploadRecords(any()) }
         verify(exactly = 0) { uploadScheduler.scheduleUpload() }
     }
 

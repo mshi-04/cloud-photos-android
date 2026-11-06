@@ -19,12 +19,12 @@ import com.appvoyager.cloudphotos.ui.auth.uistate.LoginUiState
 import com.appvoyager.cloudphotos.ui.util.ValidationUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
-import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -38,14 +38,14 @@ class LoginViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(LoginUiState())
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
 
-    private val _effect = MutableSharedFlow<LoginEffect>(extraBufferCapacity = 1)
-    val effect: SharedFlow<LoginEffect> = _effect.asSharedFlow()
+    private val _effect = Channel<LoginEffect>(Channel.BUFFERED)
+    val effect: Flow<LoginEffect> = _effect.receiveAsFlow()
 
     init {
         savedStateHandle.get<String?>("message")?.let { key ->
             AuthSnackbarMessage.fromKey(key)?.let { message ->
                 viewModelScope.launch {
-                    _effect.emit(LoginEffect.ShowSnackbar(message))
+                    _effect.send(LoginEffect.ShowSnackbar(message))
                 }
             }
             savedStateHandle.remove<String>("message")
@@ -71,7 +71,7 @@ class LoginViewModel @Inject constructor(
 
     fun onForgotPassword() {
         viewModelScope.launch {
-            _effect.emit(LoginEffect.NavigateToForgotPassword)
+            _effect.send(LoginEffect.NavigateToForgotPassword)
         }
     }
 
@@ -116,11 +116,11 @@ class LoginViewModel @Inject constructor(
     private suspend fun handleSignInResult(result: AuthResult<SignInState>, requestedEmail: Email) = when (result) {
         is AuthResult.Success -> {
             when (result.value) {
-                is SignInState.SignedIn -> _effect.emit(LoginEffect.NavigateToHome)
+                is SignInState.SignedIn -> _effect.send(LoginEffect.NavigateToHome)
                 is SignInState.MFARequired,
                 is SignInState.NewPasswordRequired,
                 is SignInState.AdditionalStepRequired ->
-                    _effect.emit(
+                    _effect.send(
                         LoginEffect.ShowSnackbar(AuthSnackbarMessage.AdditionalAuthRequired)
                     )
             }
@@ -131,7 +131,7 @@ class LoginViewModel @Inject constructor(
 
     private suspend fun handleSignUpResult(result: AuthResult<Unit>, requestedEmail: Email) = when (result) {
         is AuthResult.Success -> {
-            _effect.emit(LoginEffect.NavigateToVerification(requestedEmail))
+            _effect.send(LoginEffect.NavigateToVerification(requestedEmail))
         }
 
         is AuthResult.Error -> handleAuthError(result.error, requestedEmail)
@@ -147,7 +147,7 @@ class LoginViewModel @Inject constructor(
         }
 
         is AuthError.UserNotConfirmed -> {
-            _effect.emit(LoginEffect.NavigateToVerification(requestedEmail))
+            _effect.send(LoginEffect.NavigateToVerification(requestedEmail))
         }
 
         is AuthError.UsernameAlreadyExists -> {
@@ -155,17 +155,17 @@ class LoginViewModel @Inject constructor(
         }
 
         is AuthError.Network -> {
-            _effect.emit(LoginEffect.ShowSnackbar(AuthSnackbarMessage.Network))
+            _effect.send(LoginEffect.ShowSnackbar(AuthSnackbarMessage.Network))
         }
 
         is AuthError.TooManyRequests -> {
-            _effect.emit(LoginEffect.ShowSnackbar(AuthSnackbarMessage.TooManyRequests))
+            _effect.send(LoginEffect.ShowSnackbar(AuthSnackbarMessage.TooManyRequests))
         }
 
         is AuthError.CodeExpired,
         is AuthError.CodeMismatch,
         is AuthError.Unknown -> {
-            _effect.emit(LoginEffect.ShowSnackbar(AuthSnackbarMessage.Unknown))
+            _effect.send(LoginEffect.ShowSnackbar(AuthSnackbarMessage.Unknown))
         }
     }
 

@@ -1,0 +1,510 @@
+# アプリ本体の規約準拠リファクタリング設計
+
+状態: 段階 01（PR #138）・02（PR #139）・03（PR #140）・04（PR #141）・05（PR #143）・06（PR #142）・06b（PR #144）・07（PR #145）・08（PR #146）はマージ済み。段階 09 は実装・全 JVM テスト・静的解析・dev APK ビルド済み（実機での最終動作確認待ち）。
+調査日: 2026-10-31。
+調査基準: develop `e261bc2` の本番コード・テスト・技術文書。
+
+## 目的と範囲
+
+刷新した技術文書・Skill にアプリ本体を合わせ、規約との差が実行時の問題につながる箇所から修正する。
+`app / core / feature` のマルチモジュール構成と `ui -> domain <- data` の依存方向は維持する。
+Lite Memo のアーキテクチャと実装も参考にし、責務・状態・外部 I/O の境界を明確にする。
+
+対象は `app/src/main`、`core/*/src/main`、`feature/*/*/src/main` と、変更した振る舞いを保証するテスト、および変更した契約を記述する `docs/` と両クライアントの Skill reference。
+テスト全体の書き換え、依存更新、CI/CD の修正、モジュール再編、認証機能や同期仕様の追加は含めない。
+
+判断の正本:
+
+- [Architecture](../architecture.md): モジュール境界、UseCase、domain abstraction、Repository / DataSource、Composition Root。
+- [Implementation Guidelines](../implementation-guidelines.md): StateFlow、Effect、キャンセル、main-safe、Clock、Resource、コメント。
+- [Authentication](../authentication.md)、[Media Sync](../media-sync.md)、[Data Model](../data-model.md): 維持する業務・保存・バックグラウンド実行契約。
+- [Development Setup](../development-setup.md)、[Testing](../testing.md): 実装時の検証範囲とテスト方法。
+
+## Lite Memo から取り入れる構造と適用しない差分
+
+参照元は `C:\Users\masato\AndroidStudioProjects\lite-memo` の現行ファイル。読み取りのみとし、Git の版は確認できていない。
+`docs/architecture.md`、`docs/implementation-guidelines.md` と関連する実装を照合した。
+参照元のコードにも先行実装・例外があるため、そのままコピーすることは準拠の根拠にしない。
+
+参照元のコードパスは `app/src/main/kotlin/com/lambdarc/litememo/` を基準とする。表内で省略した `ui/`、`domain/`、`data/` はすべてこの配下を指す。
+
+| 観点 | 参照した実装 | Cloud Photos への適用 |
+| --- | --- | --- |
+| 接続と描画の分離 | `app/src/main/kotlin/com/lambdarc/litememo/ui/route/SettingsRoute.kt`、`ui/screen/SettingsScreen.kt` | Hilt、Lifecycle、権限、Android SDK と接続する Screen と、state / callback を受け取る Content を分ける。Cloud Photos の Screen / private Content という名前と配置を維持する |
+| 画面単位の状態所有 | `ui/viewmodel/SettingsViewModel.kt`、`MainViewModel.kt`、`LiteMemoAppViewModel.kt` | 起動時のセッション判定は app、フォームは各 auth ViewModel、一覧・撮影は各 media ViewModel が所有する。全画面の状態を MainViewModel へ集約しない |
+| 必要な範囲の domain contract | `domain/repository/DisplaySettingsRepository.kt`、`data/repository/DataStoreUserSettingsRepository.kt` | 呼び出し側の責務に合わせた interface を使う。既存の local / remote Repository、Scheduler、CapturedPhotoWriter を維持する。列数設定しかない SettingsRepository を機械的に分割しない |
+| I/O の実行場所と資源の所有 | `data/image/MemoImageFileDataSource.kt`、`data/di/DispatcherModule.kt` | Data 側で dispatcher を切り替え、開く・使う・閉じるまでを所有する。単一モジュールの `data.di` 配置は転用せず、既存の app DI を維持する |
+| 外部値の差し替え | `data/provider/SystemCurrentTimeProvider.kt` | Cloud Photos の既存 Clock を使う。別名の時刻 provider を増やさない |
+| キャンセルと通常失敗の分離 | `data/repository/StagingMemoImportArchiveRepository.kt` | 通常失敗への変換前に CancellationException を再スローする |
+| 重要な処理結果の配送 | `ui/route/SettingsRoute.kt` の要求 ID と処理済み callback | collector 不在時の取りこぼしを検討する参考にする。Cloud Photos 全体を state + acknowledgment へ移行する変更は今回に含めない |
+
+意図的に転用しない方針:
+
+- Lite Memo の「単純委譲でも UseCase 必須」は、Cloud Photos の [UseCase と Domain Abstraction](../architecture.md#usecase-と-domain-abstraction) と異なる。CameraViewModel → CapturedPhotoWriter を維持し、既存 auth UseCase も一括削除しない。
+- Lite Memo の単一 `:app`、役割別の全体パッケージ、Route / Screen のファイル配置を移植しない。
+- Room の schema export、migration、UI result / event 命名、テスト命名、Throwable を持つ例外契約を移植しない。
+- ローカルファイルの cleanup と S3 / API / Room の同期を同じ設計にしない。キャンセル時の MediaStore レコード削除や S3 孤立オブジェクトの扱いは Cloud Photos の契約を守る。
+
+## 維持する責務
+
+| 所有者 | 維持する内容 |
+| --- | --- |
+| `app` | 初期化、認証開始先、トップレベル Navigation、DI、FCM 起動連携と登録 Worker |
+| `feature:*:ui` | Screen / Content、画面固有の StateFlow、入力 callback、Effect の UI 解決 |
+| `feature:*:domain` | 業務ルール、入力値、Repository / Scheduler / Writer の契約、複数操作の調整 |
+| `feature:*:data` | SDK / DB / DataStore / MediaStore、変換、メディア Worker / Scheduler |
+| `core:*` | 現在複数箇所で使う最小限の共通契約・基盤・リソース |
+
+Domain への Android / SDK 型の持ち込みや、feature UI から data 実装への直接依存は、調査したソースでは見つからなかった。
+Repository の単純委譲やファイルの行数だけを理由に、層の削除やクラスの分割を行わない。
+
+## 変更設計
+
+### A. 認証キャンセルを通常エラーへ変換しない
+
+対象: [AuthDataSourceImpl](../../feature/auth/data/src/main/kotlin/com/appvoyager/cloudphotos/data/auth/datasource/AuthDataSourceImpl.kt)。
+
+現状は `signUp`、`confirmSignUp`、`signIn`、`fetchCurrentUser`、`getSession`、`resendSignUpCode`、`resetPassword`、`confirmResetPassword` の 8 経路で、suspend 処理の `runCatching.fold` が CancellationException をそのまま AuthErrorMapper に渡す。
+Mapper の未分類分岐により AuthError.Unknown へ変わり、キャンセルと通信・認証失敗の契約が混ざっている。
+
+- 8 経路の `runCatching { ... }.fold(...)` を、AuthDataSourceImpl 内の private な suspend helper 1 つに置き換える。helper は CancellationException を再スローしてから AuthErrorMapper を適用し、8 経路はすべてこの helper を通す。既存の `rethrowIfCancellation()` を経路ごとに書き足す形にはせず、今後追加する経路での呼び忘れを防ぐ。
+- provider の通常エラー分類、サインインの追加認証 step、サインアウトの PartialSignOut 判定は維持する。
+- FCM cleanup と backend → Cognito の退会順序、signOut / deleteUser の既存の再スローは変更しない。
+- Amplify.Auth 自体の通信停止を実現する変更とは扱わない。キャンセル可能な operation を返さない API は、呼び出し側の待機のキャンセルを保証する。
+- テスト用の差し替え口として、8 経路が使う Amplify.Auth の操作（`signUp`、`confirmSignUp`、`signIn`、`getCurrentUser`、`fetchUserAttributes`、`fetchAuthSession`、`resendSignUpCode`、`resetPassword`、`confirmResetPassword`）だけを覆う internal な facade を `feature:auth:data` に置く。AuthDataSourceImpl は internal コンストラクタで facade を受け取り、`@Inject` コンストラクタから実体を委譲する（[SettingsDataSourceImpl](../../feature/media/data/src/main/kotlin/com/appvoyager/cloudphotos/data/media/datasource/SettingsDataSourceImpl.kt) と同じ形）。
+- 今回変更しない signOut、deleteUser、`Amplify.API`、`FirebaseMessaging` は facade に含めない。SDK の型・テスト用抽象を domain へ追加しない。
+
+検証: 新規 AuthDataSourceImplTest で、8 経路すべてのキャンセル再スローと、代表的な成功・通常失敗を確認する。既存 AuthErrorMapperTest / Repository / auth UI のテストも実行する。
+
+### B. アップロード準備の大量 ID 検索を分割する
+
+対象: [PrepareUploadQueueUseCase](../../feature/media/domain/src/main/kotlin/com/appvoyager/cloudphotos/domain/media/usecase/PrepareUploadQueueUseCase.kt) と、削除する未使用の `GetPendingMediaUseCase` / `GetPendingMediaUseCaseTest`。
+
+移行前の `getUploadRecords(allMediaIds)` は端末内の全 ID を一度に DAO の IN 句まで渡していた。
+GetPendingMediaUseCase は同じ契約に対して 900 件ずつ分割していたが、本番コードからの呼び出しはなく、テストからのみ使われていた。
+端末ごとの SQLite 上限を断定せず、[Data Model](../data-model.md) の呼び出し側で 900 件ずつ分割する方針に合わせる。チャンク分割は [Architecture](../architecture.md) が UseCase の責務として挙げているため、domain に置く。
+
+- PrepareUploadQueueUseCase でも 900 件単位に分割し、既存 ID を集合へ集約する。
+- 全チャンクの取得が終わるまで新規レコードを保存・enqueue しない。
+- 空一覧、全件登録済みの場合の早期 return、新規レコードの保存後に Scheduler を 1 回呼ぶ順序を維持する。
+- 本番から使われていない GetPendingMediaUseCase と GetPendingMediaUseCaseTest を削除し、900 件分割の実装を PrepareUploadQueueUseCase の 1 か所にする。
+- DAO の SQL、Repository interface、Room schema は変えない。
+- 900 件分割の例示を GetPendingMediaUseCase から PrepareUploadQueueUseCase へ差し替える。対象は `docs/architecture.md` の UseCase の節、`docs/data-model.md` の DAO 契約、`docs/media-sync.md` のキュー準備の節、両クライアントの `db-implementation/references/dao.md` と `domain-implementation/references/usecase.md`。
+
+検証: PrepareUploadQueueUseCaseTest に 900 / 901 件境界、複数チャンクで既存・新規が混在する例、全件既存、後続チャンクの失敗・キャンセル時に保存と enqueue をしない例を追加する。
+
+### C. メディア I/O の main-safe と Result 契約を揃える
+
+対象:
+
+- [UploadDataSourceImpl](../../feature/media/data/src/main/kotlin/com/appvoyager/cloudphotos/data/media/datasource/UploadDataSourceImpl.kt)
+- [MediaStoreCapturedPhotoWriter](../../feature/media/data/src/main/kotlin/com/appvoyager/cloudphotos/data/media/datasource/MediaStoreCapturedPhotoWriter.kt)
+
+UploadDataSourceImpl は ContentResolver.openInputStream を呼び出し元の context で実行している。
+stream の取得・use・close を IO context 内で所有する。開いた stream だけを `withContext` の外へ返す形にはしない。dispatcher 境界でキャンセルされても資源を残さないためである。
+Amplify の非同期 callback 待機を、ブロッキング処理へ置き換えない。既存の operation.cancel() 連携と UploadResult の分類を維持する。
+
+MediaStoreCapturedPhotoWriter は createContentValues / insert が try の外にあり、挿入時の予期される失敗が SavePhotoResult に変換されない。
+またファイル名の生成に System.currentTimeMillis() を直接使っている。
+
+- insert から保存確定までをエラー処理の対象にし、実際に作成された Uri だけを cleanup 対象として保持する。
+- ENOSPC は STORAGE_FULL、その他の予期される保存失敗は SAVE_FAILED、null insert も SAVE_FAILED とする。
+- insert 前の失敗では削除を呼ばない。書き込み / pending 解除失敗では作成済みレコードの削除を試みる。
+- CancellationException は再スローし、その経路ではレコードを削除しない現行契約を維持する。NonCancellable cleanup は追加しない。
+- 既存の Clock を注入し、ファイル名を決める時刻だけを差し替えられるようにする。形式、Locale.US、端末の既存 timezone、保存場所、MIME、IS_PENDING の順序を維持する。
+- ファイル名の生成は、epoch millis と TimeZone を受け取る `internal object CapturedPhotoFileName` の純粋関数 `create` に切り出す。本番では Clock の時刻と `TimeZone.getDefault()` を渡す。
+- dispatcher のテスト差し替えは、SettingsDataSourceImpl と同様に internal コンストラクタで受け取り、Inject コンストラクタから委譲する。新しい共有モジュール・DI qualifier は導入しない。
+- data 層で ContentResolver を呼ぶほかのクラスも確認した。LocalMediaDataSourceImpl は既に IO へ切り替えている。ContentTypeResolverImpl は非 suspend の `getType` を呼ぶが、呼び出し元は UploadMediaWorker だけで main thread を通らないため今回の対象外とし、main thread から呼ぶ経路を追加する時に main-safe にする。
+- 両クライアントの `data-implementation/references/datasource.md` にある MediaStoreCapturedPhotoWriter の契約に、insert 失敗・null insert の扱いと Clock 注入を追記する。
+
+検証は、Android framework の stub に依存するかどうかで振り分ける。リポジトリには Robolectric も `unitTests.isReturnDefaultValues` もなく、JVM では ContentValues、ErrnoException、OsConstants を使えないためである。
+
+- JVM Unit Test: UploadDataSourceImpl の stream の成功・失敗・キャンセル時の close と operation.cancel、ファイル名関数（固定の epoch millis と固定の TimeZone）。
+- androidTest（`:feature:media:data:connectedDebugAndroidTest`）: insert 失敗・null insert、null stream、write / update 失敗、ENOSPC から STORAGE_FULL への分類、pending 解除、cleanup の範囲。失敗は ContentResolver の test double で注入し、テスト中に作成した MediaStore レコードは teardown で削除する。test double に必要な Gradle 設定を追加する場合は「実装時に選ぶ検証」の Sync の規定に従う。
+- テストのためだけの Robolectric や新規 framework は前提にしない。
+- ClockModule の既存 binding を再利用し、Hilt を含むビルドで解決を確認する。
+
+### D. アップロード通知の終了処理を保証する
+
+対象: [UploadMediaWorker](../../feature/media/data/src/main/kotlin/com/appvoyager/cloudphotos/data/media/worker/UploadMediaWorker.kt)。
+
+進行中通知の cancel は現在ループ後にしかない。SDK / Room 処理がキャンセル・例外で抜けると到達しない。
+
+- 通知表示要求とループを try / finally で囲み、finally で通知の終了を試みる。show 自体の失敗時も cancel を 1 回試みる。
+- 例外や CancellationException は元の契約どおり伝播させ、retry / success へ変換しない。先行例外がある場合は、通知終了側の例外を suppressed として追加して先行例外を保持する。先行例外がない場合の通知終了失敗は従来どおり伝播させる。
+- `completeUpload()` は通常のループ完了後、`!hasTemporaryFailure && successCount > 0` の場合だけ 1 回呼ぶ。finally には入れない。
+- pending が空なら通知を表示も cancel もしない。S3 再転送防止、1 件ごとの status 再取得、失敗分類、cleanup 後の PENDING_DELETE は維持する。
+- [Media Sync](../media-sync.md) の `UploadMediaWorker` の処理順とアップロード通知の節に、例外・キャンセルで抜けた場合も finally で進行中通知を消すことを追記する。
+
+検証: 既存 UploadMediaWorkerTest にキャンセルと未捕捉 DB 例外のケースを加え、通知が 1 回消され、元の例外が伝播し、completeUpload が呼ばれないことを確認する。
+
+### E. 起動状態を StateFlow で公開する
+
+対象: [MainViewModel](../../app/src/main/kotlin/com/appvoyager/cloudphotos/ui/MainViewModel.kt)、[MainActivity](../../app/src/main/kotlin/com/appvoyager/cloudphotos/ui/MainActivity.kt)、MainViewModelTest。
+
+段階 09 の着手前は feature の ViewModel が StateFlow を使う一方、MainViewModel の `uiState`、`isCheckingSession`、`isRetrying` は Compose の mutableStateOf を公開していた。
+
+- 3 つの状態を private MutableStateFlow / public read-only StateFlow に置き換える。sealed な MainUiState と既存のフラグの意味を維持し、無関係な状態の統合を必須にしない。
+- 更新は update を使い、MainActivity の Compose 内では collectAsStateWithLifecycle() で購読する。
+- スプラッシュ保持条件は最新の isCheckingSession.value を読む。起動時のセッション確認開始箇所、重複 Job ガード、finally でのフラグ解除を維持する。
+- startDestination と back stack の構成は維持する。MainViewModel を全画面のセッション監視・ナビゲーションの新しい状態機械へ拡張しない。
+- Authenticated 描画時の FCM 登録連携とアプリ起動 / onNewToken の登録契機を維持する。
+
+検証: 初期状態、guest / signed-in / error、再試行中、重複呼び出し、キャンセルと finally を private Snapshot で確認する。スプラッシュ表示、再試行、画面再生成、認証前後の Back 操作を手動確認する。
+
+### F. 認証 UI の resource と派生値の配置を揃える
+
+対象: [LoginScreen](../../feature/auth/ui/src/main/kotlin/com/appvoyager/cloudphotos/ui/auth/screen/LoginScreen.kt)、[ForgotPasswordScreen](../../feature/auth/ui/src/main/kotlin/com/appvoyager/cloudphotos/ui/auth/screen/ForgotPasswordScreen.kt)、auth UiState / ViewModel、[共有文字列](../../core/ui/src/main/res/values/strings.xml)。
+
+resource 化（必須）:
+
+- Login / ForgotPassword の直書きラベル、ボタン、説明、contentDescription を string resource へ移す。既存の意味が同じ resource は再利用する。
+- 日本語の文言と操作を維持し、values-en も更新する。新しい認証エラー表現やアカウントの存在を示す文言は追加しない。
+- 同時に触る純粋 helper の StringUtils / ValidationUtils を internal object に限定する。
+
+派生値の配置（任意。resource 化とは別 PR）:
+
+- ForgotPasswordUiState / ResetPasswordUiState / VerificationCodeUiState の `isFormValid`、`isCodeComplete`、`isResendEnabled` を、[Implementation Guidelines](../implementation-guidelines.md) の派生値の規定に合わせて所有 ViewModel の computed property へ移す。形は既存の `LoginViewModel.isFormValid` に揃える。
+- 現在も computed getter であり、不具合の修正ではない。Screen、Content の引数、Preview、テストまで変更が及ぶため、規約準拠の任意項目として resource 化の PR と分ける。
+- 入力値や timer の保存場所は変えない。保存済み Boolean を増やしたり、独立した StateFlow に二重管理したりしない。
+- Screen は購読済みの uiState を ViewModel の判定関数へ渡し、入力値と同じ snapshot から計算した派生値を Content の表示引数へ渡す。最新 state を使う computed property も同じ判定関数へ委譲する。ViewModel 内の入力検証と UI の有効条件を合わせ、テストも更新する。
+
+検証: auth UI Unit Test、フォームの有効条件、コード貼り付け・自動送信・再送 timer、日英 Preview、長い文字列、resource build / lint を確認する。
+
+### G. カメラの接続処理と描画を分ける
+
+対象: [CameraScreen](../../feature/media/ui/src/main/kotlin/com/appvoyager/cloudphotos/ui/media/screen/CameraScreen.kt)。
+
+段階 08 の着手前は、1 つの Screen に ViewModel 接続、権限、camera manager、Lifecycle、描画が同居し、CameraContent と画面全体の Preview がなかった。
+
+- Screen は state / Effect の収集、権限 launcher、Lifecycle、CameraPreviewManager、撮影 bridge を所有する。
+- private CameraContent は CameraUiState、画面限定の表示値、callback、カメラ表示 slot を受け取る。slot を使い、Preview ではハードウェアや PreviewView を生成しない。
+- `startCamera` を呼ぶ `LaunchedEffect(lensFacing, resumeKey)` は、現行どおり Ready / Capturing のときだけ composition に入る位置に置く。Screen が渡すカメラ表示 slot の中に含め、権限確認中・要求中には bind しない。レンズ切替・復帰時の再 bind も維持する。
+- シャッターの有効判定に使う `cameraPreviewManager.isCameraBound` は Screen で読み、Boolean として Content へ渡す。
+- lens 選択、flash アニメーション、thumbnail、ダイアログ開閉は寿命の短い画面状態として適切な UI 所有者に置く。描画値を理由なく ViewModel へ移さない。
+- CameraX は UI と結び付いた SDK のため、この分割を理由に domain / data へ移さない。
+- MediaDetailScreen に ViewModel を新設しない。MediaViewModel も行数を理由に分割しない。
+
+検証: 権限確認中・要求・Ready・Capturing・Error の Hilt 不要 Preview、media UI Unit Test、実機の権限拒否 / 許可、切替、撮影、pause / resume、容量不足表示を確認する。
+
+### H. 認証 Effect の Lifecycle と配送を一緒に整える（任意）
+
+対象: auth の 4 ViewModel / 4 Screen / 対応テストと、共通規約・両クライアントの UI reference。
+
+この項目は単純な規約修正ではなく、既存の配送例外を見直す任意の設計提案とする。採否は段階 07 の着手条件で決め、本書で「H を採用する場合」はこの条件を満たした場合を指す。
+
+段階 06b までの ForgotPassword / VerificationCode / ResetPassword の 3 Screen は Effect を直接 collect しており、Login だけが STARTED で収集していた。
+4 ViewModel はいずれも `MutableSharedFlow(extraBufferCapacity = 1)` で、collector 不在時に Effect を保持しなかった。3 Screen の収集側だけを止めると、バックグラウンド中の認証完了による画面遷移を落とし得る。
+
+collector 不在による欠落は、init 時の Effect で既に起きている。
+LoginViewModel は init で SavedStateHandle の `message` を、VerificationCodeViewModel は email 欠落時の NavigateBack を、`viewModelScope.launch` で emit している。
+移行前の ViewModel は Screen の初回 composition 中に生成され、Main.immediate 上で collector より先に emit するため、replay 0 の SharedFlow はこれらを常に破棄していた。
+このため、パスワード再設定の完了後に `login?message=…` で戻った Login の Snackbar は、移行前には表示されなかった。
+
+採用方針（段階 07 で採用）:
+
+- 4 ViewModel の Effect を `Channel<XxxEffect>(Channel.BUFFERED)` / `receiveAsFlow()` に揃え、4 Screen を STARTED の repeatOnLifecycle で収集する。
+- Effect の型、Snackbar message 型、画面遷移先は変えない。各 ViewModel の collector は 1 つとする。
+- init 時の Effect は Channel 化によって初めて配送される。再設定完了後の Login Snackbar の表示と、email 欠落時の検証画面の即時戻りは、利用者に見える挙動変更として PR に記載する。
+- collector の停止中に発生し、まだ受信されていない Effect を ViewModel 存続中はキューで待たせる。回転・停止復帰をまたぐ配送をテストする。
+- timer の開始は repeat ブロックの外に置き、collector 再開を理由に cooldown をリセットしない。
+- 長生きする collect ブロック内の callback / Context は rememberUpdatedState で参照する。
+- Channel をプロセス終了後も残る配送や exactly-once の保証とは扱わない。受信時と Lifecycle 停止が競合すると、キューから取り出した Effect が handler 実行前にキャンセルされる可能性も残る。未受信のキュー保持と、すべての停止復帰での画面遷移保証を区別する。
+- 受信済みの Snackbar 中断、受信と handler の引き渡し時の取りこぼし、プロセス再生成後の結果復元を新たに保証する変更は、この段階には含めない。これらを含めて重要結果の配送を保証する要件にする場合は、H を state + 消費確認の設計へ改める。
+
+移行前の規約との関係:
+
+- 移行前の [Implementation Guidelines](../implementation-guidelines.md) は auth 4 ViewModel について「既存ファイルを触る場合はそのファイルの形に合わせる」とし、両クライアントの UI event reference は「既存 auth ViewModel の小規模修正ではそのファイルの方式に合わせ、無関係な全面書き換えを混ぜない」としていた。段階 07 は 4 ViewModel をまとめて書き換え、これらの記述も配送方針と一体で更新する。
+- 両方の [Codex UI event reference](../../.agents/skills/ui-implementation/references/uievent.md) / [Claude UI event reference](../../.claude/skills/ui-implementation/references/uievent.md) と ViewModel reference の対応箇所を確認し、差が生じる箇所を手動反映する。
+- Lite Memo の重要結果を state に保持して消費確認する方式は、より強い再生成対応が要件になった時の別設計とする。今回の全 Effect をその方式に置き換えない。
+- 3 Screen の Lifecycle gating だけを Channel 化より先に入れない。collector 停止中の Effect が SharedFlow で破棄されるためである。
+- H を採用しない場合、init 時 Effect の欠落と 3 Screen の Lifecycle gating 未対応は、既知の残存課題として段階 09 の記録に残す。
+
+検証: 4 ViewModel の collector 不在 → 再収集での配送、継続収集での二重送信なし、ログイン完了・コード確認完了・パスワード再設定完了、init 時 Effect（Login の message、Verification の NavigateBack）が初回収集で 1 回だけ配送されることを確認する。
+実際の Lifecycle STOPPED / STARTED、回転、callback 更新、timer 継続は UI の手動確認または UI テストで別に確認する。Unit Test だけで Lifecycle まで検証済みとしない。
+
+## 小さな整理と今回見送る変更
+
+規約に直接対応する小さな整理は、関連する実装を触る段階に含める。
+
+- ConfirmationCode.of の長さと数字の require を分ける。trim、6 文字（コードポイント単位）、Char.isDigit の受理範囲、例外型を維持する。ASCII 数字限定へ変更せず、受理した Unicode 10 進数字は Cognito が照合する ASCII 数字へ正規化して保持する。
+- AuthSignInStepMapper は純粋な変換のため internal object にする。
+- AuthError.Unknown に残る実態と合わない「cause はログ専用」という KDoc を削除する。
+
+以下は今回の必須変更にしない。
+
+- Upload / Delete Worker の HTTP エラー判定共通化。重複自体は現在の規約違反ではない。実施する場合も media:data 内に閉じ、404 / 429 を一時失敗とする意味を維持する。FCM の isNonServerError へ置換しない。
+- 4 Screen の Snackbar message → resource 変換の共通化。resource 化と混ぜず、変更の価値がある場合に auth UI 内だけで行う。
+- Room Entity / DAO / mapper / DB version の変更、schema export の導入。未知 syncStatus → ERROR と保存済みデータの互換性を維持する。
+- テーマのテンプレートコメントの全整理、全パッケージの改名、全 sealed class / interface の統一。
+- 同期 runCatching の一律置換。値生成・JSON パースだけの同期処理と、suspend 境界のキャンセルを区別する。
+- CameraPreviewManager の非 coroutine future listener にあるキャンセルの無視。カメラ切替・unbind による意図的な終了であり、coroutine のキャンセル握り潰しと区別する。
+
+## モジュール・レイヤー単位の段階的移行プラン
+
+移行は Domain → Data → UI → app の順を基本にする。各段階は対象モジュールの本番コード、対応テスト、変更した契約を記述する文書を同時に更新し、検証を通した状態で区切る。
+既存の公開 contract を維持して内部実装を置き換えるため、全層の変更を待たずに各 PR をマージできる構成にする。
+実装時は **段階 01〜09 ごとに別の feature ブランチを作成し、段階ごとに PR を分ける**。各段階の「ブランチ案」をその開始時の名前とする。
+設計書のマージ後に各実装段階のブランチを develop から分岐し、設計用ブランチに実装を積み重ねない。
+段階 00 は事前確認であり、コード変更がなければ専用ブランチ・PR は作らない。段階 07 のブランチは H の採用が決まるまで作成しない。
+
+### モジュール別の移行範囲
+
+| モジュール | 移行対象 | 段階 |
+| --- | --- | --- |
+| `:core:common` | Clock の既存契約を維持。共通抽象の新設なし | 00 で確認、04 で利用 |
+| `:core:data` | REST のキャンセル橋渡し、SystemClock、FCM API の既存契約を維持 | 00 で確認、03〜05・09 の関連検証 |
+| `:core:ui` | 認証画面の日本語・英語 resource | 06。利用側の auth UI と同じ PR |
+| `:feature:auth:domain` | ConfirmationCode の制約分離、古い AuthError KDoc の整理 | 01 |
+| `:feature:media:domain` | アップロード準備の ID 分割、未使用の GetPendingMediaUseCase の削除 | 02 |
+| `:feature:auth:data` | 認証のキャンセル再スロー、Amplify.Auth facade、mapper の可視性 | 03 |
+| `:feature:media:data` | 保存・アップロード I/O と Clock、Worker の通知終了処理 | 04・05 |
+| `:feature:auth:ui` | resource 参照、helper の可視性（06）、派生値の配置（06 の任意 PR）、Effect 配送（07、任意） | 06・07 |
+| `:feature:media:ui` | CameraScreen / Content / Preview の分離 | 08 |
+| `:app` | 起動状態の StateFlow 化と全体の接続確認 | 09。04 で既存 DI による解決も確認 |
+| `docs/`・両クライアントの Skill | 変更した契約の記述 | 02・04・05・07。各段階の PR に含める |
+
+`core:common`、`core:data`、Room の保存構造には、今回確認した差分を解消するための変更を予定しない。対象がないモジュールに空の移行 PR を作らない。
+`build-logic` とモジュール構成も維持する。実装中に新たな問題を見つけた場合は、根拠と波及先を本設計へ追加してから、その問題の所有モジュールで扱う。
+
+### 00. 移行前の基準を確定する
+
+- 作業ツリーと最新 develop を確認し、既存の変更を保持したうえで、実装対象を develop から分岐する。現在のブランチ名だけを根拠に実装を始めない。
+- 既存のテスト・静的解析の基準には、最新 develop の CI（lint / unit-test / instrumented-test）の結果を記録して使う。CI 結果を参照できない場合や、ローカル環境固有の失敗を切り分ける場合だけ、ローカルで `./gradlew.bat test` と `./gradlew.bat ktlintCheck detekt` を実行する。
+- 開発用環境値と端末が用意できる場合は dev debug build と、起動・認証・一覧・撮影の基準動作を確認する。環境を用意できない確認は未検証として残す。
+- 完了条件: 対象 commit、作業ツリー、基準にした CI 結果（またはローカルの実行結果）、端末検証の可否が記録されている。実行できない検証を成功扱いにしない。
+
+### 01. Auth Domain
+
+ブランチ案: `feature/01-auth-domain-conventions`。
+
+- 対象: `:feature:auth:domain` の ConfirmationCode と AuthError、および ConfirmationCodeTest。
+- 作業: require を長さ・数字ごとに分け、受理した Unicode 10 進数字を ASCII へ正規化し、実態と合わない KDoc を除く。入力の受理範囲、例外型、AuthResult / AuthError の公開 contract は維持する。
+- 検証: `./gradlew.bat :feature:auth:domain:test`。メッセージに依存する既存テストの期待値を合わせる。
+- 完了条件: 既存の正常値と不正値の判定が変わらず、各制約の失敗理由を識別できる。Data / UI の実装変更を要求しない。
+
+### 02. Media Domain
+
+ブランチ案: `feature/02-media-domain-batching`。変更設計 B に対応する。
+
+- 対象: `:feature:media:domain` の PrepareUploadQueueUseCase、GetPendingMediaUseCase と対応テスト、900 件分割を例示する文書。
+- 作業: 900 件単位の参照、既存 ID の集約、全取得後の保存と 1 回の enqueue を実装する。GetPendingMediaUseCase と GetPendingMediaUseCaseTest を削除し、B に挙げた文書の例示を差し替える。
+- 検証: `./gradlew.bat :feature:media:domain:test`。境界件数、既存・新規混在、後続チャンクの失敗・キャンセルを確認する。文書のリンクと両クライアントの対応箇所を確認する。
+- 完了条件: 大量 ID を 1 回で渡さず、途中の参照失敗で部分的な保存・enqueue をしない。900 件分割の実装と文書の例示が PrepareUploadQueueUseCase の 1 か所に揃っている。Repository interface と DAO は維持する。
+
+実装記録（2026-10-31）:
+
+- develop `a8d8c21` から `feature/02-media-domain-batching` を分岐し、本番コード・テスト・共通文書・両クライアントの reference を更新した。
+- 分割件数は PrepareUploadQueueUseCase の定数 `MAX_IDS_PER_LOOKUP` に置いた。LocalUploadRecordsRepository はシグネチャを維持し、`getUploadRecords` の KDoc に呼び出し側で分割する前提を記した。
+- `./gradlew.bat :feature:media:domain:test :feature:media:domain:ktlintCheck :feature:media:domain:detekt` は成功。Unit Test は 75 件（PrepareUploadQueueUseCaseTest は 12 件）、失敗・スキップとも 0 件。
+- 文書リンク 707 件の参照切れ 0 件、変更した Codex / Claude reference 2 組の不一致 0 件、本番・テストのソース内に削除済み UseCase の参照がないことを確認した。
+- アプリ全体のビルド・実機確認・Instrumented Test は未実施。今回の変更は Domain と文書に限定し、DAO / schema / enqueue 契約を変更していないため。
+
+### 03. Auth Data
+
+ブランチ案: `feature/03-auth-data-cancellation`。変更設計 A に対応する。
+
+- 対象: `:feature:auth:data` の AuthDataSourceImpl、Amplify.Auth facade、AuthSignInStepMapper、対応テスト。
+- 作業: 8 経路を共通 helper 経由に置き換え、A に挙げた操作だけを覆う facade を追加し、mapper を internal 化する。テスト用の差し替え口はこのモジュールに閉じる。
+- 検証: `./gradlew.bat :feature:auth:domain:test :feature:auth:data:test :feature:auth:ui:test`。上位層へキャンセルが伝播しても通常失敗の表示に変わらず、既存の認証分岐を維持することを確認する。
+- 完了条件: AuthDataSourceImplTest が 8 経路すべてのキャンセル再スローを検証しており、キャンセルが AuthError.Unknown に変わらない。通常エラー分類・サインアウト・退会順序が保たれる。
+
+実装記録（2026-10-31）:
+
+- develop `ff5a663` から `feature/03-auth-data-cancellation` を分岐した。8 経路の結果変換を private な `authResult` に共通化し、9 個の SDK callback 操作を internal な AmplifyAuthFacade へ分離した。SDK 型は Data 内に閉じ、AuthSignInStepMapper を internal 化した。
+- AuthDataSourceImpl の internal コンストラクタから facade を差し替え、既存の `@Inject` コンストラクタから本番実体を委譲する。生成された AuthDataSourceImpl_Factory が既存と同じ単一依存で構築することを確認した。
+- `./gradlew.bat :feature:auth:domain:test :feature:auth:data:test :feature:auth:ui:test :feature:auth:data:ktlintCheck :feature:auth:data:detekt` は成功。Domain 63 件・Data 58 件・UI 48 件の計 169 件、失敗・スキップは 0 件。Data の新規テストは AuthDataSourceImplTest 37 件と AmplifyAuthFacadeTest 6 件。
+- `signOut`、`deleteUser`、FCM cleanup と既存のキャンセル helper の処理本体を移行前と照合し、変更がないことを確認した。認証のキャンセル契約を `docs/authentication.md` と両クライアントの DataSource reference に反映した。
+- 文書リンク 710 件の参照切れ 0 件、変更した Codex / Claude DataSource reference の不一致 0 件。実機での Cognito / Firebase 接続、Instrumented Test、アプリ全体のビルドは未実施。Data 内の SDK 境界を JVM テストで確認し、画面・DB・WorkManager・app 配線は変更していないため。
+
+### 04. Media Data の I/O
+
+ブランチ案: `feature/04-media-data-io`。変更設計 C に対応する。
+
+- 対象: `:feature:media:data` の MediaStoreCapturedPhotoWriter、UploadDataSourceImpl と対応テスト、両クライアントの `data-implementation/references/datasource.md`。
+- 作業: 最初に保存の Result 境界、ファイル名関数と Clock 注入、次にアップロード stream の IO context と資源管理を変更する。C に挙げた reference の契約も更新する。差分が大きければ、同じモジュール内の保存 / アップロードで 2 PR に分ける。
+- 検証: `./gradlew.bat :feature:media:data:test`、保存の Android I/O を検証する `./gradlew.bat :feature:media:data:connectedDebugAndroidTest`（エミュレータ・実機を用意する）、`assembleDevDebug` による既存 Clock binding と Hilt の解決確認。テストの振り分けは C に従う。
+- 完了条件: stream が各終了経路で閉じられ、保存失敗が所定の Result へ変換される。固定時刻・固定 TimeZone のファイル名とキャンセル時の非削除契約を確認している。
+- app 側の既存 binding で解決する限り、そのコードは変更しない。配線変更が必要なら、この PR に必要最小限の app DI 差分を含める。
+
+実装記録（2026-11-01）:
+
+- develop `e8178a3` から `feature/04-media-data-io` を分岐した。変更モジュールは `:feature:media:data` と両クライアントの DataSource reference。この段階では公開 domain contract・保存形式・Worker / Scheduler は変更していない。
+- MediaStoreCapturedPhotoWriter は ContentValues の生成・insert から保存確定までを Result 境界に含め、実際に作成した Uri だけを失敗時に cleanup する。null insert は SAVE_FAILED、ENOSPC は STORAGE_FULL、キャンセル時は再スローして削除しない。Clock を既存 binding から注入し、ファイル名関数を固定時刻・固定 TimeZone で検証できるようにした。
+- PR #141 のレビュー指摘に合わせ、ファイル名生成を `internal object CapturedPhotoFileName` の `create` にまとめた。Nitpick 2 件にも対応し、正常保存と書き込み失敗の戻り直後（teardown 前）に descriptor が閉じていることを確認する assertion と、`output.write` 自体が ENOSPC を原因とする IOException を投げた場合の STORAGE_FULL 分類テストを追加した。
+- UploadDataSourceImpl は注入した dispatcher の同じ IO context 内で stream の open / use / close を所有する。Amplify callback 待機・operation.cancel と UploadResult の分類を維持した。dispatcher は両クラスの internal コンストラクタから差し替え、Inject コンストラクタは Dispatchers.IO へ委譲する。app DI の変更は不要。
+- JVM テストではファイル名の 4 条件と、アップロードの成功・SDK 失敗・同期例外・null / open 失敗・キャンセルを確認する。成功時には open / SDK 呼び出し / close の dispatcher も検証する。Android テストは ContentResolver.wrap(ContentProvider) と実ファイル・descriptor で保存の 18 条件を検証する構成とし、追加のテスト framework・Gradle 設定は導入していない。
+- `bash gradlew :feature:media:data:test :feature:media:data:ktlintCheck :feature:media:data:detekt :feature:media:data:assembleDebugAndroidTest -Pkotlin.compiler.execution.strategy=in-process --max-workers=4 --console=plain` は成功。JVM テスト 90 件（新規はアップロード 8 件・ファイル名 4 件）、失敗・エラー・スキップはすべて 0 件。Android テスト 18 件は APK のビルドまで確認した。
+- `bash gradlew :app:assembleDevDebug -PDEV_API_BASE_URL=http://localhost:8080/dummy -PDEV_COGNITO_CLIENT_ID=dummy_client_id -PDEV_S3_BUCKET_NAME=dummy_bucket_name -Pkotlin.compiler.execution.strategy=in-process --max-workers=4 --console=plain` は成功。既存 ClockModule と ApplicationContext で Hilt が解決することを確認した。環境値が未設定のため CI の Fork PR と同じダミー接続値を用いたコンパイル・DI の確認であり、実環境への接続検証ではない。
+- 文書リンク 710 件の参照切れ 0 件、変更した Codex / Claude DataSource reference の不一致 0 件、`git diff --check` 成功。接続端末は `adb devices` で 0 台、エミュレータもないため、`:feature:media:data:connectedDebugAndroidTest`、実機の保存操作・クラウドへのアップロードは未実施。次段階 05 の Worker interface・通知契約への影響はないが、段階 04 の端末検証は残す。
+
+### 05. Media Data の Worker
+
+ブランチ案: `feature/05-media-data-worker-cleanup`。変更設計 D に対応する。
+
+- 対象: `:feature:media:data` の UploadMediaWorker と対応テスト、`docs/media-sync.md`。
+- 作業: 通知終了を finally で保証し、通常完了・例外・キャンセルを確認する。`docs/media-sync.md` の処理順とアップロード通知の記述を更新する。
+- 検証: `./gradlew.bat :feature:media:domain:test :feature:media:data:test :feature:media:ui:test`。通知、例外伝播、completeUpload の呼び出し条件・回数を確認する。
+- 完了条件: 通知を表示したループの異常終了でも通知が消え、異常終了時には completeUpload を呼ばない。Scheduler の名前・policy・constraints・input Data と DB 保存形式は変わらない。
+
+実装記録（2026-11-01）:
+
+- develop `a12ee83`（PR #141 マージ後）から `feature/05-media-data-worker-cleanup` を分岐した。UploadMediaWorker は通知の寿命管理を doWork に残し、レコードのループを private な processPendingRecords へ分離した。ループを囲む `finally` で通知を終了し、通常完了・未捕捉例外・キャンセルのいずれでも `cancel()` を 1 回呼ぶ。`completeUpload()` は通知終了後の通常経路だけに残し、pending が空の場合の早期 return も維持した。既存ループのネストを増やさず、レコードごとの処理本体・順序・失敗分類は移行前と一致することを確認した。
+- PR #143 の指摘 1 件と Nitpick 1 件に対応し、通知表示も `try / finally` の対象へ含めた。通知終了の失敗が先行する DB 例外・アップロードキャンセルを置き換えないよう suppressed として保持する。先行例外がない場合の終了失敗は通常例外・キャンセルとも伝播し、`completeUpload()` は呼ばない。表示失敗、DB 例外・アップロードキャンセルと通知終了失敗の競合、通知終了単独の失敗を追加の 6 ケースで検証した。
+- UploadMediaWorkerTest は、複数件成功時の成功数・完了要求 1 回と通知終了との順序、先行成功と一時失敗の混在、成功 0 件・pending 空の場合を補強した。追加テストは先行成功後の未捕捉 DB 例外、待機中アップロードの実ジョブキャンセル、S3 cleanup 中のキャンセル、完了要求中のキャンセルを確認する。異常終了したループでは `completeUpload()` を呼ばない。
+- 変更モジュールは `:feature:media:data`。`docs/media-sync.md` と両クライアントの Worker reference に通知終了・完了要求の契約を反映した。公開 domain contract、同期の失敗分類、DB 保存形式、Scheduler の名前・policy・constraints・input Data は変更していない。
+- `bash gradlew :feature:media:domain:test :feature:media:data:test :feature:media:ui:test :feature:media:data:ktlintCheck :feature:media:data:detekt -Pkotlin.compiler.execution.strategy=in-process --max-workers=4 --console=plain` は成功。JVM テストは Domain 75 件・Data 100 件・UI 47 件の計 222 件（UploadMediaWorkerTest は 30 件）、失敗・エラー・スキップはすべて 0 件。
+- 文書リンク 710 件の参照切れ 0 件、変更した Codex / Claude Worker reference の不一致 0 件、`git diff --check` 成功。
+- アプリ全体のビルド・Instrumented Test・実機の通知表示とクラウド接続は未実施。変更は Worker の終了処理と JVM テスト・文書に限定し、DI / resource / DAO / schema / enqueue 契約は変更していないため。次段階 06 の Auth UI / 共有 resource への影響はない。
+
+### 06. Auth UI と共有 resource
+
+ブランチ案: `feature/06-auth-ui-conventions`。変更設計 F の resource 化に対応する。
+
+- 対象: `:feature:auth:ui` と `:core:ui` の日英 strings.xml、および auth UI テスト。
+- 作業: resource 化と helper の internal 化を行う。利用側の書き換えと新規 resource は同じ PR に含め、参照先が揃った状態でマージする。
+- 検証: core:ui を変更するため `./gradlew.bat test`、resource を含む `assembleDevDebug`、auth の日英 Preview とフォーム操作。
+- 完了条件: 表示文字列と contentDescription が resource から解決され、有効条件・コード入力・再送 timer が既存どおり動く。Effect の配送方式と Lifecycle gating はこの段階では変更しない。
+- F の派生値の配置を行う場合は、06 のマージ後に別ブランチ `feature/06b-auth-ui-derived-values` で行い、検証は `./gradlew.bat :feature:auth:ui:test` と auth の Preview・フォーム操作とする。
+
+実装記録（2026-11-01）:
+
+- develop `a12ee83` から `feature/06-auth-ui-conventions` を分岐した。Auth 系と Media 系を並行できる計画に従い、03 がマージ済みの develop を起点とした。PR #143 マージ後の develop `e88dc87` を取り込み、段階 05 と 06 の実装記録を両方維持して進捗を統合した。
+- Login / ForgotPassword のラベル・説明・ボタン・contentDescription を core:ui の resource 参照に変更し、日英 9 組を追加した。既存の reset_password_title と hide / show_password_description を再利用し、本番の日本語文言・改行を維持した。Login のエラー Preview も既存の resource を参照し、アカウントの存在を示す直書きサンプルは残していない。
+- StringUtils / ValidationUtils を internal object に限定した。利用箇所はすべて `:feature:auth:ui` 内に閉じており、変換・検証ロジックは変更していない。
+- 通常状態は日英 × light / dark、エラー・loading・メール入力済みは代表 2 組の計 14 Preview を定義した。変更は表示文言の解決と helper の可視性に限定し、フォームの有効条件・コード入力・再送 timer・Effect の配送・Lifecycle gating は維持した。任意項目の 06b・07 はこのブランチに含めない。
+- `bash gradlew test :app:assembleDevDebug :core:ui:ktlintCheck :core:ui:detekt :feature:auth:ui:ktlintCheck :feature:auth:ui:detekt :core:ui:lintDebug :feature:auth:ui:lintDebug -PDEV_API_BASE_URL=http://localhost:8080/dummy -PDEV_COGNITO_CLIENT_ID=dummy_client_id -PDEV_S3_BUCKET_NAME=dummy_bucket_name -PPROD_API_BASE_URL=http://localhost:8080/dummy -PPROD_COGNITO_CLIENT_ID=dummy_client_id -PPROD_S3_BUCKET_NAME=dummy_bucket_name -Pkotlin.compiler.execution.strategy=in-process --max-workers=4 --console=plain` は成功。全 JVM テストは延べ 429 件（app の dev / prod 各 16 件を別集計、Auth UI は 48 件）、失敗・エラー・スキップはいずれも 0 件。フォームの検証、コード貼り付け、再送 timer 等は既存の Auth UI テストで確認し、状態遷移を変えていないためテストの追加・書き換えは行っていない。
+- Android lint は両モジュールとも error 0 件。core:ui の既存 settings_grid_column_value に PluralsCandidate warning が 1 件あるが、今回追加した resource ではなく、既存値も変更していない。日英の string 名は各 81 件で一致し、重複・参照不足はない。既存 72 組と追加した日本語 9 組の文言・改行が移行前と一致することを確認した。
+- 文書リンク 710 件の参照切れ 0 件、`git diff --check` 成功。独立した静的レビューでは指摘なし。表示文字列以外の layout / callback / 有効条件、ViewModel / UiState / timer / Effect / Lifecycle を維持していることを確認した。
+- develop `e88dc87` 統合後も `bash gradlew test :app:assembleDevDebug`（環境値と実行オプションは上記と同じ）は成功。全 JVM テストは延べ 439 件（app の dev / prod を別集計）、失敗・エラー・スキップは 0 件。競合箇所は計画書の進捗行のみで、Auth UI / core:ui は段階 06、Media Data と Worker reference は develop の内容をそのまま保持している。
+- 開発環境値が未設定のため、ビルドと JVM テストには CI と同じダミー接続値を用いた。実環境への接続検証ではない。Android Studio と接続端末・エミュレータがないため、Preview の実描画・長文の収まり・端末上のフォーム操作は未実施。Preview 定義のコンパイルと resource build / lint までを検証範囲とする。
+
+### 06b. Auth UI の派生値
+
+ブランチ: `feature/06b-auth-ui-derived-values`。変更設計 F の任意項目に対応する。
+
+実装・レビュー対応記録（2026-11-01〜02）:
+
+- 段階 06 の PR #142 マージ後の develop `0a0183f` から分岐した。ForgotPasswordUiState の isFormValid、ResetPasswordUiState の isCodeComplete / isFormValid / isResendEnabled、VerificationCodeUiState の isCodeComplete / isResendEnabled を、所有 ViewModel の computed property へ移した。
+- getter は既存の LoginViewModel に合わせて最新の `_uiState.value` から計算する。画面に渡す派生値には UiState を引数に取る判定関数を用意し、getter も同じ関数へ委譲する。ResetPassword のフォーム判定は単一の state snapshot を使い、コード完成判定の private predicate と既存の MIN_PASSWORD_LENGTH を利用して画面表示と送信時の条件を揃えた。入力値・エラー・isLoading・resendTimerSeconds と timer の所有者は維持し、保存済み Boolean や StateFlow を追加していない。
+- 3 Screen は collectAsStateWithLifecycle による購読を維持し、購読済みの uiState を ViewModel の判定関数に渡す。既存 Content の入力値・timer・loading と派生値は同じ snapshot を参照する。既存 Preview は固定値の引数で構成されており、ViewModel を生成せずに引き続き利用できる。Effect 配送・Lifecycle gating・入力 callback・公開 navigation 引数は変更していない。
+- 変更モジュールは `:feature:auth:ui`。既存の ViewModel テストで新しい getter を検証し、入力変更・コード完成・再送 timer に対する派生値の追従と操作条件を確認する。両クライアントの ViewModel reference に所有者を反映した。Domain / Data の契約・依存・Gradle 設定・resource は変更していない。
+- `bash gradlew :feature:auth:ui:test :feature:auth:ui:ktlintCheck :feature:auth:ui:detekt :feature:auth:ui:lintDebug -Pkotlin.compiler.execution.strategy=in-process --max-workers=4 --console=plain` は成功。Auth UI の JVM テストは 71 件（追加 23 ケース）、失敗・エラー・スキップはいずれも 0 件。メールの空・不正・trim、パスワード長の 7 / 8 文字境界と trim、コード消去への追従、貼り付けからの自動確認、60 秒の再送境界、loading 中の送信抑止と cooldown 再開を確認した。レビュー対応で、捕捉済み UiState と現在状態が異なる 5 ケースと、貼り付け時の確認処理の総呼び出し回数 1 回の検証を追加した。Android lint は error / warning ともに 0 件。
+- 文書リンク 726 件の参照切れ 0 件、変更した Codex / Claude ViewModel reference の不一致 0 件、`git diff --check` 成功。独立レビューでの文書の旧記述も修正した。
+- PR #144 の追加レビューに対応し、3 Screen の配線を確認する Compose UI テストを `src/androidTest` に 5 件追加した。実 ViewModel と fake Repository を使い、LifecycleOwner の収集停止中に入力・仮想 timer を更新して Screen を再描画する。入力値とボタンの有効条件が購読済み snapshot を使い、収集再開後は最新状態に追従することを検証する。Compose UI Test の依存は auth UI のテスト用に追加し、既存の Compose BOM に合わせた。CI の instrumented-test に `:feature:auth:ui:connectedDebugAndroidTest` を追加した。本番コードの変更はない。
+- 追加検証の `bash gradlew test ktlintCheck detekt :feature:auth:ui:assembleDebugAndroidTest :feature:auth:ui:lintDebug -Pkotlin.compiler.execution.strategy=in-process --max-workers=4 --console=plain` は、DEV / PROD の API URL・Cognito client ID・S3 bucket にダミーの Gradle project property を指定して成功した。全モジュールの JVM テストは 462 実行（auth UI は 71 件）、失敗・エラー・スキップ 0 件。追加した端末テストのコンパイル・APK 生成、ktlint・detekt、Android lint（error / warning 0 件）が成功した。文書リンク 727 件の参照切れ 0 件、`git diff --check` 成功、独立レビューで追加指摘なし。接続端末・エミュレータがないため、Compose UI テスト 5 件の実行は未確認で CI での確認が必要。
+- 検証範囲は変更モジュールの JVM テスト・Kotlin / Preview 定義のコンパイル・静的解析とし、アプリ全体のビルドと Instrumented Test は未実施。公開 navigation 引数・resource・DI 配線・他モジュールは変更していない。Android Studio と接続端末・エミュレータがないため、Preview の実描画と実機のフォーム操作は未確認。段階 07 の Effect 配送はこの変更には含めない。
+
+- 最終的に PR #144 の CI #476 は lint・unit-test・instrumented-test とも成功し、認証 UI テスト 5 件も端末上で成功した。英語の見出しとボタンが同じ `Reset Password` となるケースは、ボタンの click action を selector に加えて解消済み。PR #144 は develop `71ae50e` にマージされた。
+
+### 07. Auth UI の Effect 配送（任意）
+
+ブランチ: `feature/07-auth-ui-effect-delivery`。変更設計 H に対応する。
+
+- 着手条件: 06（派生値の配置を行う場合は 06b も）の完了と、H の配送方式・保証範囲を移行方針として確定していること。06 とは同じ auth UI ファイルを編集するが、03 とはコード上の依存がない。未採用ならこの段階だけを保留し、08・09 は進められる。
+- 対象: `:feature:auth:ui` の 4 ViewModel / 4 Screen / 対応テストと、共通規約・両クライアントの UI reference。
+- 作業: producer の Channel 化、consumer の STARTED 収集、callback の最新化、規約の例外更新を同じ PR に含める。consumer だけの移行は行わない。
+- 検証: auth UI Unit Test、停止復帰・回転・message 初期配送・timer 継続の UI 確認、文書リンクと両クライアントの対応箇所。
+- 完了条件: 未受信 Effect の保持と停止復帰時の挙動を確認し、init 時 Effect の配送開始を挙動変更として PR に記載している。Channel の受信時キャンセル競合・プロセス終了への保証がないことを文書化している。より強い保証を求める場合は H の再設計を先に行う。
+
+採用・実装記録（2026-11-02）:
+
+- PR #144 のマージ後の develop `71ae50e` から `feature/07-auth-ui-effect-delivery` を分岐した。H の `Channel.BUFFERED` / `receiveAsFlow()` と STARTED 収集を同時に採用した。未受信 Effect の ViewModel 存続中の保持を対象とし、受信と停止の競合・受信済み Snackbar の中断・プロセス再生成後の復元・exactly-once は保証しない。
+- 利用者に見える変更は、初回収集前の Login の message Snackbar と、email が欠落した VerificationCode の NavigateBack が初回 STARTED 時に届くこと。Effect 型・Snackbar message 型・navigation 引数・派生値の条件は維持する。
+- 4 ViewModel は Channel の `send` で Effect を送り、collector は各 ViewModel に 1 つとする。4 Screen は `LaunchedEffect(viewModel, lifecycleOwner)` で収集元の交換に追従し、STARTED の repeat ブロック内で最新の callback / Context を参照する。timer の開始は ViewModel を key とする別の LaunchedEffect に置き、再収集で cooldown をリセットしない。
+- `bash gradlew :feature:auth:ui:test -Pkotlin.compiler.execution.strategy=in-process --max-workers=4 --console=plain` は成功。JVM テストは 81 件（追加 10 ケース）、失敗・エラー・スキップ 0 件。4 ViewModel の収集前完了の保持、収集停止中の新規 Effect の保持、消費済み非 replay、継続収集中の二重配送なし、Login の message key 消費、Verification の初期 NavigateBack を確認した。
+- Compose UI テストを 9 件追加した（既存 5 件と合わせて 14 件）。4 Screen の停止復帰と最新 callback、初期 Effect、owner 交換、同一 ViewModel の Composition 再生成、timer 継続、Login の初回 Snackbar 表示中のサインイン成功による遷移を確認する構成。`bash gradlew :feature:auth:ui:ktlintCheck :feature:auth:ui:detekt :feature:auth:ui:lintDebug :feature:auth:ui:assembleDebugAndroidTest -Pkotlin.compiler.execution.strategy=in-process --max-workers=4 --console=plain` は成功し、Android lint は error / warning 0 件。端末テストの Kotlin コンパイル・APK 生成まで確認した。
+- PR #145 のレビューに対応し、Login の Snackbar 表示を STARTED の repeat ブロックに属する子コルーチンへ分離した。表示完了を待って collector がホーム遷移を遅らせることを防ぎ、停止時には Snackbar の子コルーチンもキャンセルする。入力検証・isLoading の解除条件・Effect の型は変えていない。
+- 文書リンク 730 件の参照切れ 0 件、両クライアントの UI event / ViewModel reference 一致、`git diff --check` 成功。独立レビューで追加指摘なし。
+- 接続端末・エミュレータがないため、新しい UI テストの実行、端末の停止復帰・物理回転・フォーム操作は未確認。owner / Composition 再生成のテストを、実端末の物理回転を確認した結果とは扱わない。変更は auth UI と文書に限定し、公開 navigation 引数・resource・DI 配線・依存関係は変えていないため、アプリ全体のビルドは未実施。
+
+### 08. Media UI
+
+ブランチ: `feature/08-media-ui-camera-content`。変更設計 G に対応する。
+
+- 対象: `:feature:media:ui` の CameraScreen / private CameraContent / Preview と関連テスト。
+- 作業: 接続処理と描画を分離する。04 の保存契約を利用し、UI 側に I/O や新たな UseCase を増やさない。
+- 検証: `./gradlew.bat :feature:media:ui:test`、状態別 Preview、実機の権限・切替・撮影・pause / resume・保存失敗表示。
+- 完了条件: Hilt・カメラ実機に依存しない Content Preview が描画でき、権限前に bind しないことを含めて Screen の Lifecycle と操作結果が既存どおり動く。
+
+実装記録（2026-11-02）:
+
+- PR #145 のマージ後の develop `790da26` から `feature/08-media-ui-camera-content` を分岐した。CameraScreen の接続処理と private CameraContent の描画を分け、状態・画面限定の表示値・callback・カメラ表示 slot で接続する。
+- Screen は権限 launcher、PreviewView / CameraPreviewManager、LifecycleResumeEffect、state / Effect の購読、撮影 bridge を所有する。lens・flash・thumbnail・dialog の寿命も Screen のまま維持する。CameraContent へ manager を渡さず、isCameraBound は Boolean として渡す。
+- Ready / Capturing のときだけ slot を呼び出し、slot 内の LaunchedEffect(lensFacing, resumeKey) で起動・再接続する。設定画面を開く操作も callback に移し、描画側から Context / Intent 操作を分離する。シャッターとレンズ切替の有効条件、保存失敗時の表示と retry の順序を維持する。
+- 変更対象は media UI の CameraScreen と文書に限定する。ViewModel・UiState・Effect・CapturedPhotoWriter の保存契約・CameraPreviewManager・navigation 引数・resource・依存関係は変更しない。ViewModel の状態遷移と Effect の条件は変えないため、抽出を写す JVM テストは追加せず、既存テストと静的レビューで確認する。
+- Preview は CheckingPermission / PermissionRequired / Ready（接続済み・接続前・サムネイルあり）/ Capturing / Error 3 種 / 容量不足ダイアログの 10 状態を用意した。各状態の日 light・英 dark と、Ready の日 dark・英 light を合わせて 22 構成。CloudPhotosTheme と代替 Box slot で構成し、Hilt・PreviewView・CameraPreviewManager・実画像の読み込みを必要としない。
+- PR #146 の Nitpick に対応し、CameraContentPreview が lastThumbnailUri を受け取って CameraContent に渡すようにした。非 null の URI を渡す Preview では、Coil の Preview handler が固定の色付き画像を返す。MediaStore・ファイル・ネットワークへアクセスせず、サムネイルを表示する分岐を確認できる構成とした。本番のサムネイル処理は変更していない。
+- `bash gradlew :feature:media:ui:test :feature:media:ui:ktlintCheck :feature:media:ui:detekt :feature:media:ui:lintDebug -Pkotlin.compiler.execution.strategy=in-process --max-workers=4 --console=plain` は成功。JVM テスト 47 件（CameraViewModel 19 件、MediaViewModel 28 件）、失敗・エラー・スキップ 0 件。Kotlin / Preview 定義のコンパイルと ktlint・detekt も成功。Android lint は error 0 件、変更前からある `Uri.parse` への UseKtx warning 1 件。
+- 文書リンク 730 件の参照切れ 0 件、両クライアントの Screen reference 一致、`git diff --check` 成功。独立した静的レビューでも追加指摘なし。
+- Android Studio と接続端末・エミュレータがないため、Preview の実描画、権限拒否・許可・設定復帰、レンズ切替・撮影・tap / pinch・pause / resume、容量不足表示の実機操作は未確認。単一 UI モジュール内の描画抽出で公開 API・DI・resource・依存関係を変えていないため、アプリ全体のビルドと Instrumented Test は未実施。次の段階 09 はこの変更のマージ後に最新 develop から分岐する。
+
+### 09. App の状態管理と最終統合
+
+ブランチ: `feature/09-app-stateflow`。変更設計 E と全体の接続確認に対応する。
+
+- 対象: `:app` の MainViewModel / MainActivity / 対応テスト。
+- 作業: 起動状態を StateFlow へ移し、ここまでの feature と既存 Navigation / DI / FCM の接続を確認する。feature 固有の状態を app へ移さない。
+- 検証: `./gradlew.bat test`、`./gradlew.bat ktlintCheck detekt assembleDevDebug`。端末ではスプラッシュ・再試行・認証前後の Back・一覧・撮影・通知を確認する。端末が必要な検証は JVM 結果と分けて報告する。
+- 完了条件: 起動状態・フラグ・認証開始先・FCM 登録契機が維持され、各段階の検証結果が揃っている。07 を保留した場合は、配送変更を未採用とし、H に挙げた既知の残存課題を明記する。
+
+実装記録（2026-11-02）:
+
+- PR #146 のマージ後の develop `80f257a` から `feature/09-app-stateflow` を分岐した。MainViewModel の uiState / isCheckingSession / isRetrying を独立した private MutableStateFlow / read-only StateFlow へ移し、MainUiState の sealed 構造と None / true / false の初期値を維持した。
+- MainActivity は onCreate のセッション確認開始を維持し、スプラッシュ保持条件で最新の isCheckingSession.value を読む。Compose 内では uiState / isRetrying を collectAsStateWithLifecycle で購読し、収集済み uiState に応じた表示と FCM 登録を行う。起動先は Authenticated → HOME、Unauthenticated → login() のまま維持する。
+- NavGraph の認証完了・再設定完了・サインアウト時の popUpTo、camera / detail からの戻り操作を静的に確認した。Application 起動時・MainActivity の Authenticated 表示時・onNewToken の FCM 登録契機、登録 Worker の unique REPLACE、Manifest / Hilt WorkerFactory / Auth の Repository・DataSource / CapturedPhotoWriter の DI 配線を確認した。これらの実装と feature の公開 navigation 引数は変更していない。
+- 段階 07 は採用・マージ済みであり、auth の未受信 Effect を ViewModel 存続中に保持する方針を引き継ぐ。受信と Lifecycle 停止の競合・受信済み Snackbar の中断・プロセス終了後の配送を保証しないという限界は維持する。
+- MainViewModelTest は 11 件から 17 件へ整理・拡充した。3 項目の private Snapshot と実際の StateFlow 購読で、初期値、signed-in / guest / error / 例外、初回・再試行の待機と重複抑止、成功・失敗・キャンセル後の finally 解除、完了後の再確認、FCM の明示的な委譲を検証した。非 suspend の checkSession が起動した Job を依存内から捕捉し、キャンセル時に Job が cancelled となり Error へ置換されないことも確認した。再確認・再試行で初回スプラッシュを再保持しない意味は維持している。
+- `bash gradlew test ktlintCheck detekt assembleDevDebug -Pkotlin.compiler.execution.strategy=in-process --max-workers=4 --console=plain` は、DEV / PROD の API_BASE_URL・COGNITO_CLIENT_ID・S3_BUCKET_NAME をそれぞれ `http://localhost:8080/dummy`・`dummy_client_id`・`dummy_bucket_name` の Gradle project property に指定して成功した。全 JVM テストは 484 実行、失敗・エラー・スキップ 0 件（app は dev / prod 各 22 件、うち MainViewModel は各 17 件）。dev debug APK の生成を確認した。ダミーの接続値によるコンパイル・ビルド確認であり、実サービスへの接続成功としては扱わない。
+- 全体の Kotlin / resource / Hilt・DI 配線のコンパイル、ktlint・detekt が成功した。文書リンク 730 件の参照切れ 0 件、Codex / Claude の ViewModel・Navigation reference 一致、`git diff --check` 成功。独立した静的レビューで追加指摘なし。
+- 接続端末・エミュレータがないため、Instrumented Test、実環境のスプラッシュ・起動再試行・Activity 再生成、認証前後の Back、一覧・撮影・権限復帰・通知の実動作は未確認。各段階に記録した Preview 実描画・カメラ・停止復帰などの端末依存項目も未確認のまま区別する。全実装段階のコード変更と JVM / ビルドの統合確認は揃ったが、09 のマージと実機の最終確認は残る。
+
+### 段階間の依存とレビュー運用
+
+番号は推奨する実行順であり、コード上すべてが直列依存するわけではない。
+
+| 段階の関係 | 意味 |
+| --- | --- |
+| 01 → 03 → 06 | auth の下位層から順に検証する推奨順。公開 contract を維持するため、コード上の依存はない |
+| 02 → 04 → 05 | media の準備・I/O・Worker を順に確認する推奨順。05 は UploadDataSource interface を mock して検証するため、04 とのコード上の依存はない |
+| 06 → 07 | 同じ auth UI の 4 ViewModel / 4 Screen を編集するため、06 のマージ後に 07 を始める |
+| 04 → 08 | 保存契約を先に整え、Content 分離後の撮影結果・保存失敗表示を通して確認する推奨順 |
+| 01〜06・08 → 09 | 基本移行を終えて app 接続を最終確認する。07 は採用した場合だけ最終確認へ含める |
+
+auth 系（01・03・06・07）と media 系（02・04・05・08）は変更するモジュールが重ならないため、並行して進めてよい。
+同じ系列の段階は 1 本ずつレビュー・マージし、その結果を取り込んだ最新 develop から次段階専用の feature ブランチを新規作成する。09 は採用した他の段階がすべてマージされてから始める。
+前段階のブランチを使い回したり、そのブランチから後続を分岐したりしない。未マージの後続ブランチを一括作成しない。段階 04 を保存 / アップロードの 2 PR に分割する場合も、各 PR 用の feature ブランチを順に作成する。
+各段階の完了時に、対象 commit、変更モジュール、公開 contract の変更有無、実行した検証と未実施理由、次段階への影響を PR または作業記録へ残す。
+レビューで contract や規約を変更した場合は、後続の対象・テスト・完了条件も更新する。
+不具合が出た場合はその段階の PR 単位で戻せる範囲を維持し、未完の後続実装で補う前提にしない。
+A / B / C / D は規約から外れていた失敗・キャンセル経路の改善であることを、単なる整形と区別して PR に記載する。
+
+## 検証と完了条件
+
+### 実装時に選ぶ検証
+
+コマンドの選択は [Development Setup](../development-setup.md) の「変更種別ごとの検証目安」を正本とする。各段階の「検証」には、それに基づくコマンドと、この計画で追加する確認だけを書く。
+PowerShell では `./gradlew` に相当する `./gradlew.bat` を使う。
+
+この計画で正本の目安に追加する確認:
+
+| 対象 | コマンド / 確認 |
+| --- | --- |
+| MediaStore への実 I/O（段階 04） | `./gradlew.bat :feature:media:data:connectedDebugAndroidTest`。エミュレータ・実機を用意する |
+| 最終統合（段階 09） | `./gradlew.bat test`、`./gradlew.bat ktlintCheck detekt assembleDevDebug` |
+| UI | 日英・ライト / ダーク Preview、起動再試行、認証 Back、停止復帰、カメラ撮影 / 権限 / 切替 |
+| 文書変更 | ローカルリンク、Codex / Claude 対応箇所、`git diff --check` |
+
+Kotlin と resource の変更だけなら Gradle Sync は通常不要。テスト都合で Gradle 設定や依存を追加した場合だけ、その変更に応じた Sync・全体検証を追加する。
+assembleDevDebug と実行には開発用の環境値を使い、ダミーの接続値で実機検証成功と報告しない。
+Unit Test は Cloud Photos の JUnit 5・backtick 名・private Snapshot、androidTest は JUnit 4・snake_case の規約に従う。
+テストを新設・更新する実装段階では test-implementation Skill も併用する。
+
+完了条件:
+
+1. モジュール・依存方向・公開 domain contract・保存データ互換性を維持している。
+2. A〜G の確認済み差分が解消され、関連する通常動作と失敗・キャンセルのテストが通っている。F の派生値の配置は任意とする。
+3. H を採用する場合は、受信側と配送側と規約を一緒に変更し、認証結果の停止復帰時の挙動を確認している。採用しない場合は、H に挙げた既知の残存課題を記録している。
+4. アーキテクチャ上の例外、意図した cleanup、pending 保護を整形・共通化の名目で削除していない。
+5. 実行した検証と未実施の検証を区別し、端末・環境値などの理由を記載している。
+6. 変更した契約を記述する `docs/` と両クライアントの Skill reference を、同じ PR で更新している。

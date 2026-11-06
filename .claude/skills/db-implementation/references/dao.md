@@ -16,7 +16,7 @@ Room の `@Dao` インターフェース（`UploadRecordDao`）。クエリの�
   - SQL 内に `SyncStatus` の文字列リテラル（`'PENDING_UPLOAD'`、`'PENDING_DELETE'` など）を埋め込むのは、複数 status を固定で絞るクエリ（`getPendingMediaIds`）のような必要な箇所だけに限定し、単一 status の検索（`getByStatus`）は呼び出し側の DataSource から `syncStatus.name` を引数で渡す。
   - SQL 内の status リテラルを変更・追加した場合は、必ず KDoc コメントと `UploadRecordDaoSyncStatusTest` の検証ケースを合わせて更新する。
 - **呼び出し側との境界**:
-  - `IN (:mediaIds)` クエリを大件数で呼ぶ経路では、SQLite のバインド変数上限（999）を超えないよう呼び出し側（例: `GetPendingMediaUseCase` の 900 件 `chunked`）との分担を確認する。
+  - `IN (:mediaIds)` クエリを大件数で呼ぶ経路では、SQLite のバインド変数上限を超えないよう呼び出し側（例: `PrepareUploadQueueUseCase` の 900 件 `chunked`）との分担を確認する。
   - 空リスト入力時の空リスト返却、不在 ID 指定時の空リスト返却、不在 ID 削除の冪等性を崩さない。
 - **波及先**:
   - DAO のメソッドシグネチャや取得順を変更した場合は、`UploadRecordLocalDataSource` / `UploadRecordLocalDataSourceImpl`、`LocalUploadRecordsRepository`、および呼び出し元の UseCase / Worker への影響を確認する。

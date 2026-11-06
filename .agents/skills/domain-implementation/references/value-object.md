@@ -12,7 +12,7 @@
 - **必須制約**:
   - `@JvmInline value class Xxx private constructor(val value: T)` とし、`companion object` の `fun of(raw: T): Xxx` を唯一の生成経路にする。
   - `of` の処理順は「正規化（`String` の `trim()` など）→ `require` による検証 → コンストラクタ呼び出し」とする。
-  - 検証条件が複数ある場合（例: `Email` の空チェックと形式チェック、`ConfirmationCode` の空チェックと 6 桁数字チェック）は 1 つの `require` に `&&` でまとめず、条件ごとに `require` を分けてどの条件で失敗したか判別できるようにする。
+  - 検証条件が複数ある場合（例: `Email` の空チェックと形式チェック、`ConfirmationCode` の空チェック・文字数チェック・数字チェック）は 1 つの `require` に `&&` でまとめず、条件ごとに `require` を分けてどの条件で失敗したか判別できるようにする。
   - Domain 層に `android.net.Uri` や `android.util.Patterns` を持ち込まない。`MediaUrl` のように URI / URL 妥当性を判定する場合は `java.net.URI` / `URL` を用い、`content` scheme の扱いを含めて純粋 Kotlin / JDK で完結させる。
   - data / UI との境界（mapper、DTO 組み立て、DB 書き込み、UI 表示）まで value object のまま運び、途中で `.value` の生プリミティブに戻さない。
 - **プロジェクト固有の設計**:

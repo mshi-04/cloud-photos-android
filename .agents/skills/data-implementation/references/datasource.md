@@ -21,13 +21,16 @@
   - **REST 呼び出し**: バックエンド API 呼び出しは `core:data` の `awaitAmplifyRestCall` を使う。非 2xx 応答は `AmplifyRestException(statusCode, ...)` となり、`isNonServerError`（4xx 等）で retry 可否やエラー分類を判定する。
   - **サインアウト・退会の順序**: `AuthDataSourceImpl.signOut` / `deleteUser` における FCM cleanup・バックエンド削除・Cognito 操作の順序と失敗時の扱いは [`docs/authentication.md`](../../../../docs/authentication.md) の契約を厳守する。
   - **DataStore のテスト差し替え口**: `SettingsDataSourceImpl` は `internal constructor(private val dataStore: DataStore<Preferences>)` を主コンストラクタにし、`@Inject constructor(@ApplicationContext context: Context)` から委譲することでテストから任意の `DataStore` を注入できるようにしている。
-  - **撮影画像の保存（`MediaStoreCapturedPhotoWriter`）**: Android Q（API 29）以上では `IS_PENDING = 1` で `MediaStore` に挿入し、ストリーム書き込み完了後に `IS_PENDING = 0` に更新する。ストリーム書き込みや `IS_PENDING` の更新に失敗した場合は、作成したレコードの `contentResolver.delete` を試み、`SavePhotoResult.Error`（容量不足は `STORAGE_FULL`、それ以外は `SAVE_FAILED`）を返す。`CancellationException` は再スローし、この経路ではレコードの削除を行わない。
+  - **Auth のテスト差し替え口**: `AuthDataSourceImpl` は internal コンストラクタで `AmplifyAuthFacade` を受け取り、`@Inject` コンストラクタから実体を委譲する。対象 8 経路は private な `authResult` でキャンセル再スローと結果変換を共通化し、facade は SDK callback の橋渡しだけを担う。対象範囲は [`docs/authentication.md`](../../../../docs/authentication.md) の「SDK 操作のキャンセル伝播」に従う。
+  - **撮影画像の保存（`MediaStoreCapturedPhotoWriter`）**: Android Q（API 29）以上では `IS_PENDING = 1` で `MediaStore` に挿入し、ストリーム書き込み完了後に `IS_PENDING = 0` に更新する。ContentValues の生成・insert から保存確定までの予期される失敗は `SavePhotoResult.Error`（ENOSPC は `STORAGE_FULL`、それ以外は `SAVE_FAILED`）へ変換し、null insert も `SAVE_FAILED` とする。insert 前の失敗・null insert では削除せず、ストリーム書き込みや `IS_PENDING` の更新に失敗した場合だけ、実際に作成した Uri の `contentResolver.delete` を試みる。ファイル名の時刻は既存の `Clock` を注入し、固定の epoch millis と TimeZone を受け取る `internal object CapturedPhotoFileName` の純粋関数 `create` で生成する。本番の Locale.US・端末 timezone・保存場所・MIME は維持する。`CancellationException` は再スローし、この経路ではレコードの削除を行わない。
 - **波及先**:
   - 新しい DataSource や具体 I/O 実装を追加した場合は、`app/src/main/kotlin/com/appvoyager/cloudphotos/di/` の対応する Hilt module（`AuthDataSourceModule` / `UploadDataSourceModule` / `UploadRecordModule` / `MediaDataModule`）に binding を登録する。
 
 ## テスト判断
 
 - REST / Room / S3 / Auth 呼び出しの変換と `CancellationException` 再スローは `src/test/.../datasource/XxxDataSourceImplTest`（および `core/data/src/test/`）で検証する。
+- `UploadDataSourceImpl` は stream の取得・use・close を同じ IO context 内で所有する。成功・失敗・キャンセル時の close と SDK operation.cancel を JVM テストで確認する。
+- 撮影画像のファイル名生成は JVM テスト、ContentValues・MediaStore 保存と ENOSPC の分類は ContentResolver の test double を使う `MediaStoreCapturedPhotoWriterInstrumentedTest` で確認する。
 - `DataStore<Preferences>` の実ファイル読み書きは `feature/media/data/src/androidTest/.../SettingsDataSourceInstrumentedTest` で検証する（[`docs/testing.md`](../../../../docs/testing.md) を参照）。
 
 ## 検証観点

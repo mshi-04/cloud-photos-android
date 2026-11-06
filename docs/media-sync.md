@@ -32,7 +32,7 @@ MediaViewModel.onScreenResumed()
 - **キュー準備とチャンク取得**:
   - [`PrepareUploadQueueUseCase`](../feature/media/domain/src/main/kotlin/com/appvoyager/cloudphotos/domain/media/usecase/PrepareUploadQueueUseCase.kt) は端末メディアが空、または未登録の差分が空のときは早期 return し、不要な Scheduler 起動を行わない。
   - [`RecordMediaUploadUseCase`](../feature/media/domain/src/main/kotlin/com/appvoyager/cloudphotos/domain/media/usecase/RecordMediaUploadUseCase.kt) は `PENDING_UPLOAD` レコードの保存と `scheduleUpload()` を一体で実行する。
-  - [`GetPendingMediaUseCase`](../feature/media/domain/src/main/kotlin/com/appvoyager/cloudphotos/domain/media/usecase/GetPendingMediaUseCase.kt) は SQLite のバインド変数上限を超えないよう、メディア ID リストを 900 件ずつ `chunked` して `getUploadRecords` を呼ぶ。
+  - `PrepareUploadQueueUseCase` は SQLite のバインド変数上限を超えないよう、メディア ID リストを 900 件ずつ `chunked` して `getUploadRecords` を呼ぶ。全チャンクの取得が完了してから未登録のレコードをまとめて保存し、その後 `scheduleUpload()` を 1 回だけ呼ぶ。取得中の例外・キャンセルは伝播し、後続の保存・スケジュール要求は行わない。
 
 ## リモート同期と Pending 保護
 
@@ -47,7 +47,7 @@ MediaViewModel.onScreenResumed()
 [`UploadMediaWorker.doWork()`](../feature/media/data/src/main/kotlin/com/appvoyager/cloudphotos/data/media/worker/UploadMediaWorker.kt) は次の順序で実行する。
 
 1. `localRepository.getPendingUploadRecords()` を取得し、空なら通知を出さずに `Result.success()` を返す。
-2. 処理対象がある場合のみ `notificationHelper.show(pendingRecords.size)` で進行中通知を表示する。
+2. 処理対象がある場合のみ、後続のループと共通の `try / finally` 内で `notificationHelper.show(pendingRecords.size)` による進行中通知の表示を試みる。
 3. 各レコードをループ処理する:
    - ループ先頭で `localRepository.getUploadRecords(listOf(record.mediaId)).firstOrNull()` を取り直し、存在しない場合や `SyncStatus.PENDING_UPLOAD` でなくなっている場合はスキップする（一覧取得後に削除予約などへ変わったレコードを誤処理しないため）。
    - `ContentTypeResolver` で MIME type を解決し、`ContentType.of` で検証する。失敗した場合は永続失敗として `SyncStatus.ERROR` を保存し次へ進む。
@@ -57,9 +57,9 @@ MediaViewModel.onScreenResumed()
    - **リモート API 登録（`remoteRepository.createUploadRecord`）**:
      - 成功したら返却されたレコード（`SyncStatus.SYNCED`）をローカル DB に保存し、`successCount` を増やす。
      - 永続失敗した場合は、先にアップロードした S3 オブジェクトの削除（`deleteUploadedObject`）を試みる。S3 削除に成功したら `cloudStoragePath = null, syncStatus = SyncStatus.ERROR` を保存し、S3 削除に失敗したら孤立オブジェクトを残さないよう `SyncStatus.PENDING_DELETE` を保存して削除フローへ引き継ぐ。
-4. ループ終了後に `notificationHelper.cancel()` で進行中通知を消す。
+4. 表示要求からループまでを囲む `try / finally` の `finally` で、`notificationHelper.cancel()` を 1 回試みる。通常完了・例外・キャンセルに加え、`show()` 自体の失敗も対象とする。先行する例外がある場合はその例外を再スローし、通知終了の例外は先行例外の suppressed に追加して元の原因を保持する。先行する例外がない場合、通知終了の例外（`CancellationException` を含む）はそのまま伝播する。pending が空の場合は表示も cancel もしない。
 5. **`completeUpload()` の呼び出し単位**:
-   - `!hasTemporaryFailure && successCount > 0` のときだけ、ループの外（Worker 実行単位）で 1 回だけ `remoteRepository.completeUpload(UploadSuccessCount.of(successCount))` を呼ぶ。レコードごとに呼ぶと完了通知が重複するため禁止する。
+   - `!hasTemporaryFailure && successCount > 0` のときだけ、ループと通知終了処理が正常に終わった後（Worker 実行単位）で 1 回だけ `remoteRepository.completeUpload(UploadSuccessCount.of(successCount))` を呼ぶ。レコードごとに呼ぶと完了通知が重複するため禁止する。`completeUpload()` は `finally` に入れず、途中まで成功していてもループが例外・キャンセルで抜けた場合は呼ばない。
    - `completeUpload()` の失敗は `CancellationException` のみ再スローし、アップロード自体の成否は巻き戻さない。
 6. `hasTemporaryFailure` が true なら `Result.retry()`、false なら `Result.success()` を返す。
 
@@ -117,6 +117,6 @@ MediaViewModel.onScreenResumed()
 アップロードに関する通知は 2 種類あり、どちらも `POST_NOTIFICATIONS` 権限（Android 13 以降）を確認してから表示する。通知チャネルは [`CloudPhotosApp.onCreate()`](../app/src/main/kotlin/com/appvoyager/cloudphotos/CloudPhotosApp.kt) で作成する。
 
 - **アップロード進行中通知（[`UploadNotificationHelper`](../feature/media/data/src/main/kotlin/com/appvoyager/cloudphotos/data/media/worker/UploadNotificationHelper.kt)）**:
-  - チャネル ID `"upload_progress"`（`IMPORTANCE_LOW`）。`UploadMediaWorker` が処理開始時に表示し、ループ終了時に `cancel()` する。
+  - チャネル ID `"upload_progress"`（`IMPORTANCE_LOW`）。`UploadMediaWorker` は pending が 1 件以上ある場合だけ表示を要求し、表示要求からループ処理までを囲む `finally` で `cancel()` を試みる。通常完了・例外・キャンセル・表示失敗のいずれも対象とし、通知終了の失敗で先行例外を置き換えない。pending が空の場合は表示も cancel もしない。
 - **アップロード完了プッシュ通知（[`CloudPhotosFirebaseMessagingService.onMessageReceived`](../app/src/main/kotlin/com/appvoyager/cloudphotos/fcm/CloudPhotosFirebaseMessagingService.kt)）**:
   - チャネル ID `"upload_complete"`（`IMPORTANCE_DEFAULT`、silent）。`completeUpload()` 後にバックエンドから配信される FCM notification メッセージを受信し、`MainActivity` を開く `PendingIntent` 付きで表示する。

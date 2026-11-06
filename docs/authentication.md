@@ -77,5 +77,6 @@ FCM デバイストークンの登録は、`:app` の [`FcmTokenRegistrar`](../a
 ## SDK 操作のキャンセル伝播
 
 - `Amplify.Auth.*` と `FirebaseMessaging` の `Task` はキャンセル用ハンドル（`Cancelable`）を返さないため、`suspendCancellableCoroutine` がキャンセルされた場合は呼び出し側の coroutine 再開のみが行われ、SDK 内部の通信自体は止まらない。
+- `AuthDataSourceImpl` のサインアップ・確認・サインイン・ユーザー取得・セッション確認・コード再送・パスワード再設定・再設定確認の 8 経路は、private な `authResult` で結果変換を共通化する。`CancellationException` は通常エラーへ変換する前に再スローする。これらの SDK callback の橋渡しは data 内の internal な [`AmplifyAuthFacade`](../feature/auth/data/src/main/kotlin/com/appvoyager/cloudphotos/data/auth/datasource/AmplifyAuthFacade.kt) に置き、internal コンストラクタからテスト用に差し替えられるようにする。サインアウト・退会・FCM cleanup はこの facade の対象に含めない。
 - 一方、バックエンド REST 呼び出し（`DELETE /users`、`PUT /devices/token`、`DELETE /devices/token`）に使う [`awaitAmplifyRestCall`](../core/data/src/main/kotlin/com/appvoyager/cloudphotos/data/common/AmplifyRestClient.kt) は Amplify の `Cancelable` operation を受け取り、`coroutine.invokeOnCancellation { operation?.cancel() }` でキャンセルを伝播させる。
 - いずれの経路でも、`runCatching` で受けた `CancellationException` を `AuthError.Unknown` や Worker の `retry` に落とさないよう、mapper 適用前に再スローする。
